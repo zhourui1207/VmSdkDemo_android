@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="com.jxlianlian.vmnetsdktest.MainActivity">
+
+  <TextView
+      android:id="@+id/sample_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="Hello World!"/>
+
+  <SurfaceView
+      android:layout_width="match_parent"
+      android:layout_height="300dp"
+      android:layout_alignParentLeft="true"
+      android:id="@+id/surfaceView"/>
+
+  <Button
+      android:text="播放声音"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_below="@+id/surfaceView"
+      android:layout_toRightOf="@+id/sample_text"
+      android:layout_marginLeft="29dp"
+      android:layout_marginTop="33dp"
+      android:id="@+id/button"/>
+
+  <Button
+      android:text="开始录像"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_below="@+id/button"
+      android:layout_alignLeft="@+id/button"
+      android:layout_marginTop="20dp"
+      android:id="@+id/record"/>
+</RelativeLayout>

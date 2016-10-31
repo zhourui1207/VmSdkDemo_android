@@ -1,0 +1,5 @@
+include ':app'
+// 子目录third_party下的android_support模块
+// include '12'
+// 也可以这样写
+//include ':app', 'third_party:android_support'
