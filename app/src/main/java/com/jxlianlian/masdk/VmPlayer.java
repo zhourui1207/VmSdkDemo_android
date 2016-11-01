@@ -16,6 +16,12 @@ import com.jxlianlian.masdk.core.StreamData;
 public class VmPlayer {
   private final String TAG = "VmPlayer";
 
+  // 应用启动时，加载VmNet动态库
+  static {
+    System.loadLibrary("ijkffmpeg");
+    System.loadLibrary("VmPlayer");
+  }
+
   // 播放状态侦听器
   public interface PlayStatusListener {
     void onStatusChanged(int currentStatus);  // 播放状态改变
@@ -112,6 +118,8 @@ public class VmPlayer {
    */
   public synchronized boolean startRealplay(String fdId, int channelId, boolean isSub, int
       decodeType, boolean openAudio, SurfaceHolder surfaceHolder) {
+    H264DecoderInit();
+
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
@@ -401,4 +409,6 @@ public class VmPlayer {
       }
     }
   }
+
+  private native boolean H264DecoderInit();
 }

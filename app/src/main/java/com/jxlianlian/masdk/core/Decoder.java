@@ -450,6 +450,10 @@ public class Decoder {
             mediaCodecDecoder.release();
           } catch (Exception e) {
             Log.e(TAG, StringUtil.getStackTraceAsString(e));
+            // 如果这里还出错，证明不支持硬件解码，那么使用智能解码的话，就改用软解码了
+            if (decodeType == VmType.DECODE_TYPE_INTELL) {
+              decodeType = VmType.DECODE_TYPE_SOFTWARE;
+            }
           }
           mediaCodecDecoder = null;
         }

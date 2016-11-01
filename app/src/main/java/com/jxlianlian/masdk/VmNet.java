@@ -8,6 +8,11 @@ package com.jxlianlian.masdk;
 public class VmNet {
   private static String TAG = "VmNet";
 
+  // 应用启动时，加载VmNet动态库
+  static {
+    System.loadLibrary("VmNet");
+  }
+
   /**
    * 服务器连接状态回调接口
    */
@@ -36,11 +41,6 @@ public class VmNet {
 
   private static ServerConnectStatusCallback mServerStatusCallback = null;
   private static RealAlarmCallback mRealAlarmCallback = null;
-
-  // 应用启动时，加载VmNet动态库
-  static {
-    System.loadLibrary("VmNet");
-  }
 
   /**
    * 初始化

@@ -19,6 +19,7 @@ endif()
 
 # 相当于g++ 中的 -I参数
 include_directories(/usr/local/Cellar/boost/1.61.0_1/include/)
+include_directories(src/main/cpp/ffmpeg/)
 include_directories(/Users/zhourui/Library/Android/sdk/ndk-bundle/sources/android/support/include)
 
 # 它相当于g++命令的-L选项的作用，也相当于环境变量中增加LD_LIBRARY_PATH的路径的作用
@@ -46,6 +47,17 @@ add_library( # Sets the name of the library.
               src/main/cpp/util/Tasks.cpp
               src/main/cpp/util/Timer.cpp )
 
+add_library( # Sets the name of the library.
+             VmPlayer
+
+             # Sets the library as a shared library.
+             SHARED
+
+             # Provides a relative path to your source file(s).
+             # Associated headers in the same location as their source
+             # file are automatically included.
+             src/main/cpp/VmPlayer-lib.c)
+
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because system libraries are included in the search path by
 # default, you only need to specify the name of the public NDK library
@@ -72,3 +84,9 @@ target_link_libraries( # Specifies the target library.
                        # 使用android_support.a库
                        /Users/zhourui/Library/Android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libandroid_support.a
                        ${log-lib} )
+
+target_link_libraries(VmPlayer
+                      "/Users/zhourui/Documents/c++workspace/DreamEngine/VmSdkDemo_android/app/src/main/jniLibs/${ANDROID_ABI}/libijkffmpeg.so"
+                      ${log-lib} )
+
+#link_libraries()
