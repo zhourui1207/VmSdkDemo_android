@@ -19,9 +19,17 @@
 
   <SurfaceView
       android:layout_width="match_parent"
-      android:layout_height="300dp"
+      android:layout_height="200dp"
+      android:layout_marginTop="20dp"
       android:layout_alignParentLeft="true"
       android:id="@+id/surfaceView"/>
+
+  <android.opengl.GLSurfaceView
+      android:layout_width="match_parent"
+      android:layout_height="200dp"
+      android:layout_marginTop="20dp"
+      android:layout_alignParentLeft="true"
+      android:id="@+id/glSurfaceView"/>
 
   <Button
       android:text="播放声音"

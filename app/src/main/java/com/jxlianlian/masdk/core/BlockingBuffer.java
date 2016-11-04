@@ -129,7 +129,7 @@ public class BlockingBuffer {
    * @throws InterruptedException 被强制中断时，返回中断异常
    */
   public Object removeObjectBlocking() throws InterruptedException {
-    Object ret = null;
+    Object ret;
     ret = linkedBlockingQueue.take();
     return ret;
   }

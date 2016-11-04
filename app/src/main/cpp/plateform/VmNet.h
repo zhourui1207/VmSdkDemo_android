@@ -9,6 +9,10 @@
 #ifndef VMNET_H_
 #define VMNET_H_
 
+#define VMNET_API
+#define CALL_METHOD
+#define out
+
 #ifdef __cplusplus
 extern "C" {
 #endif

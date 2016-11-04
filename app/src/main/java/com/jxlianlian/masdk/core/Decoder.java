@@ -1,5 +1,9 @@
 package com.jxlianlian.masdk.core;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -11,7 +15,9 @@ import android.view.SurfaceHolder;
 
 import com.jxlianlian.masdk.VmType;
 import com.jxlianlian.masdk.util.FlvSave;
+import com.jxlianlian.masdk.util.OpenGLESUtil;
 import com.jxlianlian.masdk.util.StringUtil;
+import com.jxlianlian.vmnetsdktest.MainActivity;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -24,6 +30,11 @@ import java.nio.ByteBuffer;
 
 public class Decoder {
   private final String TAG = "Decoder";
+
+  // 应用启动时，加载VmNet动态库
+  static {
+    System.loadLibrary("VmPlayer");
+  }
 
   private final int BUFFER_MAX_SIZE = 500;
   private final int BUFFER_WARNING_SIZE = 400;
@@ -40,6 +51,7 @@ public class Decoder {
 
   private int decodeType = VmType.DECODE_TYPE_INTELL;
   private SurfaceHolder surfaceHolder;
+  private Context context;  // 上下文，获取是否支持OpenGLES2.0
 
   private boolean isRunning = false;
 
@@ -55,9 +67,11 @@ public class Decoder {
     this.decodeType = decodeType;
   }
 
-  public Decoder(int decodeType, boolean autoPlay, SurfaceHolder surfaceHolder) {
+  public Decoder(int decodeType, boolean autoPlay, SurfaceHolder surfaceHolder, Context context) {
+    Log.i(TAG, "构造解码器 decodeType=" + decodeType + ", autoPlay=" + autoPlay);
     this.decodeType = decodeType;
     this.surfaceHolder = surfaceHolder;
+    this.context = context;
     if (autoPlay) {
       startPlay();
     }
@@ -356,14 +370,24 @@ public class Decoder {
     private SurfaceHolder surfaceHolder;
     private boolean isTv = false;
 
+    // 硬件解码相关
     private MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-    private int w = 1920;
-    private int h = 1080;
+    private int w = 1280;
+    private int h = 720;
     private String mime = "video/avc";
     private MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, w, h);
     private MediaCodec mediaCodecDecoder;  //硬解码器
     private ByteBuffer[] inputBuffers;
 
+    // 软件解码相关
+    private long decoderHandle;
+    private boolean RGBMode = true;  // 使用rgb模式，效率较低，但适用范围较广
+    private byte[] pixelBuffer;
+    private ByteBuffer rgbBuffer;
+    private Bitmap videoBitmap;
+    private Bitmap screenshotBitmap;
+
+    // 音频相关
     private AudioTrack audioDecoder;
 
     boolean showed = false;
@@ -407,21 +431,39 @@ public class Decoder {
       audioDecoder = null;
     }
 
-    private synchronized void createDecoder() {
+    private synchronized void createDecoder(int payloadType) {
       if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {
+        if (decoderHandle == 0) {
+          // 判断是否支持open gl es 2.0
+          if (context != null) {
+            if (OpenGLESUtil.detectOpenGLES20(context)) {
+              RGBMode = false;
+              Log.i(TAG, "支持OpenGLES2.0");
+            } else {
+              Log.i(TAG, "不支持OpenGLES2.0");
+            }
+          }
 
+          decoderHandle = DecoderInit(payloadType, RGBMode);
+          int size = 4096 * 2160 * 2;  // 最大支持4096 * 2160视频分辨率
+          // pixelBuffer接收解码数据的缓存
+          pixelBuffer = new byte[size];
+          for (int i = 0; i < size; ++i) {
+            pixelBuffer[i] = (byte) 0x00;
+          }
+          // rgbBuffer可以知道写入的数据长度
+          rgbBuffer = ByteBuffer.wrap(pixelBuffer, 0, size);
+
+          Log.i(TAG, "decoderHandle=" + decoderHandle);
+        }
       } else {
         if (mediaCodecDecoder == null && isRunning) {
           try {
             if (surfaceHolder != null && surfaceHolder.getSurface() != null) {
-              Log.e(TAG, "createDecoderByType");
               mediaCodecDecoder = MediaCodec.createDecoderByType(mime);
-              Log.e(TAG, "configure");
               mediaCodecDecoder.configure(mediaFormat, surfaceHolder.getSurface(), null, 0);
-              Log.e(TAG, "start");
               mediaCodecDecoder.start();
 
-              Log.e(TAG, "getInputBuffers");
               inputBuffers = mediaCodecDecoder.getInputBuffers();
 
               if (displayThread == null) {
@@ -430,6 +472,9 @@ public class Decoder {
               displayThread.start();
             }
           } catch (Exception e) {
+            if (decodeType == VmType.DECODE_TYPE_INTELL) {
+              decodeType = VmType.DECODE_TYPE_SOFTWARE;
+            }
             Log.e(TAG, StringUtil.getStackTraceAsString(e));
           }
         }
@@ -438,7 +483,10 @@ public class Decoder {
 
     private synchronized void releaseDecoder() {
       if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {
-
+        if (decoderHandle != 0) {
+          DecoderUninit(decoderHandle);
+          decoderHandle = 0;
+        }
       } else {
         if (mediaCodecDecoder != null && isRunning) {
           try {
@@ -473,6 +521,7 @@ public class Decoder {
       }
     }
 
+//    FileOutputStream fileOutputStream;
     @Override
     public void run() {
       Log.i(TAG, "解码线程开始...");
@@ -505,13 +554,59 @@ public class Decoder {
 
           showed = true;
 
-          createDecoder();
-          if (mediaCodecDecoder == null) {
+          createDecoder(esStreamData.getPayloadType());
+
+          if ((decodeType == VmType.DECODE_TYPE_INTELL || decodeType == VmType
+              .DECODE_TYPE_HARDWARE) && mediaCodecDecoder == null) {
             continue;
           }
 
+          if ((decodeType == VmType.DECODE_TYPE_SOFTWARE) && decoderHandle == 0) {
+            continue;
+          }
+
+          byte[] data = esStreamData.getData();
+
           if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {  // 软件解码
 
+            int canShow;
+            canShow = DecodeNalu(decoderHandle, data, data.length, pixelBuffer);
+//            Log.e(TAG, "canShow=" + canShow);
+            if (canShow > 0) {
+              if (RGBMode) {
+                Canvas c = surfaceHolder.lockCanvas(null);
+                if (c != null) {
+                  draw(c, surfaceHolder.getSurfaceFrame().width(), surfaceHolder.getSurfaceFrame()
+                      .height());
+                }
+                surfaceHolder.unlockCanvasAndPost(c);
+              } else {
+                MainActivity mainActivity = (MainActivity) context;
+                if (videoBitmap == null) {
+                  w = GetFrameWidth(decoderHandle);
+                  h = GetFrameHeight(decoderHandle);
+                  videoBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
+                  mainActivity.getGLFrameRenderer().update(w, h);
+//
+//                  try {
+//                    fileOutputStream = new FileOutputStream("sdcard/MVSS/LocalRecord/123.yuv");
+//                  } catch (FileNotFoundException e) {
+//                    Log.e(TAG, StringUtil.getStackTraceAsString(e));
+//                  }
+                }
+                // 保存文件
+//                if (fileOutputStream != null) {
+//                  fileOutputStream.write(pixelBuffer, 0, canShow);
+//                }
+                byte[] y = new byte[w * h];
+                byte[] u = new byte[w * h / 4];
+                byte[] v = new byte[w * h / 4];
+                System.arraycopy(pixelBuffer, 0 , y, 0, w * h);
+                System.arraycopy(pixelBuffer, w * h, u, 0, w * h / 4);
+                System.arraycopy(pixelBuffer, w * h * 5 / 4, v, 0, w * h / 4);
+                mainActivity.getGLFrameRenderer().update(y, u, v);
+              }
+            }
           } else {  // 智能解码或者硬件解码
             int inputBufferIndex;
             if (isTv) {
@@ -523,7 +618,6 @@ public class Decoder {
             if (inputBufferIndex >= 0) {
               ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
               inputBuffer.clear();
-              byte[] data = esStreamData.getData();
               inputBuffer.put(data, 0, data.length);
 
               int flags;
@@ -551,6 +645,28 @@ public class Decoder {
       Log.i(TAG, "解码线程结束...");
     }
 
+    private void draw(Canvas canvas, int screenWidth, int screenHeight) {
+      if (videoBitmap == null) {  // 创建显示位图
+        w = GetFrameWidth(decoderHandle);
+        h = GetFrameHeight(decoderHandle);
+        videoBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
+      }
+      rgbBuffer.rewind();
+      videoBitmap.copyPixelsFromBuffer(rgbBuffer);
+
+      // 适应surfaceview屏幕大小
+      float scaleWidth = ((float) screenWidth) / w;
+      float scaleHeight = ((float) screenHeight) / h;
+      Matrix matrix = new Matrix();
+      matrix.postScale(scaleWidth, scaleHeight);
+
+      //screenshotBitmap用来保存截图
+      screenshotBitmap = Bitmap.createBitmap(videoBitmap);
+
+      // 显示到画布
+      canvas.drawBitmap(videoBitmap, matrix, null);
+    }
+
     private class Display extends Thread {
       @Override
       public void run() {
@@ -574,6 +690,7 @@ public class Decoder {
         }
         Log.i(TAG, "显示线程结束...");
       }
+
     }
   }
 
@@ -702,5 +819,16 @@ public class Decoder {
       return data;
     }
   }
+
+  private static native long DecoderInit(int payloadType, boolean rgbMode);
+
+  private static native void DecoderUninit(long decoderHandle);
+
+  private static native int DecodeNalu(long decoderHandle, byte[] inData, int inLen, byte[] outData);
+
+  private static native int GetFrameWidth(long decoderHandle);
+
+  private static native int GetFrameHeight(long decoderHandle);
+
 }
 

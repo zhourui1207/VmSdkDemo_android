@@ -1,5 +1,6 @@
 package com.jxlianlian.vmnetsdktest;
 
+import android.opengl.GLSurfaceView;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -15,6 +16,8 @@ import com.jxlianlian.masdk.DepTree;
 import com.jxlianlian.masdk.DepTreesHolder;
 import com.jxlianlian.masdk.VmNet;
 import com.jxlianlian.masdk.VmPlayer;
+import com.jxlianlian.masdk.util.OpenGLESUtil;
+import com.jxlianlian.masdk.util.opengles.GLFrameRenderer;
 
 import java.util.List;
 
@@ -23,8 +26,14 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
   private String TAG = "MainActivity";
 
   private SurfaceView surfaceView;
+  private GLSurfaceView glSurfaceView;
+  GLFrameRenderer mGLFRenderer;
   private Button button;
   private Button record;
+
+  public GLFrameRenderer getGLFrameRenderer() {
+    return mGLFRenderer;
+  }
 
   boolean audioOpen = false;
 
@@ -39,6 +48,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
     surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
     button = (Button) findViewById(R.id.button);
+    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
+
     button.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
@@ -75,7 +86,17 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
     // Example of a call to a native method
     TextView tv = (TextView) findViewById(R.id.sample_text);
-    tv.setText("测试");
+
+    boolean supportOpenGLES = OpenGLESUtil.detectOpenGLES20(this);
+    if (supportOpenGLES) {
+      tv.setText("支持openGLES2.0");
+    } else {
+      tv.setText("不支持openGLES2.0");
+    }
+    glSurfaceView.setEGLContextClientVersion(2);
+    mGLFRenderer = new GLFrameRenderer(glSurfaceView);
+    glSurfaceView.setRenderer(mGLFRenderer);
+
 
     new RealplayTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
   }
@@ -90,8 +111,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected Void doInBackground(Void... voids) {
       VmNet.init(10);
-      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
-//      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+//      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
+      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
       try {
         Thread.sleep(2000);
       } catch (InterruptedException e) {
@@ -192,8 +213,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected void onPostExecute(Void aVoid) {
       player = new VmPlayer();
-//      player.startRealplay("201607201402389091", 1, true, 0, false, surfaceView.getHolder());
-      player.startRealplay("201610111654538071", 1, false, 0, false, surfaceView.getHolder());
+      player.startRealplay("201607201402389091", 1, true, 0, false, glSurfaceView.getHolder(), MainActivity.this);
+//      player.startRealplay("201610111654538071", 1, true, 2, false, glSurfaceView.getHolder(), MainActivity.this);
+
     }
   }
 }

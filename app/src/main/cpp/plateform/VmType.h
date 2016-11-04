@@ -8,10 +8,7 @@
 #ifndef VMTYPE_H_
 #define VMTYPE_H_
 
-#define VMNET_API
-#define CALL_METHOD
 #define CALLBACK
-#define out
 
 // 实时报警回调  报警类型
 #define ALARM_TYPE_EXTERNEL 1  // 外部告警

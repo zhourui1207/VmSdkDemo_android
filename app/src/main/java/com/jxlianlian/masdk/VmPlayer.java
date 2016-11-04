@@ -1,11 +1,11 @@
 package com.jxlianlian.masdk;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
 import com.jxlianlian.masdk.core.Decoder;
-import com.jxlianlian.masdk.core.Player;
 import com.jxlianlian.masdk.core.StreamData;
 
 /**
@@ -15,12 +15,6 @@ import com.jxlianlian.masdk.core.StreamData;
 
 public class VmPlayer {
   private final String TAG = "VmPlayer";
-
-  // 应用启动时，加载VmNet动态库
-  static {
-    System.loadLibrary("ijkffmpeg");
-    System.loadLibrary("VmPlayer");
-  }
 
   // 播放状态侦听器
   public interface PlayStatusListener {
@@ -35,8 +29,8 @@ public class VmPlayer {
   }
 
   private int currentStatus = VmType.PLAY_STATUS_NONE;
-  private Player.PlayStatusListener playStatusListener;
-  private Player.StreamStatusListener streamStatusListener;
+  private PlayStatusListener playStatusListener;
+  private StreamStatusListener streamStatusListener;
 
   private int errorCode;
 
@@ -53,6 +47,7 @@ public class VmPlayer {
   private boolean openAudio = false;
 
   private SurfaceHolder surfaceHolder;
+  private Context context;
 
   private int monitorId;
   private int videoStreamId;
@@ -78,7 +73,7 @@ public class VmPlayer {
    *
    * @param playStatusListener
    */
-  public void setPlayStatusListener(Player.PlayStatusListener playStatusListener) {
+  public void setPlayStatusListener(PlayStatusListener playStatusListener) {
     this.playStatusListener = playStatusListener;
   }
 
@@ -94,7 +89,7 @@ public class VmPlayer {
    *
    * @param statusStatusListener
    */
-  public void setStatusStatusListener(Player.StreamStatusListener statusStatusListener) {
+  public void setStatusStatusListener(StreamStatusListener statusStatusListener) {
     this.streamStatusListener = statusStatusListener;
   }
 
@@ -114,12 +109,11 @@ public class VmPlayer {
    * @param decodeType 解码类型
    * @param openAudio 是否打开音频
    * @param surfaceHolder 播放页面
+   * @param context 播放页面上下文
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
    */
   public synchronized boolean startRealplay(String fdId, int channelId, boolean isSub, int
-      decodeType, boolean openAudio, SurfaceHolder surfaceHolder) {
-    H264DecoderInit();
-
+      decodeType, boolean openAudio, SurfaceHolder surfaceHolder, Context context) {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
@@ -130,6 +124,7 @@ public class VmPlayer {
     this.decodeType = decodeType;
     this.openAudio = openAudio;
     this.surfaceHolder = surfaceHolder;
+    this.context = context;
 
     doOpenStreamTask();
     return true;
@@ -145,11 +140,12 @@ public class VmPlayer {
    * @param decodeType 解码类型
    * @param openAudio 是否打开音频
    * @param surfaceHolder 播放页面
+   * @param context 播放页面上下文
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
    */
   public synchronized boolean startRealplay(String videoAddr, int videoPort, String audioAddr,
                                             int audioPort, int
-      decodeType, boolean openAudio, SurfaceHolder surfaceHolder) {
+      decodeType, boolean openAudio, SurfaceHolder surfaceHolder, Context context) {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
@@ -158,6 +154,7 @@ public class VmPlayer {
     this.decodeType = decodeType;
     this.openAudio = openAudio;
     this.surfaceHolder = surfaceHolder;
+    this.context = context;
 
     PlayAddressHolder holder = new PlayAddressHolder();
     holder.init(0, videoAddr, videoPort, audioAddr, audioPort);
@@ -334,11 +331,12 @@ public class VmPlayer {
       StreamIdHolder streamIdHolder = new StreamIdHolder();
       errorCode = VmNet.startStream(holder.getVideoAddr(), holder.getVideoPort(), new
           VideoStreamCallbackI(), streamIdHolder);
+      Log.e(TAG, "errorCode" + errorCode);
       if (errorCode == ErrorCode.ERR_CODE_OK) {
         videoStreamId = streamIdHolder.getStreamId();
         // 视频开始解码
         if (videoDecoder == null) {
-          videoDecoder = new Decoder(decodeType, true, surfaceHolder);
+          videoDecoder = new Decoder(decodeType, true, surfaceHolder, context);
         } else {
           videoDecoder.startPlay();
         }
@@ -354,7 +352,7 @@ public class VmPlayer {
         audioStreamId = streamIdHolder.getStreamId();
         // 音频开始解码
         if (audioDecoder == null) {
-          audioDecoder = new Decoder(decodeType, openAudio, surfaceHolder);
+          audioDecoder = new Decoder(decodeType, openAudio, surfaceHolder, context);
         } else if (openAudio) {
           audioDecoder.startPlay();
         }
@@ -381,6 +379,7 @@ public class VmPlayer {
     public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer, int
         timeStamp, int seqNumber, boolean isMark) {
 
+//      Log.e(TAG, "!!");
       if (videoDecoder != null) {
         videoDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_VIDEO, payloadType,
             buffer,
@@ -409,6 +408,4 @@ public class VmPlayer {
       }
     }
   }
-
-  private native boolean H264DecoderInit();
 }
