@@ -16,6 +16,7 @@ if (_ANDROID)
 else()
     message(STATUS "Use Nothing")
 endif()
+#add_definitions(-D__ANDROID__)
 
 # 相当于g++ 中的 -I参数
 include_directories(/usr/local/Cellar/boost/1.61.0_1/include/)
@@ -54,8 +55,9 @@ add_library( VmPlayer
              SHARED
 
              src/main/cpp/VmPlayer-lib.cpp
-             src/main/cpp/encdec/VmPlayer.cpp
-             src/main/cpp/encdec/Decoder.cpp)
+             src/main/cpp/plateform/VmPlayer.cpp
+             src/main/cpp/encdec/Decoder.cpp
+             src/main/cpp/render/EGLRender.cpp)
 
 
 # Searches for a specified prebuilt library and stores the path as a
@@ -87,7 +89,9 @@ target_link_libraries( # Specifies the target library.
 
 target_link_libraries(VmPlayer
                       "/Users/zhourui/Documents/c++workspace/DreamEngine/VmSdkDemo_android/app/src/main/jniLibs/${ANDROID_ABI}/libijkffmpeg.so"
-                      "/Users/zhourui/Documents/c++workspace/DreamEngine/VmSdkDemo_android/app/src/main/jniLibs/${ANDROID_ABI}/libSDL2.so"
-                      ${log-lib} )
+                      EGL
+                      GLESv2
+                      ${log-lib}
+                      android)
 
 #link_libraries()

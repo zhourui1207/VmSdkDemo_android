@@ -5,6 +5,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
@@ -25,7 +26,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
   private String TAG = "MainActivity";
 
-  private SurfaceView surfaceView;
+  private static SurfaceView surfaceView;
   private GLSurfaceView glSurfaceView;
   GLFrameRenderer mGLFRenderer;
   private Button button;
@@ -41,6 +42,68 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
   VmPlayer player;
 
+  public static Surface getNativeSurface() {
+    Log.e("!!", "getNativeSurface");
+    return surfaceView.getHolder().getSurface();
+  }
+
+  /**
+   * This method is called by SDL using JNI.
+   */
+  public static int audioOpen(int sampleRate, boolean is16Bit, boolean isStereo, int desiredFrames) {
+    Log.e("!!", "audioOpen");
+    return 0;
+  }
+
+  public static void audioWriteShortBuffer(short[] buffer) {
+    Log.e("!!", "audioWriteShortBuffer");
+  }
+
+  public static void audioWriteByteBuffer(byte[] buffer) {
+    Log.e("!!", "audioWriteByteBuffer");
+  }
+
+  public static int captureOpen(int sampleRate, boolean is16Bit, boolean isStereo, int desiredFrames) {
+    Log.e("!!", "captureOpen");
+    return 0;
+  }
+
+  public static int captureReadShortBuffer(short[] buffer, boolean blocking) {
+    Log.e("!!", "captureReadShortBuffer");
+    return 0;
+  }
+
+  public static int captureReadByteBuffer(byte[] buffer, boolean blocking) {
+    Log.e("!!", "captureReadByteBuffer");
+    return 0;
+  }
+
+  /** This method is called by SDL using JNI. */
+  public static void audioClose() {
+    Log.e("!!", "audioClose");
+  }
+
+  /** This method is called by SDL using JNI. */
+  public static void captureClose() {
+    Log.e("!!", "captureClose");
+  }
+
+  /**
+   * This method is called by SDL using JNI.
+   */
+  public static void pollInputDevices() {
+    Log.e("!!", "pollInputDevices");
+  }
+
+  class SDLMain implements Runnable {
+    @Override
+    public void run() {
+      // Runs SDL_main()
+
+      //Log.v("SDL", "SDL thread terminated");
+    }
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -48,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
     surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
     button = (Button) findViewById(R.id.button);
-    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
+//    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
 
     button.setOnClickListener(new View.OnClickListener() {
       @Override
@@ -93,12 +156,14 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     } else {
       tv.setText("不支持openGLES2.0");
     }
-    glSurfaceView.setEGLContextClientVersion(2);
-    mGLFRenderer = new GLFrameRenderer(glSurfaceView);
-    glSurfaceView.setRenderer(mGLFRenderer);
+//    glSurfaceView.setEGLContextClientVersion(2);
+//    mGLFRenderer = new GLFrameRenderer(glSurfaceView);
+//    glSurfaceView.setRenderer(mGLFRenderer);
 
 
     new RealplayTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//    final Thread sdlThread = new Thread(new SDLMain(), "SDLThread");
+//    sdlThread.start();
   }
 
   @Override
@@ -111,8 +176,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected Void doInBackground(Void... voids) {
       VmNet.init(10);
-//      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
-      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
+//      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
       try {
         Thread.sleep(2000);
       } catch (InterruptedException e) {
@@ -139,71 +204,6 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
           }
         }
 
-//      VmNet.sendControl("201610111654538071", 1, 3, 5, 0);
-//
-//      try {
-//        Thread.sleep(5000);
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
-//
-//      VmNet.sendControl("201610111654538071", 1, 0, 0, 0);
-//
-//      try {
-//        Thread.sleep(2000);
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
-//
-//      VmNet.sendControl("201610111654538071", 1, 4, 5, 0);
-//
-//      try {
-//        Thread.sleep(5000);
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
-//
-//      VmNet.sendControl("201610111654538071", 1, 0, 0, 0);
-//
-//      try {
-//        Thread.sleep(5000);
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
-
-
-//      PlayAddressHolder playAddress = new PlayAddressHolder();
-//      ret = VmNet.openRealplayStream("201610111654538071", 1, true, playAddress);
-//      if (ret == 0) {
-//        Log.e(TAG, "monitorId:" + playAddress.getMonitorId() + ",videoAddr:" + playAddress.getVideoAddr() +  ",videoPort:" + playAddress.getVideoPort());
-//        StreamIdHolder streamIdHolder = new StreamIdHolder();
-//        ret = VmNet.startStream(playAddress.getVideoAddr(), playAddress.getVideoPort(), new VmNet.StreamCallback() {
-//
-//          @Override
-//          public void onStreamConnectStatus(int streamId, boolean isConnected) {
-//            Log.e(TAG, "码流" + streamId + "状态:" + isConnected);
-//          }
-//
-//          @Override
-//          public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer, int timeStamp, int seqNumber, boolean isMark) {
-//            Log.e(TAG, "接收到码流 streamId=" + streamId + ", streamType=" + streamType + ", payloadType=" + payloadType + ", len=" + buffer.length + ", isMark=" + isMark);
-//          }
-//        }, streamIdHolder);
-//        if (ret == 0) {
-//          Log.e(TAG, "开始播放成功");
-//          try {
-//            Thread.sleep(100000000);
-//          } catch (InterruptedException e) {
-//            e.printStackTrace();
-//          }
-//          VmNet.stopStram(streamIdHolder.getStreamId());
-//        }
-//
-//        VmNet.closeRealplayStream(playAddress.getMonitorId());
-//
-//      } else {
-//        Log.e(TAG, "ret=" + ret);
-//      }
       } else {
         Log.e(TAG, "登录失败!");
       }
@@ -213,9 +213,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected void onPostExecute(Void aVoid) {
       player = new VmPlayer();
-      player.startRealplay("201607201402389091", 1, true, 0, false, glSurfaceView.getHolder(), MainActivity.this);
-//      player.startRealplay("201610111654538071", 1, true, 2, false, glSurfaceView.getHolder(), MainActivity.this);
-
+//      player.startRealplay("201607201402389091", 1, true, 2, false, surfaceView.getHolder(), MainActivity.this);
+      player.startRealplay("201610111654538071", 1, false, 2, false, surfaceView.getHolder(), MainActivity.this);
     }
   }
+
 }

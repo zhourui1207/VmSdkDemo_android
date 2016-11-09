@@ -17,7 +17,6 @@ import com.jxlianlian.masdk.VmType;
 import com.jxlianlian.masdk.util.FlvSave;
 import com.jxlianlian.masdk.util.OpenGLESUtil;
 import com.jxlianlian.masdk.util.StringUtil;
-import com.jxlianlian.vmnetsdktest.MainActivity;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -183,7 +182,7 @@ public class Decoder {
         BUFFER_WARNING_SIZE);  // 码流数据
 
     public boolean addBuffer(Object object) {
-      return streamBuffer.addObject(object);
+      return streamBuffer.addObjectForce(object);
     }
 
     // 既有音频又有视频是为了兼容混合流
@@ -390,6 +389,11 @@ public class Decoder {
     // 音频相关
     private AudioTrack audioDecoder;
 
+    // 使用opengles时，从c++层返回的YUV数据
+    private byte[] yBuffer;
+    private byte[] uBuffer;
+    private byte[] vBuffer;
+
     boolean showed = false;
 
     private Display displayThread;
@@ -444,7 +448,7 @@ public class Decoder {
             }
           }
 
-          decoderHandle = DecoderInit(payloadType, RGBMode);
+          decoderHandle = DecoderInit(payloadType, RGBMode, surfaceHolder.getSurface());
           int size = 4096 * 2160 * 2;  // 最大支持4096 * 2160视频分辨率
           // pixelBuffer接收解码数据的缓存
           pixelBuffer = new byte[size];
@@ -565,11 +569,17 @@ public class Decoder {
             continue;
           }
 
+          // 测试不给sps和pps时是无法解码的
+//          if (dataType == DATA_TYPE_VIDEO_SPS || dataType == DATA_TYPE_VIDEO_PPS) {
+//            continue;
+//          }
+
           byte[] data = esStreamData.getData();
 
           if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {  // 软件解码
 
             int canShow;
+
             canShow = DecodeNalu(decoderHandle, data, data.length, pixelBuffer);
 //            Log.e(TAG, "canShow=" + canShow);
             if (canShow > 0) {
@@ -581,30 +591,30 @@ public class Decoder {
                 }
                 surfaceHolder.unlockCanvasAndPost(c);
               } else {
-                MainActivity mainActivity = (MainActivity) context;
-                if (videoBitmap == null) {
-                  w = GetFrameWidth(decoderHandle);
-                  h = GetFrameHeight(decoderHandle);
-                  videoBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
-                  mainActivity.getGLFrameRenderer().update(w, h);
+//                MainActivity mainActivity = (MainActivity) context;
+//                if (videoBitmap == null) {
+//                  w = GetFrameWidth(decoderHandle);
+//                  h = GetFrameHeight(decoderHandle);
+//                  videoBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
+//                  mainActivity.getGLFrameRenderer().update(w, h);
 //
 //                  try {
 //                    fileOutputStream = new FileOutputStream("sdcard/MVSS/LocalRecord/123.yuv");
 //                  } catch (FileNotFoundException e) {
 //                    Log.e(TAG, StringUtil.getStackTraceAsString(e));
 //                  }
-                }
+//                }
                 // 保存文件
 //                if (fileOutputStream != null) {
 //                  fileOutputStream.write(pixelBuffer, 0, canShow);
 //                }
-                byte[] y = new byte[w * h];
-                byte[] u = new byte[w * h / 4];
-                byte[] v = new byte[w * h / 4];
-                System.arraycopy(pixelBuffer, 0 , y, 0, w * h);
-                System.arraycopy(pixelBuffer, w * h, u, 0, w * h / 4);
-                System.arraycopy(pixelBuffer, w * h * 5 / 4, v, 0, w * h / 4);
-                mainActivity.getGLFrameRenderer().update(y, u, v);
+//                byte[] y = new byte[w * h];
+//                byte[] u = new byte[w * h / 4];
+//                byte[] v = new byte[w * h / 4];
+//                System.arraycopy(pixelBuffer, 0 , y, 0, w * h);
+//                System.arraycopy(pixelBuffer, w * h, u, 0, w * h / 4);
+//                System.arraycopy(pixelBuffer, w * h * 5 / 4, v, 0, w * h / 4);
+//                mainActivity.getGLFrameRenderer().update(y, u, v);
               }
             }
           } else {  // 智能解码或者硬件解码
@@ -820,7 +830,7 @@ public class Decoder {
     }
   }
 
-  private static native long DecoderInit(int payloadType, boolean rgbMode);
+  private static native long DecoderInit(int payloadType, boolean rgbMode, Object nativeWindow);
 
   private static native void DecoderUninit(long decoderHandle);
 

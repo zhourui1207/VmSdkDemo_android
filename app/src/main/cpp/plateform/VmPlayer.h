@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-VMPLAYER_API bool CALL_METHOD VmPlayer_DecoderInit(unsigned payloadType, bool isRGB, long &decoderHandle);
+VMPLAYER_API bool CALL_METHOD VmPlayer_DecoderInit(unsigned payloadType, bool isRGB, long &decoderHandle, void *nativeWindowType);
 VMPLAYER_API void CALL_METHOD VmPlayer_DecoderUninit(long decoderHandle);
 VMPLAYER_API bool CALL_METHOD VmPlayer_DecodeNalu(long decoderHandle, const char *inData,
                                                   int inLen, char *outData, int &outLen);

@@ -3,11 +3,11 @@
 //
 
 #include "VmPlayer.h"
-#include "Decoder.h"
+#include "../encdec/Decoder.h"
 
-VMPLAYER_API bool CALL_METHOD VmPlayer_DecoderInit(unsigned payloadType, bool isRGB, long &decoderHandle) {
+VMPLAYER_API bool CALL_METHOD VmPlayer_DecoderInit(unsigned payloadType, bool isRGB, long &decoderHandle, void* nativeWindowType) {
   Dream::Decoder* pDecoder = new Dream::Decoder();
-  if (!pDecoder->Init(payloadType, isRGB)) {
+  if (!pDecoder->Init(payloadType, isRGB, nativeWindowType)) {
     delete pDecoder;
     return false;
   }

@@ -9,7 +9,7 @@
 #ifndef PRINTTIMER_H_
 #define PRINTTIMER_H_
 
-
+#include "public/platform.h"
 #include <chrono>
 #include <stdio.h>
 
@@ -17,11 +17,11 @@ namespace Dream {
 
 class PrintTimer {
 public:
-  PrintTimer(const std::string& name = "") {
+  PrintTimer(const std::string& name = ""): _name(name) {
     _millSeconds = getCurrentTimeStamp();
   }
   virtual ~PrintTimer() {
-    printf("计时器[%s]耗时[%zd]\n", _name.c_str(), getCurrentTimeStamp() - _millSeconds);
+    LOGW("PrintTimer", "计时器[%s]耗时[%zd]\n", _name.c_str(), getCurrentTimeStamp() - _millSeconds);
   }
 
 private:

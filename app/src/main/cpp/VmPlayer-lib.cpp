@@ -16,9 +16,11 @@
  */
 
 #include <Android/log.h>
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
 #include <jni.h>
 
-#include "encdec/VmPlayer.h"
+#include "plateform/VmPlayer.h"
 
 extern "C" {
 }
@@ -96,15 +98,15 @@ extern "C" {
 //
 //}
 
-int a = 0;
-
 // 接口函数-------------------------------------------------------------------------
 extern "C" {
-jlong Java_com_jxlianlian_masdk_core_Decoder_DecoderInit(JNIEnv *env, jobject ob, jint payloadType, jboolean isRGB) {
-  long decoderHandle = 0;
 
+jlong Java_com_jxlianlian_masdk_core_Decoder_DecoderInit(JNIEnv *env, jobject ob, jint payloadType, jboolean isRGB, jobject nativeWindow) {
+  long decoderHandle = 0;
   LOGI("Java_com_jxlianlian_masdk_VmPlayer_DecoderInit(%zd)", payloadType);
-  bool ret = VmPlayer_DecoderInit(payloadType, isRGB, decoderHandle);
+  ANativeWindow* pNativeWindow = ANativeWindow_fromSurface(env, nativeWindow);
+  LOGI("format=(%d) width=(%d) height=(%d)", ANativeWindow_getFormat(pNativeWindow), ANativeWindow_getWidth(pNativeWindow), ANativeWindow_getHeight(pNativeWindow));
+  bool ret = VmPlayer_DecoderInit(payloadType, isRGB, decoderHandle, (void*)pNativeWindow);
   if (!ret) {
     decoderHandle = 0;
   }
