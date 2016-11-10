@@ -19,10 +19,26 @@
 
   <SurfaceView
       android:layout_width="match_parent"
-      android:layout_height="200dp"
-      android:layout_marginTop="20dp"
+      android:layout_height="180dp"
+      android:layout_marginTop="0dp"
       android:layout_alignParentLeft="true"
       android:id="@+id/surfaceView"/>
+
+  <SurfaceView
+      android:layout_width="match_parent"
+      android:layout_height="180dp"
+      android:layout_marginTop="5dp"
+      android:layout_below="@+id/surfaceView"
+      android:layout_alignParentLeft="true"
+      android:id="@+id/surfaceView2"/>
+
+  <SurfaceView
+      android:layout_width="match_parent"
+      android:layout_height="180dp"
+      android:layout_marginTop="5dp"
+      android:layout_below="@+id/surfaceView2"
+      android:layout_alignParentLeft="true"
+      android:id="@+id/surfaceView3"/>
 
   <!--<android.opengl.GLSurfaceView-->
       <!--android:layout_width="match_parent"-->
@@ -35,10 +51,10 @@
       android:text="播放声音"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_below="@+id/surfaceView"
+      android:layout_below="@+id/surfaceView3"
       android:layout_toRightOf="@+id/sample_text"
       android:layout_marginLeft="29dp"
-      android:layout_marginTop="33dp"
+      android:layout_marginTop="5dp"
       android:id="@+id/button"/>
 
   <Button
@@ -47,6 +63,6 @@
       android:layout_height="wrap_content"
       android:layout_below="@+id/button"
       android:layout_alignLeft="@+id/button"
-      android:layout_marginTop="20dp"
+      android:layout_marginTop="5dp"
       android:id="@+id/record"/>
 </RelativeLayout>

@@ -1,6 +1,5 @@
 package com.jxlianlian.vmnetsdktest;
 
-import android.opengl.GLSurfaceView;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -27,7 +26,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
   private String TAG = "MainActivity";
 
   private static SurfaceView surfaceView;
-  private GLSurfaceView glSurfaceView;
+  private SurfaceView surfaceView2;
+  private SurfaceView surfaceView3;
   GLFrameRenderer mGLFRenderer;
   private Button button;
   private Button record;
@@ -110,6 +110,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     setContentView(R.layout.activity_main);
 
     surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+    surfaceView2 = (SurfaceView) findViewById(R.id.surfaceView2);
+    surfaceView3 = (SurfaceView) findViewById(R.id.surfaceView3);
+
     button = (Button) findViewById(R.id.button);
 //    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
 
@@ -213,8 +216,12 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected void onPostExecute(Void aVoid) {
       player = new VmPlayer();
-      player.startRealplay("201607201402389091", 1, true, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+      player.startRealplay("201607201402389091", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
+      VmPlayer player2 = new VmPlayer();
+      player2.startRealplay("201607201402389091", 1, true, 2, false, false, surfaceView2.getHolder(), MainActivity.this);
 //      player.startRealplay("201611100925191732", 1, true, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+      VmPlayer player3 = new VmPlayer();
+      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
     }
   }
 
