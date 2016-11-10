@@ -176,8 +176,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected Void doInBackground(Void... voids) {
       VmNet.init(10);
-      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
-//      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+//      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
+      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
       try {
         Thread.sleep(2000);
       } catch (InterruptedException e) {
@@ -213,8 +213,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected void onPostExecute(Void aVoid) {
       player = new VmPlayer();
-//      player.startRealplay("201607201402389091", 1, true, 2, false, surfaceView.getHolder(), MainActivity.this);
-      player.startRealplay("201610111654538071", 1, false, 2, false, surfaceView.getHolder(), MainActivity.this);
+      player.startRealplay("201607201402389091", 1, true, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+//      player.startRealplay("201611100925191732", 1, true, 2, false, false, surfaceView.getHolder(), MainActivity.this);
     }
   }
 

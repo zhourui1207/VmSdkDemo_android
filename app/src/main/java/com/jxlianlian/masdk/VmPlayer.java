@@ -44,6 +44,7 @@ public class VmPlayer {
   private int endTime;
 
   private int decodeType;
+  private boolean closeOpengles = false;
   private boolean openAudio = false;
 
   private SurfaceHolder surfaceHolder;
@@ -107,13 +108,14 @@ public class VmPlayer {
    * @param channelId 通道号
    * @param isSub 是否子码流
    * @param decodeType 解码类型
+   * @param closeOpengles 是否强制关闭opengles
    * @param openAudio 是否打开音频
    * @param surfaceHolder 播放页面
    * @param context 播放页面上下文
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
    */
   public synchronized boolean startRealplay(String fdId, int channelId, boolean isSub, int
-      decodeType, boolean openAudio, SurfaceHolder surfaceHolder, Context context) {
+      decodeType, boolean closeOpengles, boolean openAudio, SurfaceHolder surfaceHolder, Context context) {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
@@ -122,6 +124,7 @@ public class VmPlayer {
     this.channelId = channelId;
     this.isSub = isSub;
     this.decodeType = decodeType;
+    this.closeOpengles = closeOpengles;
     this.openAudio = openAudio;
     this.surfaceHolder = surfaceHolder;
     this.context = context;
@@ -336,7 +339,7 @@ public class VmPlayer {
         videoStreamId = streamIdHolder.getStreamId();
         // 视频开始解码
         if (videoDecoder == null) {
-          videoDecoder = new Decoder(decodeType, true, surfaceHolder, context);
+          videoDecoder = new Decoder(decodeType, closeOpengles, true, surfaceHolder, context);
         } else {
           videoDecoder.startPlay();
         }
@@ -352,7 +355,7 @@ public class VmPlayer {
         audioStreamId = streamIdHolder.getStreamId();
         // 音频开始解码
         if (audioDecoder == null) {
-          audioDecoder = new Decoder(decodeType, openAudio, surfaceHolder, context);
+          audioDecoder = new Decoder(decodeType, closeOpengles, openAudio, surfaceHolder, context);
         } else if (openAudio) {
           audioDecoder.startPlay();
         }

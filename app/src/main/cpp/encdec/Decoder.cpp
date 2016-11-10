@@ -11,52 +11,13 @@
 
 namespace Dream {
 
-  static const char vertexShader[] = {
-      "attribute vec4 aPosition;\n"
-          " attribute vec2 aTexCoord;\n"
-          " varying vec2 vTextureCoord;\n"
-          " void main() {\n"
-          " gl_Position = aPosition;\n"
-          " vTextureCoord = aTexCoord;\n"
-          "}\n"
-  };
-
-  static const char fragmentShader_yuv420p[] = {
-      "precision mediump float;\n"
-          "uniform sampler2D Ytex;\n"
-          "uniform sampler2D Utex;\n"
-          "uniform sampler2D Vtex;\n"
-          "varying vec2 vTextureCoord;\n"
-          "void main(void) {\n"
-          " float nx,ny,r,g,b,y,u,v;\n"
-          " mediump vec4 txl,ux,vx;"
-          " nx=vTextureCoord[0];\n"
-          " ny=vTextureCoord[1];\n"
-          " y=texture2D(Ytex,vec2(nx,ny)).r;\n"
-          " u=texture2D(Utex,vec2(nx,ny)).r;\n"
-          " v=texture2D(Vtex,vec2(nx,ny)).r;\n"
-          " y=1.1643*(y-0.0625);\n"
-          " u=u-0.5;\n"
-          " v=v-0.5;\n"
-          " r=y+1.5958*v;\n"
-          " g=y-0.39173*u-0.81290*v;\n"
-          " b=y+2.017*u;\n"
-          " gl_FragColor=vec4(r,g,b,1.0);\n"
-          "}\n"
-  };
-
-  static float vertice_buffer[8] = {-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f};
-  static float fragment_buffer[8] = {0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f};
-
   Decoder::Decoder()
-      : _codecId(AV_CODEC_ID_H264), _inited(false), _isRGB(false), _codecContext(nullptr),
+      : _codecId(AV_CODEC_ID_H264), _inited(false), _codecContext(nullptr),
         _codecParserContext(nullptr), _frame(nullptr), _width(0), _height(0), colortab(nullptr),
         u_b_tab(
             nullptr), u_g_tab(nullptr), v_g_tab(nullptr), v_r_tab(nullptr), rgb_2_pix(nullptr),
         r_2_pix(
-            nullptr), g_2_pix(nullptr), b_2_pix(nullptr), _program(0), _position(0),
-        _coord(0), _y(0), _u(0), _v(0), _fbo(0), _rb(0), _display(0), _surface(0), _colorBuffer(0),
-        _nativeWindowType(0) {
+            nullptr), g_2_pix(nullptr), b_2_pix(nullptr) {
 
   }
 
@@ -64,10 +25,9 @@ namespace Dream {
     Uninit();
   }
 
-  bool Decoder::Init(unsigned payloadType, bool isRGB, void *nativeWindowType) {
+  bool Decoder::Init(unsigned payloadType) {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    _nativeWindowType = (EGLNativeWindowType) nativeWindowType;
     static bool isRegisterAll = false;
     if (!isRegisterAll) {
 //      int ret = SDL_VideoInit(NULL);
@@ -82,10 +42,7 @@ namespace Dream {
       return true;
     }
 
-    _isRGB = isRGB;
-    if (_isRGB) {
-      CreateYUVTab_16();
-    }
+    CreateYUVTab_16();
 
     if (payloadType == MEDIA_PAYLOAD_H265) {
       _codecId = AV_CODEC_ID_HEVC;
@@ -129,12 +86,6 @@ namespace Dream {
     // 初始化包
     av_init_packet(&avPacket);
 
-    _display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (_display == EGL_NO_DISPLAY) {
-      __android_log_print(ANDROID_LOG_ERROR, "GLES", "display failed");
-    }
-
-
     _inited = true;
     return _inited;
   }
@@ -161,9 +112,7 @@ namespace Dream {
       _codecContext = nullptr;
     }
 
-    if (_isRGB) {
-      DeleteYUVTab();
-    }
+    DeleteYUVTab();
 
     _inited = false;
   }
@@ -173,309 +122,97 @@ namespace Dream {
     for (i = 0; i < ysize; i++) {
       memcpy(pDataOut + i * xsize, buf + /*(ysize-i)*/i * wrap, xsize);
     }
-
   }
 
-  bool Decoder::DecodeNalu(const char *inData, int inLen, char *outData, int &outLen) {
+  bool Decoder::DecodeNalu2RGB(const char *inData, int inLen, char *outData, int &outLen, int &width, int &height, int &framerate) {
     if (!_inited || nullptr == _codecContext || nullptr == _codecParserContext) {
       return false;
     }
 
-    PrintTimer timer("DecodeNalu");
+//    PrintTimer timer("DecodeNalu2RGB");
+    int ret = DecodeNalu(inData, inLen);
+    if (ret != 0) {
+      return false;
+    }
+
+    width = _width;
+    height = _height;
+    framerate = _framerate;
+    int rgbLen = _width * _height * 2;
+    if (rgbLen > outLen) {
+      LOGE(TAG, "输出缓冲大小[%d]过小，RGB数据缓冲大小[%d]\n", outLen, rgbLen);
+      return true;
+    }
+    outLen = rgbLen;
+    DisplayYUV_16((unsigned int *) outData, _frame->data[0], _frame->data[1], _frame->data[2],
+                  _width, _height, _frame->linesize[0], _frame->linesize[1], _width);
+    return true;
+  }
+
+  bool Decoder::DecodeNalu2YUV(const char *inData, int inLen, char *outYData,
+                               int &outYLen, char *outUData, int &outULen, char *outVData,
+                               int &outVLen, int &width, int &height, int &framerate) {
+    if (!_inited || nullptr == _codecContext || nullptr == _codecParserContext) {
+      return false;
+    }
+
+//    PrintTimer timer("DecodeNalu2YUV");
+    int ret = DecodeNalu(inData, inLen);
+    if (ret != 0) {
+      return false;
+    }
+
+    width = _width;
+    height = _height;
+    framerate = _framerate;
+
+    int yL = _width * _height;
+    int uvL = _width * _height / 4;
+
+    if (outYLen < yL || outULen < uvL || outVLen < uvL) {
+      LOGE(TAG, "yuv输出缓冲大小过小\n");
+      return true;
+    }
+
+    outYLen = yL;
+    outULen = outVLen = uvL;
+
+    pgm_save2(_frame->data[0], _frame->linesize[0], _width, _height, (uint8_t *) outYData);
+    pgm_save2(_frame->data[1], _frame->linesize[1], _width / 2, _height / 2, (uint8_t *) outUData);
+    pgm_save2(_frame->data[2], _frame->linesize[2], _width / 2, _height / 2, (uint8_t *) outVData);
+
+    return true;
+  }
+
+  int Decoder::DecodeNalu(const char *inData, int inLen) {
+    int ret = -1;
     if (inLen > 0) {
       avPacket.data = (uint8_t *) inData;
       avPacket.size = inLen;
 
-      __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                          "bit_rate=%lld, width=%d, height=%d\n",
-                          _codecContext->bit_rate, _codecContext->width, _codecContext->height);
+      ret = avcodec_send_packet(_codecContext, &avPacket);
 
-      __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                          "bit_rate=%lld, width=%d, height=%d, framenum=%d, den=%d",
-                          _codecContext->bit_rate, _codecContext->width, _codecContext->height,
-                          _codecContext->framerate.num, _codecContext->framerate.den);
+      if (ret != 0) {
+        printf("输入包失败！\n");
+        return 0;
+      }
 
-      __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                          "bit_rate=%lld",
-                          _codecContext->bit_rate);
-      __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                          "framenum=%d, den=%d",
-                          _codecContext->framerate.num, _codecContext->framerate.den);
+      ret = avcodec_receive_frame(_codecContext, _frame);
 
-      __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame", "width=%d, height=%d", _codecContext->width, _codecContext->height);
+      if (ret == 0) {
+        _width = _frame->width;
+        _height = _frame->height;
 
-      if (avPacket.size > 0) {
-        int ret = 0;
-        {
-          PrintTimer timer1("avcodec_send_packet");
-          ret = avcodec_send_packet(_codecContext, &avPacket);
-        }
-
-        if (ret != 0) {
-          printf("输入包失败！\n");
-          return false;
-        }
-
-        {
-          PrintTimer timer2("avcodec_receive_frame");
-          ret = avcodec_receive_frame(_codecContext, _frame);
-        }
-
-        __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                            "bit_rate=%d, width=%d, height=%d, framenum=%d, den=%d",
-                            _codecContext->bit_rate, _codecContext->width, _codecContext->height,
-                            _codecContext->framerate.num, _codecContext->framerate.den);
-
-        __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                            "bit_rate=%d",
-                            _codecContext->bit_rate);
-        __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame",
-                            "framenum=%d, den=%d",
-                            _codecContext->framerate.num, _codecContext->framerate.den);
-
-        __android_log_print(ANDROID_LOG_ERROR, "avcodec_receive_frame", "width=%d, height=%d", _codecContext->width, _codecContext->height);
-
+        // LOGE(TAG, "_codecContext->framerate.den=%d\n", _codecContext->framerate.num);
         if (_codecContext->framerate.den != 0 && _codecContext->framerate.num != 0) {
           _framerate = _codecContext->framerate.num / _codecContext->framerate.den;
         } else {
           _framerate = 25;
         }
 
-        if (ret == 0) {
-          _width = _frame->width;
-          _height = _frame->height;
-
-//          __android_log_print(ANDROID_LOG_WARN, "SDL_UpdateYUVTexture", "ret=%d", ret);
-
-          //SDL_UnlockTexture(sdl_texture);
-
-          if (_isRGB) {
-            PrintTimer timer("cpu");
-            DisplayYUV_16((unsigned int *) outData, _frame->data[0], _frame->data[1],
-                          _frame->data[2],
-                          _codecContext->width, _codecContext->height, _frame->linesize[0],
-                          _frame->linesize[1], _codecContext->width);
-          } else {
-//            int yuvLen = _codecContext->width * _codecContext->height * 3 / 2;
-//            unsigned char *yuvData = new unsigned char[yuvLen];
-//            pgm_save2(_frame->data[0], _frame->linesize[0], _codecContext->width,
-//                      _codecContext->height, (uint8_t*)outData);
-//            pgm_save2(_frame->data[1], _frame->linesize[1], _codecContext->width / 2,
-//                      _codecContext->height / 2,
-//                      (uint8_t*)outData + _codecContext->width * _codecContext->height);
-//            pgm_save2(_frame->data[2], _frame->linesize[2], _codecContext->width / 2,
-//                      _codecContext->height / 2,
-//                      (uint8_t*)outData + _codecContext->width * _codecContext->height * 5 / 4);
-            int width = _frame->width;
-            int height = _frame->height;
-            {
-
-
-              if (_surface == 0) {
-
-                const EGLint pi32ConfigAttribs[] =
-                    {
-                        EGL_LEVEL, 0,
-//                        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-                        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-                        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-                        EGL_NATIVE_RENDERABLE, EGL_FALSE,
-                        EGL_DEPTH_SIZE, EGL_DONT_CARE,
-//                      EGL_RED_SIZE,   16,
-//                      EGL_GREEN_SIZE, 16,
-//                      EGL_BLUE_SIZE,  16,
-//                      EGL_ALPHA_SIZE, 16,
-                        EGL_NONE
-                    };
-
-                const EGLint param[] = {
-                    EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-                    EGL_NONE
-                };
-
-                EGLint iConfigs;
-                eglChooseConfig(_display, param, nullptr, 0, &iConfigs);
-                int a[3] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
-
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "iConfigs=%d",
-                                    iConfigs);
-
-                EGLConfig config;
-                eglChooseConfig(_display, param, &config, 1, &iConfigs);
-
-                EGLint eglMajVers, eglMinVers;
-                bool initialize = eglInitialize(_display, &eglMajVers, &eglMinVers);
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "initialize=%d", initialize);
-                __android_log_print(ANDROID_LOG_WARN, "aaa", "EGL init with version %d.%d",
-                                    eglMajVers, eglMinVers);
-
-                const EGLint surfaceAttr[] = {
-                    EGL_WIDTH, width,
-                    EGL_HEIGHT, height,
-                    EGL_NONE
-                };
-//                _surface = eglCreatePbufferSurface(_display, config, surfaceAttr);
-
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_nativeWindowType=%d",
-                                    _nativeWindowType);
-                _surface = eglCreateWindowSurface(_display, config, _nativeWindowType, nullptr);
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_surface=%d", _surface);
-                //EGLSurface surface = eglCreateWindowSurface(display, config, nullptr, nullptr);
-
-                EGLContext context = eglCreateContext(_display, config, EGL_NO_CONTEXT, a);
-                EGLBoolean ret = eglMakeCurrent(_display, _surface, _surface, context);
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "ret=%d", ret);
-                // 初始化opengles2.0
-                _program = CreateProgram();
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "program=%d", _program);
-
-                _position = glGetAttribLocation(_program, "aPosition");
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_position=%d", _position);
-                _coord = glGetAttribLocation(_program, "aTexCoord");
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_coord=%d", _coord);
-                _y = glGetUniformLocation(_program, "Ytex");
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_y=%d", _y);
-                _u = glGetUniformLocation(_program, "Utex");
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_u=%d", _u);
-                _v = glGetUniformLocation(_program, "Vtex");
-                __android_log_print(ANDROID_LOG_WARN, "GLES", "_v=%d", _v);
-
-//                glGenFramebuffers(1, &_fbo);
-//                glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
-//                __android_log_print(ANDROID_LOG_WARN, "GLES", "_fbo=%d", _fbo);
-
-//                glGenRenderbuffers(1, &_rb);
-//                __android_log_print(ANDROID_LOG_WARN, "GLES", "_rb=%d", _rb);
-//                // 分配存储空间
-//                glBindRenderbuffer(GL_RENDERBUFFER, _rb);
-//                glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_ATTACHMENT, width, height);
-//                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, _rb);
-//                glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-//                glGenTextures(1, &_colorBuffer);
-//                glBindTexture(GL_TEXTURE_2D, _colorBuffer);
-//                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5,
-//                             nullptr);
-//                glBindTexture(GL_TEXTURE_2D, 0);
-//                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _colorBuffer, 0);
-//
-//                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//
-//                GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-//                if (status != GL_FRAMEBUFFER_COMPLETE) {
-//                  __android_log_print(ANDROID_LOG_WARN, "glCheckFramebufferStatus", "glCheckFramebufferStatus failed status=%d", status);
-//                }
-              }
-
-              if (_texYId <= 0) {
-                glGenTextures(1, &_texYId);
-              }
-
-//            __android_log_print(ANDROID_LOG_WARN, "_texYId", "_texYId=%d", _texYId);
-              glBindTexture(GL_TEXTURE_2D, _texYId);
-              glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE,
-                           GL_UNSIGNED_BYTE, _frame->data[0]);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//            glBindTexture(GL_TEXTURE_2D, 0);
-
-              if (_texUId <= 0) {
-                glGenTextures(1, &_texUId);
-              }
-
-              glBindTexture(GL_TEXTURE_2D, _texUId);
-//            __android_log_print(ANDROID_LOG_WARN, "_texUId", "_texUId=%d", _texUId);
-              glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width / 2, height / 2, 0, GL_LUMINANCE,
-                           GL_UNSIGNED_BYTE, _frame->data[1]);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//              glBindTexture(GL_TEXTURE_2D, 0);
-
-              if (_texVId <= 0) {
-                glGenTextures(1, &_texVId);
-              }
-              glBindTexture(GL_TEXTURE_2D, _texVId);
-//            __android_log_print(ANDROID_LOG_WARN, "_texVId", "_texVId=%d", _texVId);
-              glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width / 2, height / 2, 0, GL_LUMINANCE,
-                           GL_UNSIGNED_BYTE, _frame->data[2]);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//              glBindTexture(GL_TEXTURE_2D, 0);
-
-              glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-              glClear(GL_COLOR_BUFFER_BIT);
-
-              glUseProgram(_program);
-
-              glEnableVertexAttribArray(_position);
-              glVertexAttribPointer(_position, 2, GL_FLOAT, GL_FALSE, 8, vertice_buffer);
-              glEnableVertexAttribArray(_coord);
-              glVertexAttribPointer(_coord, 2, GL_FLOAT, GL_FALSE, 8, fragment_buffer);
-
-              // bind textures
-              glActiveTexture(GL_TEXTURE0);
-              glBindTexture(GL_TEXTURE_2D, _texYId);
-              glUniform1i(_y, 0);
-//            glBindTexture(GL_TEXTURE_2D, 0);
-
-              glActiveTexture(GL_TEXTURE1);
-              glBindTexture(GL_TEXTURE_2D, _texUId);
-              glUniform1i(_u, 1);
-//            glBindTexture(GL_TEXTURE_2D, 0);
-
-              glActiveTexture(GL_TEXTURE2);
-              glBindTexture(GL_TEXTURE_2D, _texVId);
-              glUniform1i(_v, 2);
-//            glBindTexture(GL_TEXTURE_2D, 0);
-
-
-//              glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _texYId, 0);
-//              glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _texUId, 1);
-//              glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _texVId, 2);
-
-
-//            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-//            glDrawArrays(GL_TRIANGLES,0,4);
-              glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-              eglSwapBuffers(_display, _surface);
-//              glFlush();
-//              glFinish();
-
-//            glBindFramebuffer(GL_FRAMEBUFFER, _vbo);
-//            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            }
-
-//            PrintTimer atimer("glReadPixels");
-//            glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, outData);
-
-//            glDisableVertexAttribArray(_position);
-//            glDisableVertexAttribArray(_coord);
-//
-//            glReadPixels();
-//            glUseProgram(0);
-//            delete[] yuvData;
-//            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-          }
-
-          outLen = _frame->width * _frame->height * 2;
-          return true;
-        }
-
       }
     }
-
-    return false;
+    return ret;
   }
 
 
@@ -603,37 +340,5 @@ namespace Dream {
       }
     }
   }
-
-  GLuint Decoder::CreateShader(int shaderType, const char *source) {
-    // 创建shader对象
-    GLuint shader = glCreateShader(shaderType);
-    // 把shader代码上传到gpu
-    glShaderSource(shader, 1, &source, nullptr);
-    // 编译shader
-    glCompileShader(shader);
-    __android_log_print(ANDROID_LOG_WARN, "GLES", "shader=%d", shader);
-    return shader;
-  }
-
-  // gpu程序
-  GLuint Decoder::CreateProgram() {
-    GLuint vShader = CreateShader(GL_VERTEX_SHADER, vertexShader);
-    GLuint tShader = CreateShader(GL_FRAGMENT_SHADER, fragmentShader_yuv420p);
-    GLuint program = glCreateProgram();
-    // shader跟程序绑定
-    glAttachShader(program, vShader);
-    glAttachShader(program, tShader);
-    // 链接程序
-    glLinkProgram(program);
-    // 解除绑定
-    glDetachShader(program, vShader);
-    glDetachShader(program, tShader);
-    // 删除shader
-    glDeleteShader(vShader);
-    glDeleteShader(tShader);
-
-    return program;
-  }
-
 
 }

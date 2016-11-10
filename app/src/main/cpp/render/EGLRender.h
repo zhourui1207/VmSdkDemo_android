@@ -19,9 +19,9 @@
 
 namespace Dream {
   class EGLRender {
-    static const char* TAG = "EGLRender";
+    const char* TAG = "EGLRender";
 
-    static const char SHADER_VERTEX[] = {
+    const char* SHADER_VERTEX = {
         "attribute vec4 aPosition;\n"
             " attribute vec2 aTexCoord;\n"
             " varying vec2 vTextureCoord;\n"
@@ -31,7 +31,7 @@ namespace Dream {
             "}\n"
     };
 
-    static const char SHADER_FRAGMENT_YUV420P[] = {
+    const char* SHADER_FRAGMENT_YUV420P = {
         "precision mediump float;\n"
             "uniform sampler2D Ytex;\n"
             "uniform sampler2D Utex;\n"
@@ -55,13 +55,13 @@ namespace Dream {
             "}\n"
     };
 
-    static float BUFFER_VERTICE[8] = {
+    const float BUFFER_VERTICE[8] = {
         -1.0f, -1.0f,
         1.0f, -1.0f,
         -1.0f, 1.0f,
         1.0f, 1.0f
     };
-    static float BUFFER_FRAGMENT[8] = {
+    const float BUFFER_FRAGMENT[8] = {
         0.0f, 1.0f,
         1.0f, 1.0f,
         0.0f, 0.0f,
@@ -73,7 +73,7 @@ namespace Dream {
 
     ~EGLRender();
 
-    bool Init(EGLNativeWindowType nativeWindow);
+    bool Init(void *nativeWindow);
 
     void Uninit();
 

@@ -4,27 +4,28 @@
 
 #include "../util/public/platform.h"
 #include "EGLRender.h"
+#include "../util/PrintTimer.h"
 
 namespace Dream {
 
   EGLRender::EGLRender() : _inited(false), _program(0), _position(-1), _coord(-1), _y(-1), _u(-1),
-                           _u(-1), _texYId(0), _texUId(0), _texVId(0), _display(0), _context(0),
+                           _v(-1), _texYId(0), _texUId(0), _texVId(0), _display(0), _context(0),
                            _surface(0), _nativeWindow(0) {
 
   }
 
   EGLRender::~EGLRender() {
-
+    releaseResources();
   }
 
-  bool EGLRender::Init(EGLNativeWindowType nativeWindow) {
+  bool EGLRender::Init(void *nativeWindow) {
     std::lock_guard<std::mutex> lock(_mutex);
     if (_inited) {
       return true;
     }
 
     // 获取原生窗口
-    _nativeWindow = nativeWindow;
+    _nativeWindow = (EGLNativeWindowType)nativeWindow;
 
     // 获取默认显卡
     _display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -84,7 +85,7 @@ namespace Dream {
       return false;
     }
 
-    // 渲染上下文、显卡、缓冲关联
+    // 这里必须要注意，该函数会使该线程于上下文绑定，所以调用绘制时，必须是在同一个线程中调用!
     if (!eglMakeCurrent(_display, _surface, _surface, _context)) {
       LOGE(TAG, "eglMakeCurrent failed!\n");
       releaseResources();
@@ -114,6 +115,7 @@ namespace Dream {
 
     LOGW(TAG, "EGLRender init success.\n");
     _inited = true;
+    return _inited;
   }
 
   void EGLRender::Uninit() {
@@ -132,6 +134,7 @@ namespace Dream {
       return false;
     }
 
+//    PrintTimer timer("DrawYUV");
     bool execute = executeProgram(yData, yLen, uData, uLen, vData, vLen, width, height);
     if (execute) {
       eglSwapBuffers(_display, _surface);
@@ -145,8 +148,10 @@ namespace Dream {
       return false;
     }
 
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);  // 打包时不对齐
     bool execute = executeProgram(yData, yLen, uData, uLen, vData, vLen, width, height);
     if (execute) {
+      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, outRgbData);
       outRgbLen = width*height*2;
     }
@@ -163,7 +168,6 @@ namespace Dream {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 
     glBindTexture(GL_TEXTURE_2D, _texUId);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width / 2, height / 2, 0, GL_LUMINANCE,
@@ -187,6 +191,11 @@ namespace Dream {
 
     // 开始执行程序
     glUseProgram(_program);
+    int error = glGetError();
+    if (error != GL_NO_ERROR) {
+      LOGE(TAG, "glUseProgram failed, error=%d\n", error);
+      return false;
+    }
 
     // 传参
     glEnableVertexAttribArray(_position);
@@ -207,14 +216,18 @@ namespace Dream {
     glBindTexture(GL_TEXTURE_2D, _texVId);
     glUniform1i(_v, 2);
 
-    // 执行完毕
-    glUseProgram(0);
-
     // 绘图
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+//    glFinish();
+
+    glDisableVertexAttribArray(_position);
+    glDisableVertexAttribArray(_coord);
+
+    return true;
   }
 
   GLuint EGLRender::loadShader(int shaderType, const char *source) {
+    LOGW(TAG, "loadShader: %s\n", source);
     GLuint shader = glCreateShader(shaderType);
     // 把shader代码上传到gpu
     glShaderSource(shader, 1, &source, nullptr);
@@ -235,11 +248,24 @@ namespace Dream {
     }
     // 编译shader
     glCompileShader(vShader);
+    EGLint status = 0;
+    char errorinfo[100];
+    int errorlen = 0;
+    glGetShaderiv(vShader, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+      glGetShaderInfoLog(vShader, 100, &errorlen, errorinfo);
+      LOGE(TAG, "glCompileShader failed, error=%s\n", errorinfo);
+      glDeleteShader(vShader);
+      glDeleteShader(tShader);
+      return 0;
+    }
     glCompileShader(tShader);
-
-    EGLint error = glGetError();
-    if (error != GL_NO_ERROR) {
-      LOGE(TAG, "glCompileShader failed, error=%d\n", error);
+    glGetShaderiv(tShader, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+      glGetShaderInfoLog(vShader, 100, &errorlen, errorinfo);
+      LOGE(TAG, "glCompileShader failed, error=%s\n", errorinfo);
+      glDeleteShader(vShader);
+      glDeleteShader(tShader);
       return 0;
     }
 
@@ -248,7 +274,7 @@ namespace Dream {
     // shader跟程序绑定
     glAttachShader(program, vShader);
     glAttachShader(program, tShader);
-    error = glGetError();
+    int error = glGetError();
     if (error != GL_NO_ERROR) {
       LOGE(TAG, "glAttachShader failed, error=%d\n", error);
       return 0;
@@ -256,9 +282,12 @@ namespace Dream {
 
     // 链接程序
     glLinkProgram(program);
-    error = glGetError();
-    if (error != GL_NO_ERROR) {
-      LOGE(TAG, "glLinkProgram failed, error=%d\n", error);
+    glGetProgramiv(program, GL_LINK_STATUS, &status);
+    if (status != GL_TRUE) {
+      glGetProgramInfoLog(program, 100, &errorlen, errorinfo);
+      LOGE(TAG, "glLinkProgram failed, error=%s\n", errorinfo);
+      glDeleteShader(vShader);
+      glDeleteShader(tShader);
       return 0;
     }
 
@@ -302,6 +331,7 @@ namespace Dream {
       return false;
     }
 
+    LOGW(TAG, "position=[%d], coord=[%d], y=[%d], u=[%d], v=[%d]\n", _position, _coord, _y, _u, _v);
     return true;
   }
 
@@ -319,6 +349,7 @@ namespace Dream {
       LOGE(TAG, "glGenTextures failed!\n");
       return false;
     }
+    LOGW(TAG, "texYId=[%d], texUId=[%d], texVId=[%d]\n", _texYId, _texUId, _texVId);
     return true;
   }
 

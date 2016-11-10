@@ -31,25 +31,24 @@ extern "C" {
 namespace Dream {
 
   class Decoder {
+  private:
+    const char *TAG = "Decoder";
+
   public:
     Decoder();
 
     ~Decoder();
 
 
-    bool Init(unsigned payloadType,  bool isRGB, void *nativeWindowType);
+    bool Init(unsigned payloadType);
 
     void Uninit();
 
-    bool DecodeNalu(const char *inData, int inLen, char *outData,
-                        int &outLen);
+    bool DecodeNalu2RGB(const char *inData, int inLen, char *outData, int &outLen, int &width,
+                        int &height, int &framerate);
 
-    bool DecodeNalu2YUV(const char *inData, int inLen, int &width, int &height, char *outYData,
-                        int &outYLen, char *outUData, int &outULen, char *outVData, int &outVLen);
-
-    bool RenderInit(EGLNativeWindowType surface);
-
-    bool RenderUninit();
+    bool DecodeNalu2YUV(const char *inData, int inLen, char *outYData, int &outYLen, char *outUData,
+                        int &outULen, char *outVData, int &outVLen, int &width, int &height, int &framerate);
 
     AVCodecID CodecId() {
       return _codecId;
@@ -64,6 +63,8 @@ namespace Dream {
     }
 
   private:
+    int DecodeNalu(const char *inData, int inLen);
+
     void DeleteYUVTab();
 
     void CreateYUVTab_16();
@@ -72,14 +73,9 @@ namespace Dream {
                        unsigned char *v, int width, int height, int src_ystride, int src_uvstride,
                        int dst_ystride);
 
-    GLuint CreateProgram();
-
-    GLuint CreateShader(int shaderType, const char *source);
-
   private:
     AVCodecID _codecId;
     bool _inited;
-    bool _isRGB;
     AVCodecContext *_codecContext;
     AVCodecParserContext *_codecParserContext;
     AVFrame *_frame;
@@ -99,26 +95,6 @@ namespace Dream {
     unsigned int *r_2_pix;
     unsigned int *g_2_pix;
     unsigned int *b_2_pix;
-
-    GLuint _program;
-    GLint _position;
-    GLint _coord;
-    GLint _y;
-    GLint _u;
-    GLint _v;
-    GLuint _rb;
-    GLuint _colorBuffer;
-
-    GLuint _texYId;
-    GLuint _texUId;
-    GLuint _texVId;
-
-    GLuint _fbo;
-
-    EGLDisplay _display;
-    EGLSurface _surface;
-
-    EGLNativeWindowType _nativeWindowType;
   };
 
 }

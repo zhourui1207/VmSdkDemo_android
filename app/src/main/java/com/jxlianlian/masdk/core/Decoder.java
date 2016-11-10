@@ -11,6 +11,7 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 
 import com.jxlianlian.masdk.VmType;
@@ -58,6 +59,8 @@ public class Decoder {
   private PlayThread playThread;
   private RecordThread recordThread;
 
+  private boolean closeOpengles = false;
+
   private Decoder() {
 
   }
@@ -66,9 +69,11 @@ public class Decoder {
     this.decodeType = decodeType;
   }
 
-  public Decoder(int decodeType, boolean autoPlay, SurfaceHolder surfaceHolder, Context context) {
+  public Decoder(int decodeType, boolean closeOpengles, boolean autoPlay, SurfaceHolder
+      surfaceHolder, Context context) {
     Log.i(TAG, "构造解码器 decodeType=" + decodeType + ", autoPlay=" + autoPlay);
     this.decodeType = decodeType;
+    this.closeOpengles = closeOpengles;
     this.surfaceHolder = surfaceHolder;
     this.context = context;
     if (autoPlay) {
@@ -94,7 +99,7 @@ public class Decoder {
         handleFrameThread.start();
       }
       if (playThread == null) {
-        playThread = new PlayThread(decodeType, surfaceHolder);
+        playThread = new PlayThread(decodeType, closeOpengles, surfaceHolder);
         playThread.start();
       }
     } catch (Exception e) {
@@ -366,13 +371,18 @@ public class Decoder {
   // 播放线程
   private class PlayThread extends Thread {
     private int decodeType;
+    private boolean closeOpengles = false;
     private SurfaceHolder surfaceHolder;
     private boolean isTv = false;
 
     // 硬件解码相关
     private MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-    private int w = 1280;
+    private int w = 1080;
     private int h = 720;
+    // 帧率
+    private int framerate = 25;
+    // 帧间隔 默认40毫秒
+    private long interval = 40;
     private String mime = "video/avc";
     private MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, w, h);
     private MediaCodec mediaCodecDecoder;  //硬解码器
@@ -380,21 +390,22 @@ public class Decoder {
 
     // 软件解码相关
     private long decoderHandle;
-    private boolean RGBMode = true;  // 使用rgb模式，效率较低，但适用范围较广
     private byte[] pixelBuffer;
-    private ByteBuffer rgbBuffer;
-    private Bitmap videoBitmap;
-    private Bitmap screenshotBitmap;
 
     // 音频相关
     private AudioTrack audioDecoder;
+
+    // oepngles渲染
+    private boolean useOpengles = false;
 
     // 使用opengles时，从c++层返回的YUV数据
     private byte[] yBuffer;
     private byte[] uBuffer;
     private byte[] vBuffer;
 
-    boolean showed = false;
+    private FrameConfHolder frameConfHolder = new FrameConfHolder();
+
+    private boolean showed = false;
 
     private Display displayThread;
 
@@ -407,8 +418,9 @@ public class Decoder {
 
     }
 
-    public PlayThread(int decodeType, SurfaceHolder surfaceHolder) {
+    public PlayThread(int decodeType, boolean closeOpengles, SurfaceHolder surfaceHolder) {
       this.decodeType = decodeType;
+      this.closeOpengles = closeOpengles;
       this.surfaceHolder = surfaceHolder;
     }
 
@@ -440,24 +452,31 @@ public class Decoder {
         if (decoderHandle == 0) {
           // 判断是否支持open gl es 2.0
           if (context != null) {
+            Log.i(TAG, "支持OpenGLES2.0");
             if (OpenGLESUtil.detectOpenGLES20(context)) {
-              RGBMode = false;
-              Log.i(TAG, "支持OpenGLES2.0");
+              // 如果没有强制关闭opengles，那么就使用yuv渲染模式
+              if (!closeOpengles) {
+                Log.i(TAG, "开启yuv渲染模式");
+                useOpengles = true;
+              }
             } else {
               Log.i(TAG, "不支持OpenGLES2.0");
             }
           }
 
-          decoderHandle = DecoderInit(payloadType, RGBMode, surfaceHolder.getSurface());
-          int size = 4096 * 2160 * 2;  // 最大支持4096 * 2160视频分辨率
-          // pixelBuffer接收解码数据的缓存
-          pixelBuffer = new byte[size];
-          for (int i = 0; i < size; ++i) {
-            pixelBuffer[i] = (byte) 0x00;
+          if (useOpengles) {  // 不使用opengles渲染
+            int ySize = w * h;
+            int uvSize = w * h / 4;
+            yBuffer = new byte[ySize];
+            uBuffer = new byte[uvSize];
+            vBuffer = new byte[uvSize];
+          } else {
+            int size = w * h * 2;
+            // pixelBuffer接收解码数据的缓存
+            pixelBuffer = new byte[size];
           }
-          // rgbBuffer可以知道写入的数据长度
-          rgbBuffer = ByteBuffer.wrap(pixelBuffer, 0, size);
 
+          decoderHandle = DecoderInit(payloadType);
           Log.i(TAG, "decoderHandle=" + decoderHandle);
         }
       } else {
@@ -469,11 +488,6 @@ public class Decoder {
               mediaCodecDecoder.start();
 
               inputBuffers = mediaCodecDecoder.getInputBuffers();
-
-              if (displayThread == null) {
-                displayThread = new Display();
-              }
-              displayThread.start();
             }
           } catch (Exception e) {
             if (decodeType == VmType.DECODE_TYPE_INTELL) {
@@ -482,6 +496,10 @@ public class Decoder {
             Log.e(TAG, StringUtil.getStackTraceAsString(e));
           }
         }
+      }
+      if (displayThread == null) {
+        displayThread = new Display();
+        displayThread.start();
       }
     }
 
@@ -525,7 +543,7 @@ public class Decoder {
       }
     }
 
-//    FileOutputStream fileOutputStream;
+    //    FileOutputStream fileOutputStream;
     @Override
     public void run() {
       Log.i(TAG, "解码线程开始...");
@@ -579,42 +597,76 @@ public class Decoder {
           if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {  // 软件解码
 
             int canShow;
-
-            canShow = DecodeNalu(decoderHandle, data, data.length, pixelBuffer);
-//            Log.e(TAG, "canShow=" + canShow);
-            if (canShow > 0) {
-              if (RGBMode) {
-                Canvas c = surfaceHolder.lockCanvas(null);
-                if (c != null) {
-                  draw(c, surfaceHolder.getSurfaceFrame().width(), surfaceHolder.getSurfaceFrame()
-                      .height());
+            if (useOpengles) {
+              canShow = DecodeNalu2YUV(decoderHandle, data, data.length, yBuffer, uBuffer,
+                  vBuffer, frameConfHolder);
+              if (canShow >= 0) {
+                int tmpWidth = frameConfHolder.getWidth() > 0 ? frameConfHolder.getWidth() : w;
+                int tmpHeight = frameConfHolder.getHeight() > 0 ? frameConfHolder.getHeight() : h;
+                int tmpFramerate = frameConfHolder.getFramerate();
+                if (tmpFramerate > 0 && framerate != tmpFramerate) {
+                  Log.w(TAG, "码率改变 " + framerate + " --> " + tmpFramerate);
+                  framerate = tmpFramerate;
+                  interval = 1000 / framerate;
                 }
-                surfaceHolder.unlockCanvasAndPost(c);
-              } else {
-//                MainActivity mainActivity = (MainActivity) context;
-//                if (videoBitmap == null) {
-//                  w = GetFrameWidth(decoderHandle);
-//                  h = GetFrameHeight(decoderHandle);
-//                  videoBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
-//                  mainActivity.getGLFrameRenderer().update(w, h);
-//
-//                  try {
-//                    fileOutputStream = new FileOutputStream("sdcard/MVSS/LocalRecord/123.yuv");
-//                  } catch (FileNotFoundException e) {
-//                    Log.e(TAG, StringUtil.getStackTraceAsString(e));
+                if (w != tmpWidth || h != tmpHeight) {
+                  w = tmpWidth;
+                  h = tmpHeight;
+                  Log.w(TAG, "解码图像宽高发生变化,重新生成缓冲大小, w=" + w + ", h=" + h);
+
+                  int ySize = w * h;
+                  int uvSize = w * h / 4;
+                  yBuffer = new byte[ySize];
+                  uBuffer = new byte[uvSize];
+                  vBuffer = new byte[uvSize];
+
+                  // 重新解一次码
+                  canShow = DecodeNalu2YUV(decoderHandle, data, data.length, yBuffer, uBuffer,
+                      vBuffer, frameConfHolder);
+                }
+                // 可以显示
+                if (canShow > 0 && displayThread != null) {
+                  // 异步处理
+                  YUVFrameData yuvFrameData = new YUVFrameData(yBuffer, uBuffer, vBuffer, w, h);
+                  displayThread.addBuffer(yuvFrameData);
+                }
+              }
+            } else {
+              canShow = DecodeNalu2RGB(decoderHandle, data, data.length, pixelBuffer,
+                  frameConfHolder);
+              if (canShow >= 0) {
+                int tmpWidth = frameConfHolder.getWidth() > 0 ? frameConfHolder.getWidth() : w;
+                int tmpHeight = frameConfHolder.getHeight() > 0 ? frameConfHolder.getHeight() : h;
+                int tmpFramerate = frameConfHolder.getFramerate();
+                if (tmpFramerate > 0 && framerate != tmpFramerate) {
+                  Log.w(TAG, "码率改变 " + framerate + " --> " + tmpFramerate);
+                  framerate = tmpFramerate;
+                  interval = 1000 / framerate;
+                }
+                if (w != tmpWidth || h != tmpHeight) {
+                  w = tmpWidth;
+                  h = tmpHeight;
+                  Log.w(TAG, "解码图像宽高发生变化,重新生成缓冲大小, w=" + w + ", h=" + h);
+                  int size = w * h * 2;
+                  // pixelBuffer接收解码数据的缓存
+                  pixelBuffer = new byte[size];
+//                  for (int i = 0; i < size; ++i) {
+//                    pixelBuffer[i] = (byte) 0x00;
 //                  }
-//                }
-                // 保存文件
-//                if (fileOutputStream != null) {
-//                  fileOutputStream.write(pixelBuffer, 0, canShow);
-//                }
-//                byte[] y = new byte[w * h];
-//                byte[] u = new byte[w * h / 4];
-//                byte[] v = new byte[w * h / 4];
-//                System.arraycopy(pixelBuffer, 0 , y, 0, w * h);
-//                System.arraycopy(pixelBuffer, w * h, u, 0, w * h / 4);
-//                System.arraycopy(pixelBuffer, w * h * 5 / 4, v, 0, w * h / 4);
-//                mainActivity.getGLFrameRenderer().update(y, u, v);
+
+                  // 重新解一次码
+                  canShow = DecodeNalu2RGB(decoderHandle, data, data.length, pixelBuffer,
+                      frameConfHolder);
+                }
+                // 可以显示
+                if (canShow > 0) {
+                  // 异步处理
+                  // draw(surfaceHolder);
+                  if (displayThread != null) {
+                    RGBFrameData rgbFrameData = new RGBFrameData(pixelBuffer, w, h);
+                    displayThread.addBuffer(rgbFrameData);
+                  }
+                }
               }
             }
           } else {  // 智能解码或者硬件解码
@@ -655,49 +707,134 @@ public class Decoder {
       Log.i(TAG, "解码线程结束...");
     }
 
-    private void draw(Canvas canvas, int screenWidth, int screenHeight) {
-      if (videoBitmap == null) {  // 创建显示位图
-        w = GetFrameWidth(decoderHandle);
-        h = GetFrameHeight(decoderHandle);
-        videoBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565);
-      }
-      rgbBuffer.rewind();
-      videoBitmap.copyPixelsFromBuffer(rgbBuffer);
-
-      // 适应surfaceview屏幕大小
-      float scaleWidth = ((float) screenWidth) / w;
-      float scaleHeight = ((float) screenHeight) / h;
-      Matrix matrix = new Matrix();
-      matrix.postScale(scaleWidth, scaleHeight);
-
-      //screenshotBitmap用来保存截图
-      screenshotBitmap = Bitmap.createBitmap(videoBitmap);
-
-      // 显示到画布
-      canvas.drawBitmap(videoBitmap, matrix, null);
-    }
-
     private class Display extends Thread {
+      private long renderHandle;
+      private int width;
+      private int height;
+      private Bitmap videoBitmap;
+      private ByteBuffer rgbBuffer;
+      private long lastDisplay;
+      // 解码出来后的数据队列
+      private BlockingBuffer frameBuffer = new BlockingBuffer(25, 20);  // 最多放延迟25帧，再多的话，内存会崩溃
+
+      public boolean addBuffer(Object object) {
+        return frameBuffer.addObjectForce(object);
+      }
+
+      private void drawRGB(SurfaceHolder surfaceHolder, byte[] frameData, int width, int height) {
+        if (this.width != width || this.height != height) {
+          this.width = width;
+          this.height = height;
+          videoBitmap = Bitmap.createBitmap(this.width, this.height, Bitmap.Config.RGB_565);
+        }
+        rgbBuffer = ByteBuffer.wrap(frameData, 0, frameData.length);
+        videoBitmap.copyPixelsFromBuffer(rgbBuffer);
+
+        Canvas canvas = surfaceHolder.lockCanvas(null);
+
+        if (canvas != null) {
+          // 适应surfaceview屏幕大小
+          float scaleWidth = ((float) surfaceHolder.getSurfaceFrame().width()) / w;
+          float scaleHeight = ((float) surfaceHolder.getSurfaceFrame().height()) / h;
+          Matrix matrix = new Matrix();
+          matrix.postScale(scaleWidth, scaleHeight);
+          // 显示到画布
+          canvas.drawBitmap(videoBitmap, matrix, null);
+        }
+
+        surfaceHolder.unlockCanvasAndPost(canvas);
+      }
+
+      @Override
+      protected void finalize() throws Throwable {
+        super.finalize();
+        releaseRender();
+      }
+
+      private void createRender() {
+        if (useOpengles && renderHandle == 0) {
+          renderHandle = RenderInit(surfaceHolder.getSurface());
+        }
+      }
+
+      private void releaseRender() {
+        if (renderHandle != 0) {
+          RenderUninit(renderHandle);
+          renderHandle = 0;
+        }
+      }
+
       @Override
       public void run() {
         Log.i(TAG, "显示线程开始...");
         while (isRunning && !isInterrupted()) {
-          if (mediaCodecDecoder != null && showed) {
+          boolean display = false;
+          if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {  // 使用软解码显示
             try {
-              int outIndex = mediaCodecDecoder.dequeueOutputBuffer(info, 40000);
-              if (outIndex >= 0) {
-                if (info.size > 0) {
-                  mediaCodecDecoder.releaseOutputBuffer(outIndex, true);
-                } else {
-                  mediaCodecDecoder.releaseOutputBuffer(outIndex, false);
-                }
+              FrameData frameData = (FrameData) frameBuffer.removeObjectBlocking();
+              int frameType = frameData.getFrameType();
+
+              if (frameType == FrameData.FRAME_TYPE_RGB) {
+                RGBFrameData rgbFrameData = (RGBFrameData) frameData;
+                drawRGB(surfaceHolder, rgbFrameData.getData(), rgbFrameData.getWidth(), rgbFrameData
+                    .getHeight());
+              } else if (frameType == FrameData.FRAME_TYPE_YUV) {
+                createRender();
+                YUVFrameData yuvFrameData = (YUVFrameData) frameData;
+                byte[] yData = yuvFrameData.getyData();
+                byte[] uData = yuvFrameData.getuData();
+                byte[] vData = yuvFrameData.getvData();
+                DrawYUV(renderHandle, yData, yData.length, uData, uData.length, vData, vData
+                    .length, yuvFrameData.getWidth(), yuvFrameData.getHeight());
               }
-            } catch (Exception e) {
-              Log.w(TAG, StringUtil.getStackTraceAsString(e));
-              releaseDecoder();
+              display = true;
+
+            } catch (InterruptedException e) {
+
+            }
+          } else {  // 硬件解码显示
+            if (mediaCodecDecoder != null) {
+              try {
+                int outIndex = mediaCodecDecoder.dequeueOutputBuffer(info, 0);
+                if (outIndex >= 0) {
+                  mediaCodecDecoder.releaseOutputBuffer(outIndex, true);
+//                  if (info.size > 0) {
+//                    mediaCodecDecoder.releaseOutputBuffer(outIndex, true);
+//                  } else {
+//                    mediaCodecDecoder.releaseOutputBuffer(outIndex, false);
+//                  }
+                  display = true;
+                }
+              } catch (Exception e) {
+                Log.w(TAG, StringUtil.getStackTraceAsString(e));
+                releaseDecoder();
+              }
             }
           }
+//          if (display && decodeType == VmType.DECODE_TYPE_SOFTWARE) {  // 硬件解码时，发现如果平滑处理会有问题，花屏
+            // 流畅显示的解决方案
+            // 当缓冲区帧过多时，不调用该流畅方案，即解码时尽量保证匀速
+            while (isRunning && !isInterrupted() && display && (frameBuffer.size() < 15) && lastDisplay > 0) {
+              // －10毫秒的是为了应对，网络波动，这样在网络先堵塞，后流畅的情况下，会在短时间内接收到大量包，如果还平滑的话会延时太大
+              if (System.nanoTime() - lastDisplay > (interval * 1000000 - 10000000)) {
+                lastDisplay = System.nanoTime();
+                break;
+              }
+              // 还是加上个挂起，增加一下cpu的使用率，这个时间不能太大，不然在arm环境下，线程竞争回cpu使用权会很慢
+              try {
+                sleep(2);
+              } catch (InterruptedException e) {
+                e.printStackTrace();
+              }
+            }
+
+            if (lastDisplay == 0) {
+              lastDisplay = System.nanoTime();
+            }
+//          }
+
         }
+        releaseRender();
         Log.i(TAG, "显示线程结束...");
       }
 
@@ -830,15 +967,30 @@ public class Decoder {
     }
   }
 
-  private static native long DecoderInit(int payloadType, boolean rgbMode, Object nativeWindow);
+  private static native long DecoderInit(int payloadType);
 
   private static native void DecoderUninit(long decoderHandle);
 
-  private static native int DecodeNalu(long decoderHandle, byte[] inData, int inLen, byte[] outData);
+  private static native int DecodeNalu2RGB(long decoderHandle, byte[] inData, int inLen, byte[]
+      outData, FrameConfHolder frameConfHolder);
+
+  private static native int DecodeNalu2YUV(long decoderHandle, byte[] inData, int inLen, byte[]
+      yData, byte[] uData, byte[] vData, FrameConfHolder frameConfHolder);
 
   private static native int GetFrameWidth(long decoderHandle);
 
   private static native int GetFrameHeight(long decoderHandle);
 
+  private static native long RenderInit(Surface surface);
+
+  private static native void RenderUninit(long renderHandle);
+
+  private static native int DrawYUV(long renderHandle, byte[] yData, int yLen, byte[] uData, int
+      uLen, byte[] vData, int vLen, int width, int height);
+
+  private static native int OfflineScreenRendering(long renderHandle, byte[] yData, int yLen,
+                                                   byte[] uData, int uLen, byte[] vData, int
+                                                       vLen, int width, int height, byte[]
+                                                       outData);
 }
 
