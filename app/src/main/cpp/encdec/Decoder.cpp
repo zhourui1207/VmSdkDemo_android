@@ -12,12 +12,10 @@
 namespace Dream {
 
   Decoder::Decoder()
-      : _codecId(AV_CODEC_ID_H264), _inited(false), _codecContext(nullptr),
-        _codecParserContext(nullptr), _frame(nullptr), _width(0), _height(0), colortab(nullptr),
-        u_b_tab(
-            nullptr), u_g_tab(nullptr), v_g_tab(nullptr), v_r_tab(nullptr), rgb_2_pix(nullptr),
-        r_2_pix(
-            nullptr), g_2_pix(nullptr), b_2_pix(nullptr) {
+      : _codecId(AV_CODEC_ID_H264), _inited(false), _codecContext(nullptr), _frame(nullptr),
+        _width(0), _height(0), colortab(nullptr), u_b_tab(nullptr), u_g_tab(nullptr),
+        v_g_tab(nullptr), v_r_tab(nullptr), rgb_2_pix(nullptr), r_2_pix(nullptr), g_2_pix(nullptr),
+        b_2_pix(nullptr) {
 
   }
 
@@ -62,13 +60,6 @@ namespace Dream {
       return false;
     }
 
-    // 初始化解析上下文
-    _codecParserContext = av_parser_init(_codecId);
-    if (!_codecParserContext) {
-      printf("无法初始化解析上下文\n");
-      return false;
-    }
-
     if (codec->capabilities & CODEC_CAP_TRUNCATED) {
       _codecContext->flags |= CODEC_FLAG_TRUNCATED;
     }
@@ -101,11 +92,6 @@ namespace Dream {
       _frame = nullptr;
     }
 
-    if (nullptr != _codecParserContext) {
-      av_parser_close(_codecParserContext);
-      _codecParserContext = nullptr;
-    }
-
     if (nullptr != _codecContext) {
       avcodec_close(_codecContext);
       av_free(_codecContext);
@@ -124,8 +110,9 @@ namespace Dream {
     }
   }
 
-  bool Decoder::DecodeNalu2RGB(const char *inData, int inLen, char *outData, int &outLen, int &width, int &height, int &framerate) {
-    if (!_inited || nullptr == _codecContext || nullptr == _codecParserContext) {
+  bool Decoder::DecodeNalu2RGB(const char *inData, int inLen, char *outData, int &outLen,
+                               int &width, int &height, int &framerate) {
+    if (!_inited || nullptr == _codecContext) {
       return false;
     }
 
@@ -152,7 +139,7 @@ namespace Dream {
   bool Decoder::DecodeNalu2YUV(const char *inData, int inLen, char *outYData,
                                int &outYLen, char *outUData, int &outULen, char *outVData,
                                int &outVLen, int &width, int &height, int &framerate) {
-    if (!_inited || nullptr == _codecContext || nullptr == _codecParserContext) {
+    if (!_inited || nullptr == _codecContext) {
       return false;
     }
 

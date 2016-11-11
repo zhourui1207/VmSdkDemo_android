@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -27,6 +28,12 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
   private static SurfaceView surfaceView;
   private SurfaceView surfaceView2;
+  private SurfaceView surfaceView4;
+  private SurfaceView surfaceView5;
+  private SurfaceView surfaceView6;
+  private SurfaceView surfaceView7;
+  private SurfaceView surfaceView8;
+  private SurfaceView surfaceView9;
   private SurfaceView surfaceView3;
   GLFrameRenderer mGLFRenderer;
   private Button button;
@@ -107,11 +114,19 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);  //保持屏幕常亮
     setContentView(R.layout.activity_main);
 
     surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
     surfaceView2 = (SurfaceView) findViewById(R.id.surfaceView2);
     surfaceView3 = (SurfaceView) findViewById(R.id.surfaceView3);
+    surfaceView4 = (SurfaceView) findViewById(R.id.surfaceView4);
+    surfaceView5 = (SurfaceView) findViewById(R.id.surfaceView5);
+    surfaceView6 = (SurfaceView) findViewById(R.id.surfaceView6);
+    surfaceView7 = (SurfaceView) findViewById(R.id.surfaceView7);
+    surfaceView8 = (SurfaceView) findViewById(R.id.surfaceView8);
+    surfaceView9 = (SurfaceView) findViewById(R.id.surfaceView9);
+
 
     button = (Button) findViewById(R.id.button);
 //    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
@@ -179,8 +194,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected Void doInBackground(Void... voids) {
       VmNet.init(10);
-//      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
-      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
+//      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
       try {
         Thread.sleep(2000);
       } catch (InterruptedException e) {
@@ -216,12 +231,33 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected void onPostExecute(Void aVoid) {
       player = new VmPlayer();
-      player.startRealplay("201607201402389091", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
+//      player.startRealplay("201607201402389091", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
+      player.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView3.getHolder(), MainActivity.this);
       VmPlayer player2 = new VmPlayer();
-      player2.startRealplay("201607201402389091", 1, true, 2, false, false, surfaceView2.getHolder(), MainActivity.this);
-//      player.startRealplay("201611100925191732", 1, true, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+//      player2.startRealplay("201607201402389091", 1, true, 2, false, false, surfaceView2.getHolder(), MainActivity.this);
+      player2.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView2.getHolder(), MainActivity.this);
       VmPlayer player3 = new VmPlayer();
-      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+      player3.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
+
+//      VmPlayer player4 = new VmPlayer();
+////      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player4.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView4.getHolder(), MainActivity.this);
+//      VmPlayer player5 = new VmPlayer();
+////      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player5.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView5.getHolder(), MainActivity.this);
+//      VmPlayer player6 = new VmPlayer();
+////      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player6.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView6.getHolder(), MainActivity.this);
+//      VmPlayer player7 = new VmPlayer();
+////      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player7.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView7.getHolder(), MainActivity.this);
+//      VmPlayer player8 = new VmPlayer();
+////      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player8.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView8.getHolder(), MainActivity.this);
+//      VmPlayer player9 = new VmPlayer();
+////      player3.startRealplay("201607201402389091", 1, true, 2, true, false, surfaceView3.getHolder(), MainActivity.this);
+//      player9.startRealplay("201611100925191732", 1, true, 1, false, false, surfaceView9.getHolder(), MainActivity.this);
     }
   }
 

@@ -77,7 +77,6 @@ namespace Dream {
     AVCodecID _codecId;
     bool _inited;
     AVCodecContext *_codecContext;
-    AVCodecParserContext *_codecParserContext;
     AVFrame *_frame;
     std::mutex _mutex;
     AVPacket avPacket;

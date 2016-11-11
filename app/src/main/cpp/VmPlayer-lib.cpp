@@ -132,7 +132,7 @@ jlong Java_com_jxlianlian_masdk_core_Decoder_DecoderInit(JNIEnv *env, jobject ob
 
 void Java_com_jxlianlian_masdk_core_Decoder_DecoderUninit(JNIEnv *env, jobject ob,
                                                           jlong decoderHandle) {
-  LOGI("Java_com_jxlianlian_masdk_VmPlayer_DecoderUninit(%d)", decoderHandle);
+  LOGI("Java_com_jxlianlian_masdk_VmPlayer_DecoderUninit(%lld)", decoderHandle);
   VmPlayer_DecoderUninit(decoderHandle);
 }
 
@@ -212,7 +212,7 @@ jint Java_com_jxlianlian_masdk_core_Decoder_GetFrameWidth(JNIEnv *env, jobject o
 
 jint Java_com_jxlianlian_masdk_core_Decoder_GetFrameHeight(JNIEnv *env, jobject ob,
                                                            jlong decoderHandle) {
-  LOGI("Java_com_jxlianlian_masdk_core_Decoder_GetFrameHeight(%d)", decoderHandle);
+  LOGI("Java_com_jxlianlian_masdk_core_Decoder_GetFrameHeight(%lld)", decoderHandle);
   return VmPlayer_GetFrameHeight(decoderHandle);
 }
 
@@ -230,7 +230,7 @@ jlong Java_com_jxlianlian_masdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
 
 void Java_com_jxlianlian_masdk_core_Decoder_RenderUninit(JNIEnv *env, jobject ob,
                                                          jlong renderHandle) {
-  LOGI("Java_com_jxlianlian_masdk_core_Decoder_RenderUninit(%d)", renderHandle);
+  LOGI("Java_com_jxlianlian_masdk_core_Decoder_RenderUninit(%lld)", renderHandle);
   VmPlayer_RenderUninit(renderHandle);
 }
 

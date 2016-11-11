@@ -312,6 +312,7 @@ public class VmPlayer {
         // 开始取流
         doStartStreamTask(holder);
       } else {
+        Log.e(TAG, "打开码流失败！返回值 errorCode=" + errorCode);
         setCurrentStatus(VmType.PLAY_STATUS_NONE);
       }
       return null;

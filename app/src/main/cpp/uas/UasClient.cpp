@@ -148,6 +148,7 @@ bool UasClient::sendAndWaitRespPacket(MsgPacket& msgPacket,
   bool sendSuccess = send(msgPacket);
   // 发送包
   if (sendSuccess) {  // 如果发送成功，等待返回；若失败的话，则立刻返回
+    LOGE("UasClient", "等待中");
     // 线程挂起
     _condition.wait_for(lock, std::chrono::milliseconds(_timeout),
         [&]()->bool {return _receiveSeqNumber.load() == seqNumber;});
