@@ -945,12 +945,12 @@ public class Decoder {
             // 当缓冲区帧过多时，不调用该流畅方案，即解码时尽量保证匀速
             while (isRunning && !isInterrupted() && display && (frameBuffer.size() < 5) && getInputCount() < 5 && lastDisplay > 0) {
               // －10毫秒的是为了应对，网络波动，这样在网络先堵塞，后流畅的情况下，会在短时间内接收到大量包，如果还平滑的话会延时太大
-              if (System.nanoTime() - lastDisplay > (interval * 1000000 - 10000000)) {
+              if (System.nanoTime() - lastDisplay > (interval * 1000000 - 5000000)) {
                 lastDisplay = System.nanoTime();
                 break;
               }
               // 还是加上个挂起，增加一下cpu的使用率，这个时间不能太大，不然在arm环境下，线程竞争回cpu使用权会很慢
-              sleep(2);
+              sleep(1);
             }
 
             if (lastDisplay == 0) {
