@@ -2,6 +2,8 @@
 // Created by zhou rui on 16/11/2.
 //
 
+#ifdef PHONE_PLATEFORM  // 如果是手机操作平台
+
 #include "VmPlayer.h"
 #include "../encdec/Decoder.h"
 #include "../render/EGLRender.h"
@@ -106,3 +108,5 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_RenderOffScreenRendering(long renderHandl
   return pRender->OffScreenRendering(yData, yLen, uData, uLen, vData, vLen, width, height,
                                      outRgbData, outRgbLen);
 }
+
+#endif

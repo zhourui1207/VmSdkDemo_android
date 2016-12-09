@@ -28,8 +28,8 @@ class TcpClientSessions;
 class TcpClientSession: public std::enable_shared_from_this<TcpClientSession> {
   using SendQueue = std::queue<std::shared_ptr<PacketData>>;
 private:
-  static const unsigned DEFAULT_READ_SIZE = 10 * 1024;  // 接收时的默认缓存大小
-  static const unsigned DEFAULT_WRITE_SIZE = 10 * 1024;  // 发送时的默认缓存大小
+  static const unsigned DEFAULT_READ_SIZE = 100 * 1024;  // 接收时的默认缓存大小
+  static const unsigned DEFAULT_WRITE_SIZE = 100 * 1024;  // 发送时的默认缓存大小
 
 public:
   TcpClientSession(boost::asio::ip::tcp::socket socket,

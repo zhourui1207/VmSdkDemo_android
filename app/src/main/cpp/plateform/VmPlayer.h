@@ -5,6 +5,8 @@
 #ifndef VMPLAYER_H
 #define VMPLAYER_H
 
+#ifdef PHONE_PLATEFORM  // 如果是手机操作平台
+
 #define VMPLAYER_API
 #define CALL_METHOD
 #define out
@@ -41,5 +43,7 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_RenderOffScreenRendering(long renderHandl
 }
 #endif
 
+
+#endif
 
 #endif

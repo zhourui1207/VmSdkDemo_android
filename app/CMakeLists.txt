@@ -16,6 +16,7 @@ if (_ANDROID)
 else()
     message(STATUS "Use Nothing")
 endif()
+add_definitions(-DPHONE_PLATEFORM)
 #add_definitions(-D__ANDROID__)
 
 # 相当于g++ 中的 -I参数

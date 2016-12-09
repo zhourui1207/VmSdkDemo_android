@@ -99,7 +99,10 @@ VMNET_API unsigned CALL_METHOD VmNet_GetDepTrees(unsigned uPageNo,
       pDepTrees[i].uOfflineChannelCounts = list[i]._offlineChannelCounts;
     }
     uSize = i;
+  } else {
+    uSize = 0;
   }
+  
   return ret;
 }
 
@@ -125,7 +128,10 @@ VMNET_API unsigned CALL_METHOD VmNet_GetChannels(unsigned uPageNo,
       pChannels[i].uRecordState = list[i]._recordState;
     }
     uSize = i;
+  } else {
+    uSize = 0;
   }
+  
   return ret;
 }
 
@@ -148,7 +154,10 @@ VMNET_API unsigned CALL_METHOD VmNet_GetRecords(unsigned uPageNo,
       GBK2UTF8_STR(list[i]._downloadUrl, pRecords[i].sDownloadUrl, 256);
     }
     uSize = i;
+  } else {
+    uSize = 0;
   }
+  
   return ret;
 }
 
@@ -180,7 +189,10 @@ VMNET_API unsigned CALL_METHOD VmNet_GetAlarms(unsigned uPageNo,
       GBK2UTF8_STR(list[i]._photoUrl, pAlarms[i].sPhotoUrl, 256);
     }
     uSize = i;
+  } else {
+    uSize = 0;
   }
+  
   return ret;
 }
 
@@ -242,23 +254,21 @@ VMNET_API unsigned CALL_METHOD VmNet_OpenPlaybackStream(const char* sFdId,
 
 // 停止回放流
 // 入参    uMonitorId：监控id，打开回放码流时获得； bIsCenter：是否为中心录像
-VMNET_API void CALL_METHOD VmNet_ClosePlaybackStream(unsigned uMonitorId,
-                                                     bool bIsCenter) {
+VMNET_API void CALL_METHOD VmNet_ClosePlaybackStream(unsigned uMonitorId) {
   if (g_pMainModule == nullptr) {
     return;
   }
-  g_pMainModule->closePlaybackStream(uMonitorId, bIsCenter);
+  g_pMainModule->closePlaybackStream(uMonitorId);
 }
 
 // 控制回放
 // 入参    uMonitorId：监控id，打开回放码流时获得； bIsCenter：是否为中心录像
 //        uControlId：控制id； sAction：操作； sParam：参数
-VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId,
-                                                     bool bIsCenter, unsigned uControlId, const char* sAction, const char* sParam) {
+VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId, unsigned uControlId, const char* sAction, const char* sParam) {
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
-  return g_pMainModule->controlPlayback(uMonitorId, bIsCenter, uControlId, sAction, sParam);
+  return g_pMainModule->controlPlayback(uMonitorId, uControlId, sAction, sParam);
 }
 
 VMNET_API unsigned CALL_METHOD VmNet_StartStream(const char* sAddr,

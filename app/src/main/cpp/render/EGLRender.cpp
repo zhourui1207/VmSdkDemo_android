@@ -1,6 +1,7 @@
 //
 // Created by zhou rui on 16/11/9.
 //
+#ifdef PHONE_PLATEFORM  // 如果是手机操作平台
 
 #include "../util/public/platform.h"
 #include "EGLRender.h"
@@ -363,3 +364,5 @@ namespace Dream {
     }
   }
 }
+
+#endif

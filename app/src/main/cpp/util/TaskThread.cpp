@@ -13,7 +13,7 @@
 
 #ifdef _ANDROID
 #include <jni.h>
-#include <Android/log.h>
+#include <android/log.h>
 
 extern JavaVM* g_pJavaVM;  // 定义外部变量，该变量在VmNet-lib.cpp中被定义和赋值
 #endif

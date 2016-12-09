@@ -41,6 +41,14 @@ std::shared_ptr<MsgPacket> UasClient::newPacketPtr(unsigned msgType) {
     printf("获取通道返回包\n");
     packetPtr.reset(new GetChannelRespPacket());
     break;
+  case MSG_GET_RECORD_RESP:
+    printf("获取录像返回包\n");
+    packetPtr.reset(new GetRecordRespPacket());
+    break;
+  case MSG_GET_ALARM_RESP:
+    printf("获取报警返回包\n");
+    packetPtr.reset(new GetAlarmRespPacket());
+    break;
   case MSG_START_MONITOR_RESP:
     printf("开始预览返回包\n");
     packetPtr.reset(new StartMonitorRespPacket());
@@ -85,6 +93,14 @@ void UasClient::receive(const std::shared_ptr<MsgPacket>& packetPtr) {
     break;
   }
   case MSG_GET_DEP_CHANNEL_RESP: {
+    isResp = true;
+    break;
+  }
+  case MSG_GET_RECORD_RESP: {
+    isResp = true;
+    break;
+  }
+  case MSG_GET_ALARM_RESP: {
     isResp = true;
     break;
   }
@@ -148,7 +164,6 @@ bool UasClient::sendAndWaitRespPacket(MsgPacket& msgPacket,
   bool sendSuccess = send(msgPacket);
   // 发送包
   if (sendSuccess) {  // 如果发送成功，等待返回；若失败的话，则立刻返回
-    LOGE("UasClient", "等待中");
     // 线程挂起
     _condition.wait_for(lock, std::chrono::milliseconds(_timeout),
         [&]()->bool {return _receiveSeqNumber.load() == seqNumber;});
@@ -254,7 +269,7 @@ unsigned UasClient::getRecords(const std::string& fdId, int channelId,
     unsigned beginTime, unsigned endTime, bool isCenter, RecordList& records) {
   GetRecordReqPacket req;
   req._fdId = fdId;
-  req._channelId = channelId;
+  req._channelId = (channelId - 1 < 0) ? 0 : channelId - 1;
   req._beginTime = beginTime;
   req._endTime = endTime;
   req._recordType =
@@ -387,13 +402,30 @@ bool isCenter, unsigned beginTime, unsigned endTime, unsigned& monitorId,
     videoPort = pResp->_videoPort;
     audioAddr = pResp->_audioIp;
     audioPort = pResp->_audioPort;
+    
+    // 记录回放session
+    _playbackSessionManager.AddSession(req._monitorSessionId, isCenter, req._fdId, req._channelId);
   }
   return ret;
 }
 
-void UasClient::closePlaybackStream(unsigned monitorId, bool isCenter) {
+void UasClient::closePlaybackStream(unsigned monitorId) {
+  // 查找session是否存在
+  auto sessionPtr = _playbackSessionManager.getSession(monitorId);
+  if (sessionPtr.get() == nullptr) {
+    return;
+  }
+  
+  bool isCenter = sessionPtr->IsCenter();
+  std::string fdId = sessionPtr->FdId();
+  int channelId = sessionPtr->ChannelId();
+  
+  _playbackSessionManager.removeSession(monitorId);
+  
   StopPlaybackReqPacket req;
   req._monitorSessionId = monitorId;
+  req._fdId = fdId;
+  req._channelId = channelId;
   req._recordType =
         isCenter ?
             StartPlaybackReqPacket::RECORD_TYPE_CENTER :
@@ -402,10 +434,22 @@ void UasClient::closePlaybackStream(unsigned monitorId, bool isCenter) {
   send(req);
 }
 
-unsigned UasClient::controlPlayback(unsigned monitorId, bool isCenter, unsigned controlId,
+unsigned UasClient::controlPlayback(unsigned monitorId, unsigned controlId,
     const std::string& action, const std::string& param) {
+  // 查找session是否存在
+  auto sessionPtr = _playbackSessionManager.getSession(monitorId);
+  if (sessionPtr.get() == nullptr) {
+    return STATUS_NOT_EXIST_SESSION;
+  }
+  
+  bool isCenter = sessionPtr->IsCenter();
+  std::string fdId = sessionPtr->FdId();
+  int channelId = sessionPtr->ChannelId();
+  
   ControlPlaybackReqPacket req;
   req._monitorSessionId = monitorId;
+  req._fdId = fdId;
+  req._channelId = channelId;
   req._recordType =
        isCenter ?
            StartPlaybackReqPacket::RECORD_TYPE_CENTER :

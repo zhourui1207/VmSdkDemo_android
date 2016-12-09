@@ -81,12 +81,10 @@ bool StreamSessionManager::addStreamClient(const std::string& addr,
     unsigned port, fStreamCallBack streamCallback,
     fStreamConnectStatusCallBack streamConnectStatusCallback, void* pUser,
     unsigned& streamId) {
-
+  std::lock_guard<std::mutex> lock(_mutex);
   if (!getStreamId(streamId)) {  // 连接数到上限
     return false;
   }
-
-  std::lock_guard<std::mutex> lock(_mutex);
 
   auto streamSessionPtr = std::make_shared<StreamSession>(streamId, addr, port,
       streamCallback, streamConnectStatusCallback, pUser);
@@ -118,7 +116,6 @@ void StreamSessionManager::clearAll() {
 
 // 获得streamid 从 1 - uint_max
 bool StreamSessionManager::getStreamId(unsigned& streamId) {
-  std::lock_guard<std::mutex> lock(_mutex);
   if (_recoveryStreamIds.size() > 0) {  // 如果有回收的，先用回收的
     streamId = *(_recoveryStreamIds.begin());
     _recoveryStreamIds.erase(streamId);
@@ -133,7 +130,6 @@ bool StreamSessionManager::getStreamId(unsigned& streamId) {
 
 // 还回streamid
 void StreamSessionManager::recoveryStreamId(int streamId) {
-  std::lock_guard<std::mutex> lock(_mutex);
   _recoveryStreamIds.emplace(streamId);
 }
 

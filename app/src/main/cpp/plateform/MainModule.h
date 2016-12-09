@@ -93,10 +93,10 @@ public:
       unsigned& audioPort);
 
   // 停止回放流
-  void closePlaybackStream(unsigned monitorId, bool isCenter);
+  void closePlaybackStream(unsigned monitorId);
 
   // 控制回放
-  unsigned controlPlayback(unsigned monitorId, bool isCenter, unsigned controlId,
+  unsigned controlPlayback(unsigned monitorId, unsigned controlId,
       const std::string& action, const std::string& param);
 
   // 获取码流并设置码流回调

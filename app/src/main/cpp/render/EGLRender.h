@@ -5,10 +5,14 @@
 #ifndef EGLRANDER_H
 #define EGLRANDER_H
 
+#ifdef PHONE_PLATEFORM
+
 #include <mutex>
 
+#ifdef __ANDROID__
 #include "GLES2/gl2.h"
 #include "EGL/egl.h"
+#endif
 
 
 /**
@@ -137,5 +141,6 @@ namespace Dream {
   };
 }
 
+#endif
 
 #endif //VMSDKDEMO_ANDROID_EGLRANDER_H

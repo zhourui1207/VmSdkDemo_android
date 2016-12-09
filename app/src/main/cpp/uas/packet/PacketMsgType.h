@@ -62,6 +62,12 @@ const unsigned MSG_START_MONITOR_RESP = 0x0232;
 const unsigned MSG_STOP_MONITOR_REQ = 0x0233;
 const unsigned MSG_STOP_MONITOR_RESP = 0x0234;
 
+// 对讲
+const unsigned MSG_START_TALK_REQ = 0x0235;
+const unsigned MSG_START_TALK_RESP = 0x0236;
+const unsigned MSG_STOP_TALK_REQ = 0x0237;
+const unsigned MSG_STOP_TALK_RESP = 0x0238;
+
 // 回放
 const unsigned MSG_START_PLAYBACK_REQ = 0X0239;
 const unsigned MSG_START_PLAYBACK_RESP = 0x023A;

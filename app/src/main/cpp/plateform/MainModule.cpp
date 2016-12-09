@@ -98,19 +98,19 @@ bool isCenter, unsigned beginTime, unsigned endTime, unsigned& monitorId,
       endTime, monitorId, videoAddr, videoPort, audioAddr, audioPort);
 }
 
-void MainModule::closePlaybackStream(unsigned monitorId, bool isCenter) {
+void MainModule::closePlaybackStream(unsigned monitorId) {
   if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
     return;
   }
-  _uasClientPtr->closePlaybackStream(monitorId, isCenter);
+  _uasClientPtr->closePlaybackStream(monitorId);
 }
 
-unsigned MainModule::controlPlayback(unsigned monitorId, bool isCenter,
+unsigned MainModule::controlPlayback(unsigned monitorId,
     unsigned controlId, const std::string& action, const std::string& param) {
   if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
     return ERR_CODE_NO_CONNECT;
   }
-  return _uasClientPtr->controlPlayback(monitorId, isCenter, controlId, action, param);
+  return _uasClientPtr->controlPlayback(monitorId, controlId, action, param);
 }
 
 unsigned MainModule::startStream(const std::string& addr, unsigned port,
@@ -175,7 +175,7 @@ void MainModule::stopUasClient() {
     _uasConnected.store(false);
     onUasConnectStatus(false);
   }
-  _uasClientPtr.release();
+  _uasClientPtr.reset();
 }
 
 void MainModule::pauseUasClient() {

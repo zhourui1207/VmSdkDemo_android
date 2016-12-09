@@ -9,10 +9,6 @@
 #ifndef VMNET_H_
 #define VMNET_H_
 
-#define VMNET_API
-#define CALL_METHOD
-#define out
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -111,14 +107,12 @@ VMNET_API unsigned CALL_METHOD VmNet_OpenPlaybackStream(const char* sFdId,
 
 // 停止回放流
 // 入参    uMonitorId：监控id，打开回放码流时获得； bIsCenter：是否为中心录像
-VMNET_API void CALL_METHOD VmNet_ClosePlaybackStream(unsigned uMonitorId,
-    bool bIsCenter);
+VMNET_API void CALL_METHOD VmNet_ClosePlaybackStream(unsigned uMonitorId);
 
 // 控制回放
 // 入参    uMonitorId：监控id，打开回放码流时获得； bIsCenter：是否为中心录像
 //        uControlId：控制id； sAction：操作； sParam：参数
-VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId,
-    bool bIsCenter, unsigned uControlId, const char* sAction,
+VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId, unsigned uControlId, const char* sAction,
     const char* sParam);
 
 // 开始获取码流(获取实时流 或者 获取录像流)

@@ -11,6 +11,7 @@
 
 // 错误码
 const unsigned ERR_CODE_OK = 0;  // 成功
+const unsigned ERR_CODE_SESSION_NOEXIST = 0x0004;  // session不存在
 const unsigned ERR_CODE_SDK_UNINIT = 0xf001;  // sdk未初始化
 const unsigned ERR_CODE_SDK_STARTUP_FAILED = 0xf002;  // sdk启动失败
 const unsigned ERR_CODE_NO_CONNECT = 0xf003;  // 未连接服务器

@@ -1,7 +1,9 @@
 //
 // Created by zhou rui on 16/11/2.
 //
-#include <Android/Log.h>
+
+#ifdef PHONE_PLATEFORM  // 如果是手机操作平台
+
 #include <stdio.h>
 
 #include "../util/public/platform.h"
@@ -29,8 +31,7 @@ namespace Dream {
     static bool isRegisterAll = false;
     if (!isRegisterAll) {
 //      int ret = SDL_VideoInit(NULL);
-      __android_log_print(ANDROID_LOG_WARN, "Decoder", "开始注册所有");
-      printf("Decoder 开始注册所有！\n");
+      LOGW("Decoder", "开始注册所有\n");
       avcodec_register_all();
       // 初始化sdl
       isRegisterAll = true;
@@ -49,14 +50,14 @@ namespace Dream {
     // 查找解码器
     AVCodec *codec = avcodec_find_decoder(_codecId);
     if (!codec) {
-      printf("解码器[%d] 未找到\n", _codecId);
+      LOGW("Decoder", "解码器[%d] 未找到\n", _codecId);
       return false;
     }
 
     // 分配解码器上下文
     _codecContext = avcodec_alloc_context3(codec);
     if (!_codecContext) {
-      printf("无法分配解码器上下文\n");
+      LOGW("Decoder", "无法分配解码器上下文\n");
       return false;
     }
 
@@ -67,7 +68,7 @@ namespace Dream {
     // 打开解码器
     if (avcodec_open2(_codecContext, codec, NULL) < 0)//
     {
-      printf("打开解码器失败\n");
+      LOGW("Decoder", "打开解码器失败\n");
       return false;
     }
 
@@ -164,9 +165,11 @@ namespace Dream {
     outYLen = yL;
     outULen = outVLen = uvL;
 
-    pgm_save2(_frame->data[0], _frame->linesize[0], _width, _height, (uint8_t *) outYData);
-    pgm_save2(_frame->data[1], _frame->linesize[1], _width / 2, _height / 2, (uint8_t *) outUData);
-    pgm_save2(_frame->data[2], _frame->linesize[2], _width / 2, _height / 2, (uint8_t *) outVData);
+    if (_frame) {
+      pgm_save2(_frame->data[0], _frame->linesize[0], _width, _height, (uint8_t *) outYData);
+      pgm_save2(_frame->data[1], _frame->linesize[1], _width / 2, _height / 2, (uint8_t *) outUData);
+      pgm_save2(_frame->data[2], _frame->linesize[2], _width / 2, _height / 2, (uint8_t *) outVData);
+    }
 
     return true;
   }
@@ -180,8 +183,8 @@ namespace Dream {
       ret = avcodec_send_packet(_codecContext, &avPacket);
 
       if (ret != 0) {
-        printf("输入包失败！\n");
-        return 0;
+//        LOGW(TAG, "未显示图像\n");
+        return -1;
       }
 
       ret = avcodec_receive_frame(_codecContext, _frame);
@@ -190,13 +193,11 @@ namespace Dream {
         _width = _frame->width;
         _height = _frame->height;
 
-        // LOGE(TAG, "_codecContext->framerate.den=%d\n", _codecContext->framerate.num);
         if (_codecContext->framerate.den != 0 && _codecContext->framerate.num != 0) {
           _framerate = _codecContext->framerate.num / _codecContext->framerate.den;
         } else {
           _framerate = 25;
         }
-
       }
     }
     return ret;
@@ -329,3 +330,5 @@ namespace Dream {
   }
 
 }
+
+#endif

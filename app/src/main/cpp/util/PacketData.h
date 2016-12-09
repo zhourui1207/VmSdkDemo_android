@@ -19,7 +19,7 @@ namespace Dream {
 // todo 看情况需要改成使用内存池提高性能
 class PacketData {
 private:
-  static const std::size_t PACKET_DATA_DEFAULT_SIZE = 10*1024;
+  static const std::size_t PACKET_DATA_DEFAULT_SIZE = 100*1024;
 
 public:
   PacketData() = delete;

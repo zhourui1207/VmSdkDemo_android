@@ -5,16 +5,20 @@
 #ifndef DREAM_DECODER_H
 #define DREAM_DECODER_H
 
+#ifdef PHONE_PLATEFORM  // 如果是手机操作平台
+
 #include <mutex>
 
+#ifdef __ANDROID__
 #include "GLES2/gl2.h"
 #include "EGL/egl.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "../ffmpeg/libavcodec/avcodec.h"
+#include "libavcodec/avcodec.h"
 
 #ifdef __cplusplus
 }
@@ -97,4 +101,7 @@ namespace Dream {
   };
 
 }
+
+#endif
+
 #endif //VMSDKDEMO_ANDROID_DECODER_H

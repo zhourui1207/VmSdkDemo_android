@@ -29,6 +29,75 @@ class UasClient: public TcpClient<MsgPacket> {
 public:
   static const uint64_t TIMEOUT_DEFULT = 5000; // 默认超时5秒
   static const uint64_t HEARTBEAT_INTERVAL = 5000;  // 默认心跳间隔5秒
+    
+private:
+  class PlaybackSession {
+  public:
+    PlaybackSession() = delete;
+    PlaybackSession(bool isCenter, const std::string& fdId, int channelId)
+    : _isCenter(isCenter), _fdId(fdId), _channelId(channelId) {
+      
+    }
+    
+    bool IsCenter() {
+      return _isCenter;
+    }
+    
+    std::string FdId() {
+      return _fdId;
+    }
+    
+    int ChannelId() {
+      return _channelId;
+    }
+    
+  private:
+    bool _isCenter;
+    std::string _fdId;
+    int _channelId;
+  };
+  
+  // 通过一个session管理器来管理session，避免直接操作数据引起的锁问题
+  class PlaybackSeesionManager {
+  public:
+    PlaybackSeesionManager() = default;
+    
+    bool AddSession(unsigned monitorId, bool isCenter, const std::string& fdId, int channelId) {
+      std::unique_lock<std::mutex> lock(_mutex);
+      
+      auto sessionIt = _playbackSessionMap.find(monitorId);
+      if (sessionIt != _playbackSessionMap.end()) {
+        return false;
+      }
+      
+      _playbackSessionMap.emplace(std::make_pair(monitorId, std::make_shared<PlaybackSession>(isCenter, fdId, channelId)));
+      return true;
+    }
+    
+    void removeSession(unsigned monitorId) {
+      std::unique_lock<std::mutex> lock(_mutex);
+      
+      auto sessionIt = _playbackSessionMap.find(monitorId);
+      if (sessionIt != _playbackSessionMap.end()) {
+        _playbackSessionMap.erase(sessionIt);
+      }
+    }
+    
+    std::shared_ptr<PlaybackSession> getSession(unsigned monitorId) {
+      std::shared_ptr<PlaybackSession> retSession;
+      
+      std::unique_lock<std::mutex> lock(_mutex);
+      auto sessionIt = _playbackSessionMap.find(monitorId);
+      if (sessionIt != _playbackSessionMap.end()) {
+        retSession = sessionIt->second;
+      }
+      return retSession;
+    }
+    
+  private:
+    std::mutex _mutex;
+    std::map<unsigned, std::shared_ptr<PlaybackSession>> _playbackSessionMap;  // 录像回放时的session信息
+  };
 
 public:
   UasClient() = delete;
@@ -94,10 +163,10 @@ public:
       unsigned& audioPort);
 
   // 停止回放流
-  void closePlaybackStream(unsigned monitorId, bool isCenter);
+  void closePlaybackStream(unsigned monitorId);
 
   // 控制回放
-  unsigned controlPlayback(unsigned monitorId, bool isCenter, unsigned controlId,
+  unsigned controlPlayback(unsigned monitorId, unsigned controlId,
       const std::string& action, const std::string& param);
 
   // 控制指令
@@ -159,6 +228,7 @@ private:
   std::condition_variable _condition;
   std::map<unsigned, std::shared_ptr<MsgPacket>> _receivePackets; // 接收到的包
   std::shared_ptr<Timer> _timerPtr;  // 心跳定时器智能指针
+  PlaybackSeesionManager _playbackSessionManager;  // session管理器
 
   std::function<
       void(const std::string& fdId, int channelId, unsigned alarmType,

@@ -22,7 +22,7 @@ AsioTcpClient:: AsioTcpClient(
         receiveSize), _sendSize(sendSize), _reconnectInterval(
         reconnectInterval), _currentStatus(NO_CONNECT), _statusListener(
         [](int status)->void {printf("当前状态[%d]\n", status);}), _receive(
-        nullptr)
+        nullptr), _ioServicePtr(nullptr), _socketPtr(nullptr), _threadPtr(nullptr)
 {
   _receive = new char[receiveSize];
 }
@@ -95,7 +95,7 @@ bool AsioTcpClient::doInit() {
     boost::asio::ip::tcp::resolver resolver(*(_ioServicePtr.get()));
     _endpointIterator = resolver.resolve( { _address.c_str(), port });
   } catch (boost::system::system_error & e) {
-    printf("网络异常[%s]\n", e.what());
+    printf("网络异常，地址[%s]，错误信息[%s]\n", _address.c_str(), e.what());
     return false;
   }
 
@@ -248,36 +248,46 @@ void AsioTcpClient::close(bool isIoServiceThread) {
   if (_currentStatus.load() == CLOSEING || _currentStatus.load() == CLOSED) {
     return;
   }
-
+    
   // 由于会在析构时调用，所以全部放进try中防止析构时出错导致的内存溢出
   try {
     _currentStatus.store(CLOSEING);
     if (isIoServiceThread) {  // 是io线程的操作才进行回调
       doOnStatus(_currentStatus);
     }
-
+      
     if (_ioServicePtr.get() != nullptr) {
       _ioServicePtr->stop();
     }
-    if (_socketPtr.get() != nullptr) {
-      _socketPtr->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-      _socketPtr->close();  // 关闭套接字
+      
+    // 这里一定要单独捕获异常，如果这里出错，下面没有执行的话，类析构时会崩溃，可能时由于线程还未结束，在线程析构前，必须要调用detach或者join
+    try {
+      if (_socketPtr.get() != nullptr) {
+        _socketPtr->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+        _socketPtr->close();  // 关闭套接字
+        _socketPtr.reset();
+      }
+    } catch (std::exception& e) {
+      printf("_socketPtr->close()异常！！[%s]\n", e.what());  // 一般是由于本机网络异常，导致endpoint未连接
     }
-
-    _socketPtr.release();
-    _ioServicePtr.release();
-    if (isIoServiceThread) {
-      _threadPtr->detach();  // io线程本身调用，则不能用join
-    } else {
-      _threadPtr->join();  // 等待线程执行完毕，避免线程还在连接的时候进行关闭操作
+    
+    if (_threadPtr.get() != nullptr) {
+      if (isIoServiceThread) {
+        _threadPtr->detach();  // io线程本身调用，则不能用join
+      } else {
+        _threadPtr->join();  // 等待线程执行完毕，避免线程还在连接的时候进行关闭操作
+      }
+      
+      _threadPtr.reset();
     }
-    _threadPtr.release();
-
+    
+    _ioServicePtr.reset();
+      
     _currentStatus.store(CLOSED);
     if (isIoServiceThread) {
       doOnStatus(_currentStatus);
     }
-
+      
   } catch (std::exception& e) {
     printf("close异常！！[%s]\n", e.what());  // 一般是由于本机网络异常，导致endpoint未连接
   }

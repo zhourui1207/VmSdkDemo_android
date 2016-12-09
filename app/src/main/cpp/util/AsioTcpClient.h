@@ -40,8 +40,8 @@ public:
 private:
   static const bool RECEIVE_MODE = true;  // 默认为自由接收模式
   static const unsigned RECONNECT_INTERVAL = 10000;  // 默认重连时间间隔
-  static const unsigned DEFAULT_READ_SIZE = 10 * 1024;  // 接收时的默认缓存大小
-  static const unsigned DEFAULT_WRITE_SIZE = 10 * 1024;  // 发送时的默认缓存大小
+  static const unsigned DEFAULT_READ_SIZE = 100 * 1024;  // 接收时的默认缓存大小
+  static const unsigned DEFAULT_WRITE_SIZE = 100 * 1024;  // 发送时的默认缓存大小
 
 public:
   AsioTcpClient() = delete;
