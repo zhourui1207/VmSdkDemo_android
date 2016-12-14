@@ -104,18 +104,19 @@ public class VmPlayer {
   /**
    * 播放实时流，此函数为异步接口
    *
-   * @param fdId 设备id
-   * @param channelId 通道号
-   * @param isSub 是否子码流
-   * @param decodeType 解码类型
+   * @param fdId          设备id
+   * @param channelId     通道号
+   * @param isSub         是否子码流
+   * @param decodeType    解码类型
    * @param closeOpengles 是否强制关闭opengles
-   * @param openAudio 是否打开音频
+   * @param openAudio     是否打开音频
    * @param surfaceHolder 播放页面
-   * @param context 播放页面上下文
+   * @param context       播放页面上下文
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
    */
   public synchronized boolean startRealplay(String fdId, int channelId, boolean isSub, int
-      decodeType, boolean closeOpengles, boolean openAudio, SurfaceHolder surfaceHolder, Context context) {
+      decodeType, boolean closeOpengles, boolean openAudio, SurfaceHolder surfaceHolder, Context
+                                                context) {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
@@ -136,24 +137,95 @@ public class VmPlayer {
   /**
    * 播放实时流，此函数为异步接口
    *
-   * @param videoAddr 视频地址
-   * @param videoPort 视频端口
-   * @param audioAddr 音频地址
-   * @param audioPort 音频端口
-   * @param decodeType 解码类型
-   * @param openAudio 是否打开音频
+   * @param videoAddr     视频地址
+   * @param videoPort     视频端口
+   * @param audioAddr     音频地址
+   * @param audioPort     音频端口
+   * @param decodeType    解码类型
+   * @param openAudio     是否打开音频
    * @param surfaceHolder 播放页面
-   * @param context 播放页面上下文
+   * @param context       播放页面上下文
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
    */
   public synchronized boolean startRealplay(String videoAddr, int videoPort, String audioAddr,
                                             int audioPort, int
-      decodeType, boolean openAudio, SurfaceHolder surfaceHolder, Context context) {
+                                                decodeType, boolean openAudio, SurfaceHolder
+                                                surfaceHolder, Context context) {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
 
     playMode = VmType.PLAY_MODE_REALPLAY;
+    this.decodeType = decodeType;
+    this.openAudio = openAudio;
+    this.surfaceHolder = surfaceHolder;
+    this.context = context;
+
+    PlayAddressHolder holder = new PlayAddressHolder();
+    holder.init(0, videoAddr, videoPort, audioAddr, audioPort);
+    doStartStreamTask(holder);
+    return true;
+  }
+
+  /**
+   * 录像回放，此函数为异步接口
+   *
+   * @param fdId          设备id
+   * @param channelId     通道号
+   * @param isCenter      是否中心录像
+   * @param beginTime     录像起始时间
+   * @param endTime       录像截止时间
+   * @param decodeType    解码类型
+   * @param closeOpengles 是否强制关闭opengles
+   * @param openAudio     是否打开音频
+   * @param surfaceHolder 播放页面
+   * @param context       播放页面上下文
+   * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放实时预览原因）
+   */
+  public synchronized boolean startPlayback(String fdId, int channelId, boolean isCenter, int
+      beginTime, int endTime, int decodeType, boolean closeOpengles, boolean openAudio,
+                                            SurfaceHolder surfaceHolder, Context context) {
+    if (playMode == VmType.PLAY_MODE_REALPLAY) {
+      return false;
+    }
+    playMode = VmType.PLAY_MODE_PLAYBACK;
+    this.fdId = fdId;
+    this.channelId = channelId;
+    this.isCenter = isCenter;
+    this.beginTime = beginTime;
+    this.endTime = endTime;
+    this.decodeType = decodeType;
+    this.closeOpengles = closeOpengles;
+    this.openAudio = openAudio;
+    this.surfaceHolder = surfaceHolder;
+    this.context = context;
+
+    doOpenStreamTask();
+    return true;
+  }
+
+  /**
+   * 录像回放，此函数为异步接口
+   *
+   * @param videoAddr     视频地址
+   * @param videoPort     视频端口
+   * @param audioAddr     音频地址
+   * @param audioPort     音频端口
+   * @param decodeType    解码类型
+   * @param openAudio     是否打开音频
+   * @param surfaceHolder 播放页面
+   * @param context       播放页面上下文
+   * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放实时预览原因）
+   */
+  public synchronized boolean startPlayback(String videoAddr, int videoPort, String audioAddr,
+                                            int audioPort, int
+                                                decodeType, boolean openAudio, SurfaceHolder
+                                                surfaceHolder, Context context) {
+    if (playMode == VmType.PLAY_MODE_REALPLAY) {
+      return false;
+    }
+
+    playMode = VmType.PLAY_MODE_PLAYBACK;
     this.decodeType = decodeType;
     this.openAudio = openAudio;
     this.surfaceHolder = surfaceHolder;
@@ -255,7 +327,7 @@ public class VmPlayer {
         VmNet.closeRealplayStream(monitorId);
         break;
       case VmType.PLAY_MODE_PLAYBACK:
-        VmNet.closePlaybackStream(monitorId, isCenter);
+        VmNet.closePlaybackStream(monitorId);
         break;
       default:
         Log.e(TAG, "关闭码流失败！当前播放模式为[" + playMode + "]，未定义的值！");

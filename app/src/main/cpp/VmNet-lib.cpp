@@ -552,26 +552,27 @@ jint Java_com_jxll_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jstring fdId,
   char sTalkAddr[100];
 
   LOGI("Java_com_jxll_vmsdk_VmNet_StartTalk(%s, %d)", sFdId, channelId);
-  int ret = VmNet_StartTalk(sFdId, channelId, uTalkId, sTalkAddr, uTalkPort);
-
-  if (ret == ERR_CODE_OK && talkAddressHolder) {
-    jclass talkAddressCls = env->GetObjectClass(talkAddressHolder);
-
-    jmethodID init = env->GetMethodID(talkAddressCls, METHOD_NAME_TALKADDRESSHOLDER_INIT,
-                                      METHOD_SIG_TALKADDRESSHOLDER_INIT);
-    if (init == nullptr) {
-      LOGE("找不到[%s]方法!", METHOD_NAME_TALKADDRESSHOLDER_INIT);
-      env->DeleteLocalRef(talkAddressCls);
-      return ret;
-    }
-
-    jstring talkAddr = env->NewStringUTF(sTalkAddr);
-
-    env->CallVoidMethod(talkAddressHolder, init, uTalkId, talkAddr, uTalkPort);
-
-    env->DeleteLocalRef(talkAddressCls);
-    env->DeleteLocalRef(talkAddr);
-  }
+  int ret = 0;
+//  int ret = VmNet_StartTalk(sFdId, channelId, uTalkId, sTalkAddr, uTalkPort);
+//
+//  if (ret == ERR_CODE_OK && talkAddressHolder) {
+//    jclass talkAddressCls = env->GetObjectClass(talkAddressHolder);
+//
+//    jmethodID init = env->GetMethodID(talkAddressCls, METHOD_NAME_TALKADDRESSHOLDER_INIT,
+//                                      METHOD_SIG_TALKADDRESSHOLDER_INIT);
+//    if (init == nullptr) {
+//      LOGE("找不到[%s]方法!", METHOD_NAME_TALKADDRESSHOLDER_INIT);
+//      env->DeleteLocalRef(talkAddressCls);
+//      return ret;
+//    }
+//
+//    jstring talkAddr = env->NewStringUTF(sTalkAddr);
+//
+//    env->CallVoidMethod(talkAddressHolder, init, uTalkId, talkAddr, uTalkPort);
+//
+//    env->DeleteLocalRef(talkAddressCls);
+//    env->DeleteLocalRef(talkAddr);
+//  }
   return ret;
 }
 
@@ -581,7 +582,7 @@ void Java_com_jxll_vmsdk_VmNet_StopTalk(JNIEnv *env, jobject, jint talkId) {
   }
   LOGI("Java_com_jxll_vmsdk_VmNet_StopTalk(%d)", talkId);
 
-  VmNet_StopTalk(talkId);
+//  VmNet_StopTalk(talkId);
 }
 
 jint Java_com_jxll_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring fdId,
@@ -626,18 +627,16 @@ jint Java_com_jxll_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring 
   return ret;
 }
 
-void Java_com_jxll_vmsdk_VmNet_ClosePlaybackStream(JNIEnv *env, jobject, jint monitorId,
-                                                         jboolean isCenter) {
+void Java_com_jxll_vmsdk_VmNet_ClosePlaybackStream(JNIEnv *env, jobject, jint monitorId) {
   if (g_init.load() != INITED || g_pJavaVM == nullptr) {
     return;
   }
-  LOGI("Java_com_jxll_vmsdk_VmNet_ClosePlaybackStream(%d, %d)", monitorId, isCenter);
+  LOGI("Java_com_jxll_vmsdk_VmNet_ClosePlaybackStream(%d)", monitorId);
 
-  VmNet_ClosePlaybackStream(monitorId, isCenter);
+  VmNet_ClosePlaybackStream(monitorId);
 }
 
-jint Java_com_jxll_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorId,
-                                                     jboolean isCenter, jint controlId,
+jint Java_com_jxll_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorId, jint controlId,
                                                      jstring action, jstring param) {
   if (g_init.load() != INITED || g_pJavaVM == nullptr) {
     return ERR_CODE_SDK_UNINIT;
@@ -648,10 +647,9 @@ jint Java_com_jxll_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monito
   const char *sParam = nullptr;
   sParam = env->GetStringUTFChars(param, 0);
 
-  LOGI("Java_com_jxll_vmsdk_VmNet_ControlPlayback(%d, %d, %d, %s, %s)", monitorId,
-       isCenter, controlId, sAction, sParam);
+  LOGI("Java_com_jxll_vmsdk_VmNet_ControlPlayback(%d, %d, %s, %s)", monitorId, controlId, sAction, sParam);
 
-  return VmNet_ControlPlayback(monitorId, isCenter, controlId, sAction, sParam);
+  return VmNet_ControlPlayback(monitorId, controlId, sAction, sParam);
 }
 
 jint Java_com_jxll_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address, jint port,

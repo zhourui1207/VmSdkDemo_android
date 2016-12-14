@@ -245,10 +245,9 @@ public class VmNet {
    * 关闭回放码流
    *
    * @param monitorId 监控sessionid，打开码流时可在playAddressHolder中获得
-   * @param isCenter  true：中心录像  false：前端录像
    */
-  public static void closePlaybackStream(int monitorId, boolean isCenter) {
-    ClosePlaybackStream(monitorId, isCenter);
+  public static void closePlaybackStream(int monitorId) {
+    ClosePlaybackStream(monitorId);
   }
 
   /**
@@ -336,14 +335,15 @@ public class VmNet {
 
   private static native void CloseRealplayStream(int monitorId);
 
-  private static native int StartTalk(String fdId, int channelId, TalkAddressHolder talkAddressHolder);
+  private static native int StartTalk(String fdId, int channelId, TalkAddressHolder
+      talkAddressHolder);
 
   private static native void StopTalk(int talkId);
 
-  private static native int OpenPlaybackStream(String fdId, int channelId, boolean isCenter, int
-      beginTime, int endTime, PlayAddressHolder playAddressHolder);
+  private static native int OpenPlaybackStream(String fdId, int channelId, boolean isCenter, int beginTime, int
+      endTime, PlayAddressHolder playAddressHolder);
 
-  private static native void ClosePlaybackStream(int monitorId, boolean isCenter);
+  private static native void ClosePlaybackStream(int monitorId);
 
   private static native int ControlPlayback(int monitorId, boolean isCenter, int controlId,
                                             String action, int param);

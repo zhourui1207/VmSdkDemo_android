@@ -100,4 +100,19 @@ public class Channel {
   public void setRecordState(int recordState) {
     this.recordState = recordState;
   }
+
+  @Override
+  public String toString() {
+    return "Channel{" +
+        "depId=" + depId +
+        ", fdId='" + fdId + '\'' +
+        ", channelId=" + channelId +
+        ", channelType=" + channelType +
+        ", channelName='" + channelName + '\'' +
+        ", isOnline=" + isOnline +
+        ", videoState=" + videoState +
+        ", channelState=" + channelState +
+        ", recordState=" + recordState +
+        '}';
+  }
 }

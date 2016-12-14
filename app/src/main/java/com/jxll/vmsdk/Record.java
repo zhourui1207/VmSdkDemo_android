@@ -49,4 +49,14 @@ public class Record {
   public void setDownloadUrl(String downloadUrl) {
     this.downloadUrl = downloadUrl;
   }
+
+  @Override
+  public String toString() {
+    return "Record{" +
+        "beginTime=" + beginTime +
+        ", endTime=" + endTime +
+        ", playbackUrl='" + playbackUrl + '\'' +
+        ", downloadUrl='" + downloadUrl + '\'' +
+        '}';
+  }
 }

@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -16,16 +17,22 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.jxll.util.TimeUtil;
 import com.jxll.vmsdk.Channel;
 import com.jxll.vmsdk.ChannelsHolder;
 import com.jxll.vmsdk.DepTree;
 import com.jxll.vmsdk.DepTreesHolder;
+import com.jxll.vmsdk.Record;
+import com.jxll.vmsdk.RecordsHolder;
 import com.jxll.vmsdk.TalkAddressHolder;
 import com.jxll.vmsdk.VmNet;
 import com.jxll.vmsdk.VmPlayer;
 import com.jxll.vmsdk.util.OpenGLESUtil;
 import com.jxll.vmsdk.util.opengles.GLFrameRenderer;
+import com.jxll.widget.time.RecordTimeCell;
+import com.jxll.widget.time.TimeBar;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements VmNet.ServerConnectStatusCallback {
@@ -41,9 +48,12 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
   private SurfaceView surfaceView8;
   private SurfaceView surfaceView9;
   private SurfaceView surfaceView3;
+  private TimeBar timeBar;
   GLFrameRenderer mGLFRenderer;
   private Button button;
   private Button record;
+  private List<RecordTimeCell> recordTimeCellList = new ArrayList<>();
+  TextView textView;
 
   private static int id = 0;
 
@@ -126,6 +136,21 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     setContentView(R.layout.activity_main);
 
     surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+    textView = (TextView) findViewById(R.id.tv);
+    timeBar = (TimeBar) findViewById(R.id.tb);
+    timeBar.setCurrentTimeChangListener(new TimeBar.CurrentTimeChangListener() {
+      @Override
+      public void onCurrentTimeChanging(long currentTime) {
+        textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+      }
+
+      @Override
+      public void onCurrentTimeChanged(long currentTime) {
+        textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+      }
+    });
+
+
 //    surfaceView2 = (SurfaceView) findViewById(R.id.surfaceView2);
 //    surfaceView3 = (SurfaceView) findViewById(R.id.surfaceView3);
 //    surfaceView4 = (SurfaceView) findViewById(R.id.surfaceView4);
@@ -160,17 +185,19 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     record.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        if (recording) {
-          player.stopRecord();
-          recording = false;
-          record.setText("开始录像");
-        } else {
-          recording = player.startRecord("/sdcard/MVSS/Localrecord/test1.flv");
-          if (recording) {
-            record.setText("停止录像");
-          }
-        }
+        timeBar.invalidate();
       }
+//        if (recording) {
+//          player.stopRecord();
+//          recording = false;
+//          record.setText("开始录像");
+//        } else {
+//          recording = player.startRecord("/sdcard/MVSS/Localrecord/test1.flv");
+//          if (recording) {
+//            record.setText("停止录像");
+//          }
+//        }
+//      }
     });
 
     // Example of a call to a native method
@@ -202,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected Void doInBackground(Void... voids) {
       VmNet.init(10);
-      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
 //      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
       try {
         Thread.sleep(2000);
@@ -263,14 +290,31 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
       } else {
         Log.e(TAG, "startTalk error");
       }
+
+      RecordsHolder recordsHolder = new RecordsHolder();
+      long currentTime = System.currentTimeMillis();
+      Log.e("currentTime", "currentTime=" + currentTime);
+      ret = VmNet.getRecords(0, 100, "201610111654538071", 1, (int)(currentTime / 1000) - 7200, (int)(currentTime / 1000), true, recordsHolder);
+
+      Log.e("getRecords", "getRecords ret = " + ret + ", size=" + recordsHolder.size());
+      if (ret == 0) {
+        recordTimeCellList.clear();
+        for (Record record : recordsHolder.list()) {
+          RecordTimeCell recordTimeCell = new RecordTimeCell(record.getBeginTime()*1000L, record.getEndTime()*1000L, Color.rgb(150, 255, 150));
+          recordTimeCellList.add(recordTimeCell);
+        }
+      }
       return null;
     }
 
     @Override
     protected void onPostExecute(Void aVoid) {
+      timeBar.setRecordList(recordTimeCellList);
 //      player = new VmPlayer();
 ////      player.startRealplay("201607201402389091", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
-//      player.startRealplay("201611100925191732", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//      player.startRealplay("201610111654538071", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//      player.startPlayback("201610111654538071", 1, true, 1481242200, 1481299200, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+
     }
   }
 

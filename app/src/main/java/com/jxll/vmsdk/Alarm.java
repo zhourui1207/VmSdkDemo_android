@@ -131,4 +131,22 @@ public class Alarm {
   public void setPhotoUrl(String photoUrl) {
     this.photoUrl = photoUrl;
   }
+
+  @Override
+  public String toString() {
+    return "Alarm{" +
+        "alarmId='" + alarmId + '\'' +
+        ", fdId='" + fdId + '\'' +
+        ", fdName='" + fdName + '\'' +
+        ", channelId=" + channelId +
+        ", channelName='" + channelName + '\'' +
+        ", channelBigType=" + channelBigType +
+        ", alarmTime='" + alarmTime + '\'' +
+        ", alarmCode=" + alarmCode +
+        ", alarmName='" + alarmName + '\'' +
+        ", alarmSubName='" + alarmSubName + '\'' +
+        ", alarmType=" + alarmType +
+        ", photoUrl='" + photoUrl + '\'' +
+        '}';
+  }
 }

@@ -9,7 +9,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.jxlianlian.vmnetsdktest.com.jxll.vmnetsdktest.MainActivity">
+    tools:context="com.jxll.vmnetsdktest.MainActivity">
 
   <TextView
       android:id="@+id/sample_text"
@@ -49,7 +49,24 @@
       android:layout_below="@+id/button"
       android:layout_alignLeft="@+id/button"
       android:layout_marginTop="5dp"
+      android:layout_centerHorizontal="true"
       android:id="@+id/record"/>
+
+  <com.jxll.widget.time.TimeBar
+      android:layout_marginTop="10dp"
+      android:layout_below="@+id/record"
+      android:layout_width="match_parent"
+      android:layout_height="80dp"
+      android:id="@+id/tb"/>
+
+  <TextView
+      android:layout_marginTop="10dp"
+      android:layout_below="@+id/tb"
+      android:layout_width="match_parent"
+      android:layout_height="30dp"
+      android:id="@+id/tv"
+      android:background="@color/colorGray"
+      android:textColor="@color/colorPrimary"/>
 
 
 </RelativeLayout>

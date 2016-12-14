@@ -59,4 +59,15 @@ public class DepTree {
   public void setOfflineChannelCounts(int offlineChannelCounts) {
     this.offlineChannelCounts = offlineChannelCounts;
   }
+
+  @Override
+  public String toString() {
+    return "DepTree{" +
+        "depId=" + depId +
+        ", depName='" + depName + '\'' +
+        ", parentId=" + parentId +
+        ", onlineChannelCounts=" + onlineChannelCounts +
+        ", offlineChannelCounts=" + offlineChannelCounts +
+        '}';
+  }
 }
