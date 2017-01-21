@@ -84,6 +84,14 @@ VMPLAYER_API void CALL_METHOD VmPlayer_RenderUninit(long renderHandle) {
   delete pRender;
 }
 
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderChangeSize(long renderHandle, int width, int height) {
+  Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;
+  if (pRender == nullptr) {
+    return;
+  }
+  pRender->ChangeSize(width, height);
+}
+
 VMPLAYER_API bool CALL_METHOD VmPlayer_RenderDrawYUV(long renderHandle, const char *yData, int yLen,
                                                      const char *uData, int uLen, const char *vData,
                                                      int vLen, int width, int height) {

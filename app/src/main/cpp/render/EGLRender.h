@@ -82,6 +82,11 @@ namespace Dream {
     void Uninit();
 
     /**
+     * 改变现实视图的大小
+     */
+    void ChangeSize(int width, int height);
+
+    /**
      * 绘图，必须传入不为空的nativeWindow
      */
     bool DrawYUV(const char *yData, int yLen, const char *uData, int uLen, const char *vData,

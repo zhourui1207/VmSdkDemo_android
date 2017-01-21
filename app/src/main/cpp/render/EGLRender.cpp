@@ -130,6 +130,14 @@ namespace Dream {
     _inited = false;
   }
 
+  void EGLRender::ChangeSize(int width, int height) {
+    if (!_inited || _nativeWindow == nullptr) {
+      return;
+    }
+
+    glViewport(0, 0, width, height);
+  }
+
   bool EGLRender::DrawYUV(const char *yData, int yLen, const char *uData, int uLen,
                           const char *vData, int vLen, int width, int height) {
     if (!_inited || _nativeWindow == nullptr) {

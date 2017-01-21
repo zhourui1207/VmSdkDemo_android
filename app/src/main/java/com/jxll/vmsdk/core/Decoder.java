@@ -401,7 +401,7 @@ public class Decoder {
   }
 
   // 播放线程
-  private class PlayThread extends Thread implements SurfaceHolder.Callback {
+  private class PlayThread extends Thread {
     private int decodeType;
     private boolean closeOpengles = false;
     private boolean closeSmooth = false;
@@ -473,8 +473,9 @@ public class Decoder {
       this.closeSmooth = closeSmooth;
       this.surfaceHolder = surfaceHolder;
       if (this.surfaceHolder != null) {
-        this.surfaceHolder.addCallback(this);
         this.surfaceCreated = this.surfaceHolder.getSurface().isValid();
+        this.surfaceWidth = surfaceHolder.getSurfaceFrame().width();
+        this.surfaceHeight = surfaceHolder.getSurfaceFrame().height();
       }
     }
 
@@ -677,9 +678,6 @@ public class Decoder {
       if (displayThread != null) {
         displayThread.shutDown();
         displayThread = null;
-      }
-      if (this.surfaceHolder != null) {
-        this.surfaceHolder.removeCallback(this);
       }
     }
 
@@ -941,25 +939,6 @@ public class Decoder {
 //      }
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-      Log.w(TAG, "surfaceCreated");
-      this.surfaceCreated = true;
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-      Log.w(TAG, "surfaceChanged");
-      this.surfaceWidth = width;
-      this.surfaceHeight = height;
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-      Log.w(TAG, "surfaceDestroyed");
-      this.surfaceCreated = false;
-    }
-
     public void pauseDisplay() {
       if (displayThread != null) {
         displayThread.pauseDisplay();
@@ -972,7 +951,7 @@ public class Decoder {
       }
     }
 
-    private class Display extends Thread {
+    private class Display extends Thread implements SurfaceHolder.Callback {
       private long renderHandle;
       private int width;
       private int height;
@@ -990,6 +969,9 @@ public class Decoder {
 
       public Display(boolean closeSmooth) {
         this.closeSmooth = closeSmooth;
+        if (surfaceHolder != null) {
+          surfaceHolder.addCallback(this);
+        }
       }
 
       public boolean addBuffer(Object object) {
@@ -1016,6 +998,9 @@ public class Decoder {
           this.join();
         } catch (InterruptedException e) {
           Log.e(TAG, StringUtil.getStackTraceAsString(e));
+        }
+        if (surfaceHolder != null) {
+          surfaceHolder.removeCallback(this);
         }
       }
 
@@ -1062,8 +1047,12 @@ public class Decoder {
       }
 
       private void createRender() {
-        if (useOpengles && renderHandle == 0) {
+        if (useOpengles && renderHandle == 0 && surfaceCreated) {
           renderHandle = RenderInit(surfaceHolder.getSurface());
+        }
+        // 同步大小
+        if (renderHandle != 0) {
+          RenderChangeSize(renderHandle, surfaceWidth, surfaceHeight);
         }
       }
 
@@ -1091,33 +1080,35 @@ public class Decoder {
               // 窗口不存在则直接跳过
               if (!surfaceCreated) {
                 lastDisplay = System.nanoTime();
+                releaseRender();
                 continue;
               }
               int frameType = frameData.getFrameType();
 
               if (frameType == FrameData.FRAME_TYPE_RGB) {
+//                // 窗口不存在则直接跳过
+//                if (!surfaceCreated) {
+//                  lastDisplay = System.nanoTime();
+//                  continue;
+//                }
+
                 RGBFrameData rgbFrameData = (RGBFrameData) frameData;
-
-                // 窗口不存在则直接跳过
-                if (!surfaceCreated) {
-                  lastDisplay = System.nanoTime();
-                  continue;
-                }
-
                 drawRGB(surfaceHolder, rgbFrameData.getData(), rgbFrameData.getWidth(), rgbFrameData
                     .getHeight());
               } else if (frameType == FrameData.FRAME_TYPE_YUV) {
+//                // 窗口不存在则直接跳过
+//                if (!surfaceCreated) {
+//                  lastDisplay = System.nanoTime();
+//                  continue;
+//                }
+
                 createRender();
+
                 YUVFrameData yuvFrameData = (YUVFrameData) frameData;
                 byte[] yData = yuvFrameData.getyData();
                 byte[] uData = yuvFrameData.getuData();
                 byte[] vData = yuvFrameData.getvData();
 
-                // 窗口不存在则直接跳过
-                if (!surfaceCreated) {
-                  lastDisplay = System.nanoTime();
-                  continue;
-                }
                 DrawYUV(renderHandle, yData, yData.length, uData, uData.length, vData, vData
                     .length, yuvFrameData.getWidth(), yuvFrameData.getHeight());
 //                DrawYUV(renderHandle, yData, yData.length, uData, uData.length, vData, vData
@@ -1181,6 +1172,25 @@ public class Decoder {
 
       public void continueDisplay() {
         isPause = false;
+      }
+
+      @Override
+      public void surfaceCreated(SurfaceHolder holder) {
+        Log.w(TAG, "surfaceCreated");
+        surfaceCreated = true;
+      }
+
+      @Override
+      public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        Log.w(TAG, "surfaceChanged");
+        surfaceWidth = width;
+        surfaceHeight = height;
+      }
+
+      @Override
+      public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.w(TAG, "surfaceDestroyed");
+        surfaceCreated = false;
       }
     }
   }
@@ -1319,6 +1329,8 @@ public class Decoder {
   private static native long RenderInit(Surface surface);
 
   private static native void RenderUninit(long renderHandle);
+
+  private static native void RenderChangeSize(long renderHandle, int width, int height);
 
   private static native int DrawYUV(long renderHandle, byte[] yData, int yLen, byte[] uData, int
       uLen, byte[] vData, int vLen, int width, int height);
