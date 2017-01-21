@@ -32,6 +32,7 @@ import com.jxll.vmsdk.util.opengles.GLFrameRenderer;
 import com.jxll.widget.time.RecordTimeCell;
 import com.jxll.widget.time.TimeBar;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -147,6 +148,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
       @Override
       public void onCurrentTimeChanged(long currentTime) {
         textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+        player.stopPlay();
+        player.startPlayback("201610111654538071", 1, true, (int)(currentTime / 1000L), (int)(System.currentTimeMillis() / 1000L), 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//        player.startRealplay("201610111654538071", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
       }
     });
 
@@ -167,16 +171,27 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     button.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        if (audioOpen) {
-          player.closeAudio();
-          audioOpen = false;
-          button.setText("打开声音");
-        } else {
-          audioOpen = player.openAudio();
-          if (audioOpen) {
-            button.setText("关闭声音");
-          }
+//        if (audioOpen) {
+//          player.closeAudio();
+//          audioOpen = false;
+//          button.setText("打开声音");
+//        } else {
+//          audioOpen = player.openAudio();
+//          if (audioOpen) {
+//            button.setText("关闭声音");
+//          }
+//        }
+        Log.e("!!!", "stop start");
+        player.stopPlay();
+        Log.e("!!!", "stop end");
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
         }
+        Log.e("!!!", "startRealplay start");
+        player.startRealplay("201610111654538071", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+        Log.e("!!!", "startRealplay end");
 
       }
     });
@@ -185,7 +200,12 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     record.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        timeBar.invalidate();
+        String saveDir = "/sdcard/MVSS/Screenshot";
+        File dir = new File(saveDir);
+        dir.mkdir();
+        String fname = saveDir + "/" + "测试" + ".jpeg";
+
+        player.screenshot(fname);
       }
 //        if (recording) {
 //          player.stopRecord();
@@ -229,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     @Override
     protected Void doInBackground(Void... voids) {
       VmNet.init(10);
-      VmNet.connect("192.168.1.113", 5516, MainActivity.this);
+      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
 //      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
       try {
         Thread.sleep(2000);
@@ -304,15 +324,28 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
           recordTimeCellList.add(recordTimeCell);
         }
       }
+
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
       return null;
     }
 
     @Override
     protected void onPostExecute(Void aVoid) {
+      String currentStr = TimeUtil.timeStamp2Date(System.currentTimeMillis(), null);
+      String[] sub = currentStr.split(" ");
+      String dayBegin = sub[0] + " 00:00:00";
+      long beginTime = TimeUtil.date2TimeStamp(dayBegin, null);
+      timeBar.setBeginTime(beginTime);
+      timeBar.setCurrentTime(System.currentTimeMillis());
       timeBar.setRecordList(recordTimeCellList);
-//      player = new VmPlayer();
-////      player.startRealplay("201607201402389091", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
-//      player.startRealplay("201610111654538071", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+      timeBar.invalidate();
+      player = new VmPlayer();
+//      player.startRealplay("201612022115042811", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
+      player.startRealplay("201610111654538071", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
 //      player.startPlayback("201610111654538071", 1, true, 1481242200, 1481299200, 0, false, false, surfaceView.getHolder(), MainActivity.this);
 
     }

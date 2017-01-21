@@ -127,13 +127,16 @@ namespace Dream {
     height = _height;
     framerate = _framerate;
     int rgbLen = _width * _height * 2;
-    if (rgbLen > outLen) {
+    if (outData != nullptr && rgbLen > outLen) {
       LOGE(TAG, "输出缓冲大小[%d]过小，RGB数据缓冲大小[%d]\n", outLen, rgbLen);
       return true;
     }
     outLen = rgbLen;
-    DisplayYUV_16((unsigned int *) outData, _frame->data[0], _frame->data[1], _frame->data[2],
-                  _width, _height, _frame->linesize[0], _frame->linesize[1], _width);
+    if (outData != nullptr) {
+      DisplayYUV_16((unsigned int *) outData, _frame->data[0], _frame->data[1], _frame->data[2],
+                    _width, _height, _frame->linesize[0], _frame->linesize[1], _width);
+    }
+
     return true;
   }
 

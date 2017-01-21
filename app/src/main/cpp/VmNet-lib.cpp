@@ -22,7 +22,7 @@ const char *METHOD_NAME_ON_STREAM_CONNECT_STATUS = "onStreamConnectStatus";
 const char *METHOD_SIG_ON_STREAM_CONNECT_STATUS = "(IZLjava/lang/Object;)V";
 
 const char *METHOD_NAME_ON_STREAM = "onStream";
-const char *METHOD_SIG_ON_STREAM = "(III[BIISZLjava/lang/Object;)V";
+const char *METHOD_SIG_ON_STREAM = "(III[BIIIZLjava/lang/Object;)V";
 
 const char *METHOD_NAME_ON_REAL_ALARM = "onRealAlarm";
 const char *METHOD_SIG_ON_REAL_ALARM = "(Ljava/lang/String;IIII)V";

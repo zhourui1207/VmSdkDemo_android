@@ -61,12 +61,39 @@ public class VmPlayer {
   private Decoder audioDecoder;
 
   /**
+   * 获取监控ID，客户可以在视频播放后，使用此监控id调用网络sdk的其他接口
+   *
+   * @return
+   */
+  public int getMonitorId() {
+    return monitorId;
+  }
+
+  /**
    * 返回当前错误码，若播放状态变回PLAY_MODE_NONE时，调用此接口获取最后的错误码
    *
    * @return
    */
   public int getErrorCode() {
     return errorCode;
+  }
+
+  /**
+   * 获取播放模式
+   *
+   * @return
+   */
+  public int getPlayMode() {
+    return playMode;
+  }
+
+  /**
+   * 获取当前状态
+   *
+   * @return
+   */
+  public int getCurrentStatus() {
+    return currentStatus;
   }
 
   /**
@@ -120,6 +147,13 @@ public class VmPlayer {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
+
+    // 如果之前已经在播放，那么需要先停止
+    if (currentStatus != VmType.PLAY_STATUS_NONE) {
+      stopPlay();
+    }
+    setCurrentStatus(VmType.PLAY_STATUS_BUSY);
+
     playMode = VmType.PLAY_MODE_REALPLAY;
     this.fdId = fdId;
     this.channelId = channelId;
@@ -148,15 +182,22 @@ public class VmPlayer {
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
    */
   public synchronized boolean startRealplay(String videoAddr, int videoPort, String audioAddr,
-                                            int audioPort, int
-                                                decodeType, boolean openAudio, SurfaceHolder
+                                            int audioPort, int decodeType, boolean closeOpengles,
+                                            boolean openAudio, SurfaceHolder
                                                 surfaceHolder, Context context) {
     if (playMode == VmType.PLAY_MODE_PLAYBACK) {
       return false;
     }
 
+    // 如果之前已经在播放，那么需要先停止
+    if (currentStatus != VmType.PLAY_STATUS_NONE) {
+      stopPlay();
+    }
+    setCurrentStatus(VmType.PLAY_STATUS_BUSY);
+
     playMode = VmType.PLAY_MODE_REALPLAY;
     this.decodeType = decodeType;
+    this.closeOpengles = closeOpengles;
     this.openAudio = openAudio;
     this.surfaceHolder = surfaceHolder;
     this.context = context;
@@ -188,6 +229,13 @@ public class VmPlayer {
     if (playMode == VmType.PLAY_MODE_REALPLAY) {
       return false;
     }
+
+    // 如果之前已经在播放，那么需要先停止
+    if (currentStatus != VmType.PLAY_STATUS_NONE) {
+      stopPlay();
+    }
+    setCurrentStatus(VmType.PLAY_STATUS_BUSY);
+
     playMode = VmType.PLAY_MODE_PLAYBACK;
     this.fdId = fdId;
     this.channelId = channelId;
@@ -218,15 +266,22 @@ public class VmPlayer {
    * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放实时预览原因）
    */
   public synchronized boolean startPlayback(String videoAddr, int videoPort, String audioAddr,
-                                            int audioPort, int
-                                                decodeType, boolean openAudio, SurfaceHolder
+                                            int audioPort, int decodeType, boolean closeOpengles,
+                                            boolean openAudio, SurfaceHolder
                                                 surfaceHolder, Context context) {
     if (playMode == VmType.PLAY_MODE_REALPLAY) {
       return false;
     }
 
+    // 如果之前已经在播放，那么需要先停止
+    if (currentStatus != VmType.PLAY_STATUS_NONE) {
+      stopPlay();
+    }
+    setCurrentStatus(VmType.PLAY_STATUS_BUSY);
+
     playMode = VmType.PLAY_MODE_PLAYBACK;
     this.decodeType = decodeType;
+    this.closeOpengles = closeOpengles;
     this.openAudio = openAudio;
     this.surfaceHolder = surfaceHolder;
     this.context = context;
@@ -237,6 +292,18 @@ public class VmPlayer {
     return true;
   }
 
+  public synchronized boolean controlPlayback(String action, String param) {
+    if (playMode != VmType.PLAY_MODE_PLAYBACK || currentStatus != VmType.PLAY_STATUS_PLAYING) {
+      return false;
+    }
+
+    int ret = VmNet.controlPlayback(monitorId, 0, action, param);
+    if (ret == ErrorCode.ERR_CODE_OK) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * 停止播放
    */
@@ -245,10 +312,29 @@ public class VmPlayer {
     streamStatusListener = null;
     setCurrentStatus(VmType.PLAY_STATUS_NONE);
     // 下面皆为同步操作
-    doCloseStreamTask();
-    doStopStreamTask();
+    doCloseStreamTask(playMode, monitorId);
+    doStopStreamTask(videoStreamId, audioStreamId);
     doStopDecodeTask();
+    playMode = VmType.PLAY_MODE_NONE;
     return;
+  }
+
+  /**
+   * 暂停显示
+   */
+  public synchronized void pauseDisplay() {
+    if (videoDecoder != null) {
+      videoDecoder.pauseDisplay();
+    }
+  }
+
+  /**
+   * 继续显示
+   */
+  public synchronized void continueDisplay() {
+    if (videoDecoder != null) {
+      videoDecoder.continueDisplay();
+    }
   }
 
   /**
@@ -294,6 +380,19 @@ public class VmPlayer {
     }
   }
 
+  /**
+   * 截图，保存成jpeg/jpg格式
+   *
+   * @param file 截图后生成文件路径
+   * @return
+   */
+  public synchronized boolean screenshot(String file) {
+    if (videoDecoder != null) {
+      return videoDecoder.screenshot(file);
+    }
+    return false;
+  }
+
   @Override
   protected void finalize() throws Throwable {
     super.finalize();
@@ -318,7 +417,7 @@ public class VmPlayer {
     openStreamTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
   }
 
-  private void doCloseStreamTask() {
+  private void doCloseStreamTask(int playMode, int monitorId) {
     if (monitorId == 0) {
       return;
     }
@@ -343,9 +442,13 @@ public class VmPlayer {
     startStreamTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, holder);
   }
 
-  private void doStopStreamTask() {
-    VmNet.stopStram(videoStreamId);
-    VmNet.stopStram(audioStreamId);
+  private void doStopStreamTask(int videoStreamId, int audioStreamId) {
+    if (videoStreamId != 0) {
+      VmNet.stopStram(videoStreamId);
+    }
+    if (audioStreamId != 0) {
+      VmNet.stopStram(audioStreamId);
+    }
   }
 
   private void doStopDecodeTask() {
@@ -360,85 +463,142 @@ public class VmPlayer {
     }
   }
 
-  private class OpenStreamTask extends AsyncTask<Void, Void, Void> {
+  private class OpenStreamTask extends AsyncTask<Void, Void, PlayAddressHolder> {
+
+    int mErrorCode = ErrorCode.NO_EXECUTE;
+
+    int mPlayMode;
 
     @Override
-    protected Void doInBackground(Void... voids) {
+    protected PlayAddressHolder doInBackground(Void... voids) {
       PlayAddressHolder holder = new PlayAddressHolder();
       setCurrentStatus(VmType.PLAY_STATUS_OPENSTREAMING);
-      errorCode = ErrorCode.NO_EXECUTE;
+      mPlayMode = playMode;
       switch (playMode) {
         case VmType.PLAY_MODE_REALPLAY:
-          errorCode = VmNet.openRealplayStream(fdId, channelId, isSub, holder);
+          mErrorCode = VmNet.openRealplayStream(fdId, channelId, isSub, holder);
           break;
         case VmType.PLAY_MODE_PLAYBACK:
-          errorCode = VmNet.openPlaybackStream(fdId, channelId, isCenter, beginTime, endTime,
+          mErrorCode = VmNet.openPlaybackStream(fdId, channelId, isCenter, beginTime, endTime,
               holder);
           break;
         default:
           Log.e(TAG, "打开码流失败！当前播放模式为[" + playMode + "]，未定义的值！");
           break;
       }
-      if (errorCode == ErrorCode.ERR_CODE_OK) {
-        monitorId = holder.getMonitorId();
-        // 开始取流
-        doStartStreamTask(holder);
-      } else {
-        Log.e(TAG, "打开码流失败！返回值 errorCode=" + errorCode);
-        setCurrentStatus(VmType.PLAY_STATUS_NONE);
-      }
-      return null;
+//      if (errorCode == ErrorCode.ERR_CODE_OK) {
+//        monitorId = holder.getMonitorId();
+//        // 开始取流
+//        doStartStreamTask(holder);
+//      } else {
+//        Log.e(TAG, "打开码流失败！返回值 errorCode=" + errorCode);
+//        setCurrentStatus(VmType.PLAY_STATUS_NONE);
+//      }
+      return holder;
     }
 
     @Override
-    protected void onPostExecute(Void aVoid) {
+    protected void onPostExecute(PlayAddressHolder holder) {
+      errorCode = mErrorCode;
+      if (mErrorCode == ErrorCode.ERR_CODE_OK) {
+        monitorId = holder.getMonitorId();
+        // 开始取流
+        Log.i(TAG, "打开码流成功，开始取流...");
+        doStartStreamTask(holder);
+      } else {
+        Log.e(TAG, "打开码流失败！返回值 mErrorCode=" + mErrorCode);
+        setCurrentStatus(VmType.PLAY_STATUS_NONE);
+      }
       openStreamTask = null;
+    }
+
+    @Override
+    protected void onCancelled(PlayAddressHolder holder) {
+      if (mErrorCode == ErrorCode.ERR_CODE_OK) {
+        Log.e(TAG, "取消打开码流 mPlatMode=" + mPlayMode + ", monitorId=" + holder.getMonitorId());
+        doCloseStreamTask(mPlayMode, holder.getMonitorId());
+      }
     }
   }
 
   private class StartStreamTask extends AsyncTask<PlayAddressHolder, Void, Void> {
+
+    int mErrorCode = ErrorCode.NO_EXECUTE;
+
+    int mVideoStreamId;
+    int mAudioStreamId;
 
     @Override
     protected Void doInBackground(PlayAddressHolder... playAddressHolders) {
       PlayAddressHolder holder = playAddressHolders[0];
       setCurrentStatus(VmType.PLAY_STATUS_GETSTREAMING);
 
-      errorCode = ErrorCode.NO_EXECUTE;
-      StreamIdHolder streamIdHolder = new StreamIdHolder();
-      errorCode = VmNet.startStream(holder.getVideoAddr(), holder.getVideoPort(), new
-          VideoStreamCallbackI(), streamIdHolder);
-      Log.e(TAG, "errorCode" + errorCode);
-      if (errorCode == ErrorCode.ERR_CODE_OK) {
-        videoStreamId = streamIdHolder.getStreamId();
-        // 视频开始解码
-        if (videoDecoder == null) {
-          videoDecoder = new Decoder(decodeType, closeOpengles, true, surfaceHolder, context);
-        } else {
-          videoDecoder.startPlay();
-        }
-      } else {
-        doCloseStreamTask();
-        setCurrentStatus(VmType.PLAY_STATUS_NONE);
+      StreamIdHolder videoStreamIdHolder = new StreamIdHolder();
+      mErrorCode = VmNet.startStream(holder.getVideoAddr(), holder.getVideoPort(), new
+          VideoStreamCallbackI(), videoStreamIdHolder);
+      Log.w(TAG, "startStream mErrorCode=" + mErrorCode);
+
+      if (mErrorCode == ErrorCode.ERR_CODE_OK) {
+        mVideoStreamId = videoStreamIdHolder.getStreamId();
       }
 
+
+//      if (holder.getAudioAddr() == null || holder.getAudioAddr().equalsIgnoreCase("") || holder
+//          .getAudioPort() == 0) {
+//        return null;
+//      }
+
+      StreamIdHolder audioStreamIdHolder = new StreamIdHolder();
       // 若音频取流失败，则不做任何处理 todo:现在的音频类型是有问题的，因为音频的头居然使用的是视频的头
-      errorCode = VmNet.startStream(holder.getAudioAddr(), holder.getAudioPort(), new
-          AudioStreamCallbackI(), streamIdHolder);
-      if (errorCode == ErrorCode.ERR_CODE_OK) {
-        audioStreamId = streamIdHolder.getStreamId();
-        // 音频开始解码
-        if (audioDecoder == null) {
-          audioDecoder = new Decoder(decodeType, closeOpengles, openAudio, surfaceHolder, context);
-        } else if (openAudio) {
-          audioDecoder.startPlay();
-        }
+      int ret = VmNet.startStream(holder.getAudioAddr(), holder.getAudioPort(), new
+          AudioStreamCallbackI(), audioStreamIdHolder);
+
+      if (ret == ErrorCode.ERR_CODE_OK) {
+        mAudioStreamId = audioStreamIdHolder.getStreamId();
       }
+
       return null;
     }
 
     @Override
     protected void onPostExecute(Void aVoid) {
+      errorCode = mErrorCode;
+      boolean closeSmooth = playMode == VmType.PLAY_MODE_PLAYBACK ? true : false;
+
+      if (mErrorCode == ErrorCode.ERR_CODE_OK) {
+        videoStreamId = mVideoStreamId;
+        // 视频开始解码
+        if (videoDecoder == null) {
+          videoDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, true, surfaceHolder,
+              context);
+        } else {
+          videoDecoder.startPlay();
+        }
+        setCurrentStatus(VmType.PLAY_STATUS_PLAYING);
+      } else {
+        doCloseStreamTask(playMode, monitorId);
+        setCurrentStatus(VmType.PLAY_STATUS_NONE);
+      }
+
+      if (mErrorCode == ErrorCode.ERR_CODE_OK && mAudioStreamId > 0) {
+        audioStreamId = mAudioStreamId;
+        // 音频开始解码
+        if (audioDecoder == null) {
+          audioDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, openAudio,
+              surfaceHolder, context);
+        } else if (openAudio) {
+          audioDecoder.startPlay();
+        }
+      }
       startStreamTask = null;
+    }
+
+    @Override
+    protected void onCancelled(Void aVoid) {
+      if (errorCode == ErrorCode.ERR_CODE_OK) {
+        Log.e(TAG, "取消取流 mVideoStreamId=" + mVideoStreamId + ", mAudioStreamId=" + mAudioStreamId);
+        doStopStreamTask(mVideoStreamId, mAudioStreamId);
+      }
     }
   }
 
@@ -484,4 +644,5 @@ public class VmPlayer {
       }
     }
   }
+
 }

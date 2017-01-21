@@ -40,7 +40,8 @@ void Timer::cancel() {
     _condition.notify_one();
 
     lock.unlock();  // 在join前不能忘记解锁
-
+  }
+  if (_threadPtr->joinable()) {
     _threadPtr->join();
   }
 }

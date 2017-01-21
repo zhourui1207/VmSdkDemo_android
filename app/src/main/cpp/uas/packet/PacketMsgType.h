@@ -29,8 +29,8 @@ const unsigned DB_ERR = 0x022d;  // 数据库错误
 
 const unsigned STATUS_GEN_ERR = 0xff;  // 一般错误
 
-const unsigned STATUS_TIMEOUT_ERR = 0xf001;  // 超时
-const unsigned STATUS_SEND_FAILED = 0xf002;  // 发送失败
+const unsigned STATUS_TIMEOUT_ERR = 0xf004;  // 超时
+const unsigned STATUS_SEND_FAILED = 0xf005;  // 发送失败
 
 // 登录
 const unsigned MSG_LOGIN_REQ = 0x0201;

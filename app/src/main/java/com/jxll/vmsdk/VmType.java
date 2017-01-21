@@ -22,8 +22,9 @@ public class VmType {
 
   // 播放状态
   public static final int PLAY_STATUS_NONE = 0;  // 无状态
-  public static final int PLAY_STATUS_OPENSTREAMING = 1;  // 正在打开码流
-  public static final int PLAY_STATUS_GETSTREAMING = 2;  // 正在获取码流
-  public static final int PLAY_STATUS_DECODING = 3;  // 正在解码
-  public static final int PLAY_STATUS_PLAYING = 4;  // 正在播放
+  public static final int PLAY_STATUS_BUSY = 1;  // 正在忙
+  public static final int PLAY_STATUS_OPENSTREAMING = 2;  // 正在打开码流
+  public static final int PLAY_STATUS_GETSTREAMING = 3;  // 正在获取码流
+  public static final int PLAY_STATUS_DECODING = 4;  // 正在解码
+  public static final int PLAY_STATUS_PLAYING = 5;  // 正在播放
 }

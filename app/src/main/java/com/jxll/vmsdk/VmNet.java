@@ -238,6 +238,7 @@ public class VmNet {
    */
   public static int openPlaybackStream(String fdId, int channelId, boolean isCenter, int
       beginTime, int endTime, PlayAddressHolder playAddressHolder) {
+//    Log.e("VmNet", "openPlaybackStream()");
     return OpenPlaybackStream(fdId, channelId, isCenter, beginTime, endTime, playAddressHolder);
   }
 
@@ -247,6 +248,7 @@ public class VmNet {
    * @param monitorId 监控sessionid，打开码流时可在playAddressHolder中获得
    */
   public static void closePlaybackStream(int monitorId) {
+//    Log.e("VmNet", "closePlaybackStream(" + monitorId + ")");
     ClosePlaybackStream(monitorId);
   }
 
@@ -254,15 +256,14 @@ public class VmNet {
    * 控制回放
    *
    * @param monitorId 监控sessionid，打开码流时可在playAddressHolder中获得
-   * @param isCenter  true：中心录像  false：前端录像
    * @param controlId 控制id
    * @param action    控制动作
    * @param param     控制参数
    * @return
    */
-  public static int controlPlayback(int monitorId, boolean isCenter, int controlId,
-                                    String action, int param) {
-    return ControlPlayback(monitorId, isCenter, controlId, action, param);
+  public static int controlPlayback(int monitorId, int controlId,
+                                    String action, String param) {
+    return ControlPlayback(monitorId, controlId, action, param);
   }
 
   /**
@@ -276,6 +277,7 @@ public class VmNet {
    */
   public static int startStream(String address, int port, StreamCallback streamCallback,
                                 StreamIdHolder streamIdHolder) {
+//    Log.e("VmNet", "startStream()");
     return StartStream(address, port, streamCallback, streamIdHolder);
   }
 
@@ -285,6 +287,7 @@ public class VmNet {
    * @param streamId 码流id
    */
   public static void stopStram(int streamId) {
+//    Log.e("VmNet", "stopStram(" + streamId + ")");
     StopStream(streamId);
   }
 
@@ -345,8 +348,8 @@ public class VmNet {
 
   private static native void ClosePlaybackStream(int monitorId);
 
-  private static native int ControlPlayback(int monitorId, boolean isCenter, int controlId,
-                                            String action, int param);
+  private static native int ControlPlayback(int monitorId, int controlId,
+                                            String action, String param);
 
   private static native int StartStream(String address, int port, StreamCallback streamCallback,
                                         StreamIdHolder streamIdHolder);
@@ -367,21 +370,17 @@ public class VmNet {
   private static void onStreamConnectStatus(int streamId, boolean isConnected, Object object) {
     if (object != null) {
       StreamCallback streamCallback = (StreamCallback) object;
-      if (streamCallback != null) {
-        streamCallback.onStreamConnectStatus(streamId, isConnected);
-      }
+      streamCallback.onStreamConnectStatus(streamId, isConnected);
     }
   }
 
   private static void onStream(int streamId, int streamType, int payloadType, byte[] buffer, int
       len,
-                               int timeStamp, short seqNumber, boolean isMark, Object object) {
+                               int timeStamp, int seqNumber, boolean isMark, Object object) {
     if (object != null) {
       StreamCallback streamCallback = (StreamCallback) object;
-      if (streamCallback != null) {
-        streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,
-            timeStamp, seqNumber, isMark);
-      }
+      streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,
+          timeStamp, seqNumber, isMark);
     }
   }
 

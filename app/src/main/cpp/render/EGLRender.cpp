@@ -80,6 +80,7 @@ namespace Dream {
       // 离屏渲染
       _surface = eglCreatePbufferSurface(_display, config, nullptr);
     }
+//    LOGE(TAG, "create _surface=%d, nativeWindow=%d\n", _surface, nativeWindow);
     if (_surface == EGL_NO_SURFACE) {
       LOGE(TAG, "surface EGL_NO_SURFACE!\n");
       releaseResources();
@@ -356,11 +357,23 @@ namespace Dream {
 
   // 释放资源
   void EGLRender::releaseResources() {
-    if (_surface != EGL_NO_SURFACE) {
-      eglDestroySurface(_display, _surface);
-    }
-    if (_context != EGL_NO_CONTEXT) {
-      eglDestroyContext(_display, _context);
+    if (_display != EGL_NO_DISPLAY) {
+//      LOGE(TAG, "releaseResources _surface=%d\n", _surface);
+
+      // 这句代码一定要调用，不然后面获取suface时永远为空
+      eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+      if (_surface != EGL_NO_SURFACE) {
+        eglDestroySurface(_display, _surface);
+        _surface = EGL_NO_SURFACE;
+      }
+      if (_context != EGL_NO_CONTEXT) {
+        eglDestroyContext(_display, _context);
+        _context = EGL_NO_CONTEXT;
+      }
+
+      eglTerminate(_display);
+      _display = EGL_NO_DISPLAY;
     }
   }
 }

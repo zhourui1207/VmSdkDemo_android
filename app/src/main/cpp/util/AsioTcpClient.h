@@ -20,6 +20,7 @@
 #include "Noncopyable.h"
 #include "PacketData.h"
 #include "ThreadPool.h"
+#include "Timer.h"
 
 namespace Dream {
 
@@ -134,6 +135,7 @@ private:
   std::unique_ptr<boost::asio::io_service> _ioServicePtr;
   std::unique_ptr<boost::asio::ip::tcp::socket> _socketPtr;  // 套接字智能指针
   std::unique_ptr<std::thread> _threadPtr;  // 线程智能指针
+  std::unique_ptr<Timer> _reconnectTimerPtr;  // 重连定时器智能指针
   boost::asio::ip::tcp::resolver::iterator _endpointIterator;
 
   char* _receive;  // 接收数据缓存

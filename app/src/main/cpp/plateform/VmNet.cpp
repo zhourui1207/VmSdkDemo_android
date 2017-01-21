@@ -35,6 +35,7 @@ int GBK2UTF8_STR(const std::string& inStr, char *outbuf, size_t outlen) {
 }
 
 VMNET_API bool CALL_METHOD VmNet_Init(unsigned uMaxThreadCount) {
+  LOGD("VMSDK", "VmNet_Init\n");
   if (g_pMainModule == nullptr) {
     g_pMainModule = new Dream::MainModule(uMaxThreadCount);
     return true;
@@ -43,6 +44,7 @@ VMNET_API bool CALL_METHOD VmNet_Init(unsigned uMaxThreadCount) {
 }
 
 VMNET_API void CALL_METHOD VmNet_UnInit() {
+  LOGD("VMSDK", "VmNet_UnInit\n");
   if (g_pMainModule != nullptr) {
     delete g_pMainModule;
     g_pMainModule = nullptr;
@@ -51,6 +53,7 @@ VMNET_API void CALL_METHOD VmNet_UnInit() {
 
 VMNET_API unsigned CALL_METHOD VmNet_Connect(const char* sServerAddr,
                                              unsigned uServerPort, fUasConnectStatusCallBack cbUasConnectStatus) {
+  LOGD("VMSDK", "VmNet_Connect\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -60,6 +63,7 @@ VMNET_API unsigned CALL_METHOD VmNet_Connect(const char* sServerAddr,
 
 // 断开服务器
 VMNET_API void CALL_METHOD VmNet_Disconnect() {
+  LOGD("VMSDK", "VmNet_Disconnect\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -69,6 +73,7 @@ VMNET_API void CALL_METHOD VmNet_Disconnect() {
 
 VMNET_API unsigned CALL_METHOD VmNet_Login(const char* sLoginName,
                                            const char* sLoginPwd) {
+  LOGD("VMSDK", "VmNet_Login\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -76,6 +81,7 @@ VMNET_API unsigned CALL_METHOD VmNet_Login(const char* sLoginName,
 }
 
 VMNET_API void CALL_METHOD VmNet_Logout() {
+  LOGD("VMSDK", "VmNet_Logout\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -84,6 +90,7 @@ VMNET_API void CALL_METHOD VmNet_Logout() {
 
 VMNET_API unsigned CALL_METHOD VmNet_GetDepTrees(unsigned uPageNo,
                                                  unsigned uPageSize, out TVmDepTree* pDepTrees, out unsigned& uSize) {
+  LOGD("VMSDK", "VmNet_GetDepTrees\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -109,6 +116,7 @@ VMNET_API unsigned CALL_METHOD VmNet_GetDepTrees(unsigned uPageNo,
 VMNET_API unsigned CALL_METHOD VmNet_GetChannels(unsigned uPageNo,
                                                  unsigned uPageSize, int nDepId, out TVmChannel* pChannels,
                                                  out unsigned& uSize) {
+  LOGD("VMSDK", "VmNet_GetChannels\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -139,6 +147,7 @@ VMNET_API unsigned CALL_METHOD VmNet_GetRecords(unsigned uPageNo,
                                                 unsigned uPageSize, const char* sFdId, int nChannelId, unsigned uBeginTime,
                                                 unsigned uEndTime, bool bIsCenter, out TVmRecord* pRecords,
                                                 out unsigned& uSize) {
+  LOGD("VMSDK", "VmNet_GetRecords\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -165,6 +174,7 @@ VMNET_API unsigned CALL_METHOD VmNet_GetAlarms(unsigned uPageNo,
                                                unsigned uPageSize, const char* sFdId, int nChannelId,
                                                unsigned uChannelBigType, const char* sBeginTime, const char* sEndTime,
                                                out TVmAlarm* pAlarms, out unsigned& uSize) {
+  LOGD("VMSDK", "VmNet_GetAlarms\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -198,6 +208,7 @@ VMNET_API unsigned CALL_METHOD VmNet_GetAlarms(unsigned uPageNo,
 
 VMNET_API void CALL_METHOD VmNet_StartReceiveRealAlarm(
     fRealAlarmCallBack cbRealAlarm) {
+  LOGD("VMSDK", "VmNet_StartReceiveRealAlarm\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -205,6 +216,7 @@ VMNET_API void CALL_METHOD VmNet_StartReceiveRealAlarm(
 }
 
 VMNET_API void CALL_METHOD VmNet_StopReceiveRealAlarm() {
+  LOGD("VMSDK", "VmNet_StopReceiveRealAlarm\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -214,6 +226,8 @@ VMNET_API void CALL_METHOD VmNet_StopReceiveRealAlarm() {
 VMNET_API unsigned CALL_METHOD VmNet_OpenRealplayStream(const char* sFdId,
                                                         int nChannelId, bool bIsSub, out unsigned& uMonitorId, out char* sVideoAddr,
                                                         out unsigned& uVideoPort, out char* sAudioAddr, out unsigned& uAudioPort) {
+  LOGD("VMSDK", "VmNet_OpenRealplayStream\n");
+
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -228,6 +242,7 @@ VMNET_API unsigned CALL_METHOD VmNet_OpenRealplayStream(const char* sFdId,
 }
 
 VMNET_API void CALL_METHOD VmNet_CloseRealplayStream(unsigned uMonitorId) {
+  LOGD("VMSDK", "VmNet_CloseRealplayStream\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -238,6 +253,7 @@ VMNET_API unsigned CALL_METHOD VmNet_OpenPlaybackStream(const char* sFdId,
                                                         int nChannelId, bool bIsCenter, unsigned beginTime, unsigned endTime,
                                                         out unsigned& uMonitorId, out char* sVideoAddr, out unsigned& uVideoPort,
                                                         out char* sAudioAddr, out unsigned& uAudioPort) {
+  LOGD("VMSDK", "VmNet_OpenPlaybackStream\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -255,6 +271,7 @@ VMNET_API unsigned CALL_METHOD VmNet_OpenPlaybackStream(const char* sFdId,
 // 停止回放流
 // 入参    uMonitorId：监控id，打开回放码流时获得； bIsCenter：是否为中心录像
 VMNET_API void CALL_METHOD VmNet_ClosePlaybackStream(unsigned uMonitorId) {
+  LOGD("VMSDK", "VmNet_ClosePlaybackStream\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -265,6 +282,7 @@ VMNET_API void CALL_METHOD VmNet_ClosePlaybackStream(unsigned uMonitorId) {
 // 入参    uMonitorId：监控id，打开回放码流时获得； bIsCenter：是否为中心录像
 //        uControlId：控制id； sAction：操作； sParam：参数
 VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId, unsigned uControlId, const char* sAction, const char* sParam) {
+  LOGD("VMSDK", "VmNet_ControlPlayback\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -275,6 +293,7 @@ VMNET_API unsigned CALL_METHOD VmNet_StartStream(const char* sAddr,
                                                  unsigned uPort, fStreamCallBack cbRealData,
                                                  fStreamConnectStatusCallBack cbConnectStatus, void* pUser,
                                                  out unsigned& uStreamId) {
+  LOGD("VMSDK", "VmNet_StartStream\n");
   if (g_pMainModule == nullptr) {
     return ERR_CODE_SDK_UNINIT;
   }
@@ -283,6 +302,7 @@ VMNET_API unsigned CALL_METHOD VmNet_StartStream(const char* sAddr,
 }
 
 VMNET_API void CALL_METHOD VmNet_StopStream(unsigned uStreamId) {
+  LOGD("VMSDK", "VmNet_StopStream\n");
   if (g_pMainModule == nullptr) {
     return;
   }
@@ -291,6 +311,7 @@ VMNET_API void CALL_METHOD VmNet_StopStream(unsigned uStreamId) {
 
 VMNET_API void CALL_METHOD VmNet_SendControl(const char* sFdId, int nChannelId,
                                              unsigned uControlType, unsigned uParm1, unsigned uParm2) {
+  LOGD("VMSDK", "VmNet_SendControl\n");
   if (g_pMainModule == nullptr) {
     return;
   }

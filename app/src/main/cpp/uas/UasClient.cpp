@@ -161,8 +161,7 @@ bool UasClient::sendAndWaitRespPacket(MsgPacket& msgPacket,
   _receivePackets.emplace(
       std::make_pair(seqNumber, std::shared_ptr<MsgPacket>(nullptr)));
 
-  bool sendSuccess = send(msgPacket);
-  // 发送包
+  bool sendSuccess = send(msgPacket); // 发送包
   if (sendSuccess) {  // 如果发送成功，等待返回；若失败的话，则立刻返回
     // 线程挂起
     _condition.wait_for(lock, std::chrono::milliseconds(_timeout),
@@ -485,6 +484,7 @@ void UasClient::sendCmd(const std::string& fdId, int channelId,
 }
 
 void UasClient::heartbeat() {
+  LOGD("UasClient", "发送心跳保活\n");
   HeartbeatReqPacket req;
   send(req);  // 不需要等待响应
 }

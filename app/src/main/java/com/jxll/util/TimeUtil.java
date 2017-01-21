@@ -15,7 +15,9 @@ public class TimeUtil {
    * @return
    */
   public static String timeStamp2Date(long milliseconds, String format) {
-    if(format == null || format.isEmpty()) format = "yyyy-MM-dd HH:mm:ss";
+    if(format == null || format.isEmpty()) {
+      format = "yyyy-MM-dd HH:mm:ss";
+    }
     SimpleDateFormat sdf = new SimpleDateFormat(format);
     return sdf.format(new Date(milliseconds));
   }
@@ -27,6 +29,9 @@ public class TimeUtil {
    * @return
    */
   public static long date2TimeStamp(String date, String format) {
+    if(format == null || format.isEmpty()) {
+      format = "yyyy-MM-dd HH:mm:ss";
+    }
     try {
       SimpleDateFormat sdf = new SimpleDateFormat(format);
       return sdf.parse(date).getTime();

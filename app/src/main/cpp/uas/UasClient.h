@@ -28,7 +28,7 @@ namespace Dream {
 class UasClient: public TcpClient<MsgPacket> {
 public:
   static const uint64_t TIMEOUT_DEFULT = 5000; // 默认超时5秒
-  static const uint64_t HEARTBEAT_INTERVAL = 5000;  // 默认心跳间隔5秒
+  static const uint64_t HEARTBEAT_INTERVAL = 10000;  // 默认心跳间隔5秒
     
 private:
   class PlaybackSession {

@@ -27,6 +27,8 @@ public:
   virtual ~StreamSession();
 
   bool startUp();
+  
+  void shutDown();
 
 private:
   // 码流回调

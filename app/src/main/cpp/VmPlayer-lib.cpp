@@ -141,12 +141,13 @@ jint Java_com_jxll_vmsdk_core_Decoder_DecodeNalu2RGB(JNIEnv *env, jobject ob,
                                                            jbyteArray inData, jint inLen,
                                                            jbyteArray outData,
                                                            jobject frameConfigHolder) {
-  //LOGI("Java_com_jxll_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
+//  LOGE("Java_com_jxll_vmsdk_VmPlayer_DecodeNalu(%d)", outData);
 
   jbyte *inBuf = env->GetByteArrayElements(inData, 0);
-  jbyte *outBuf = env->GetByteArrayElements(outData, 0);
+  jbyte *outBuf = outData != nullptr ? env->GetByteArrayElements(outData, 0) : nullptr;
 
-  int outlen = env->GetArrayLength(outData);
+  int outlen = outData != nullptr ? env->GetArrayLength(outData) : 0;
+
   int width = 0;
   int height = 0;
   int framerate = 0;
@@ -154,14 +155,18 @@ jint Java_com_jxll_vmsdk_core_Decoder_DecodeNalu2RGB(JNIEnv *env, jobject ob,
                                      outlen, width, height, framerate);
   if (ret) {
     if (!FrameConfigHolderInit(env, width, height, framerate, frameConfigHolder)) {
-      return false;
+      outlen = -1;
     }
   } else {
     outlen = -1;
   }
 
   env->ReleaseByteArrayElements(inData, inBuf, 0);
-  env->ReleaseByteArrayElements(outData, outBuf, 0);
+
+  if (outBuf != nullptr) {
+    env->ReleaseByteArrayElements(outData, outBuf, 0);
+  }
+
   return outlen;
 }
 
@@ -219,9 +224,10 @@ jint Java_com_jxll_vmsdk_core_Decoder_GetFrameHeight(JNIEnv *env, jobject ob,
 jlong Java_com_jxll_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
                                                         jobject surface) {
   long renderHandle = 0;
-  LOGI("Java_com_jxll_vmsdk_core_Decoder_RenderInit()");
+  LOGW("Java_com_jxll_vmsdk_core_Decoder_RenderInit()");
   ANativeWindow *pNativeWindow = ANativeWindow_fromSurface(env, surface);
   bool ret = VmPlayer_RenderInit((void *) pNativeWindow, renderHandle);
+//  ANativeWindow_release(pNativeWindow);
   if (!ret) {
     renderHandle = 0;
   }
@@ -230,7 +236,7 @@ jlong Java_com_jxll_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
 
 void Java_com_jxll_vmsdk_core_Decoder_RenderUninit(JNIEnv *env, jobject ob,
                                                          jlong renderHandle) {
-  LOGI("Java_com_jxll_vmsdk_core_Decoder_RenderUninit(%lld)", renderHandle);
+  LOGW("Java_com_jxll_vmsdk_core_Decoder_RenderUninit(%lld)", renderHandle);
   VmPlayer_RenderUninit(renderHandle);
 }
 

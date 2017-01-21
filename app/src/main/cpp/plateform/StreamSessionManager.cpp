@@ -35,7 +35,7 @@ StreamSession::~StreamSession() {
     if (g_pJavaVM->GetEnv(reinterpret_cast<void**>(&jniEnv), JNI_VERSION_1_6) == JNI_OK) {
       if (jniEnv) {
         jniEnv->DeleteGlobalRef(static_cast<jobject>(_user));
-        __android_log_print(ANDROID_LOG_WARN, "StreamSession", "删出android线程[%zd]的全局引用！[%zd]", jniEnv, _user);
+        __android_log_print(ANDROID_LOG_WARN, "StreamSession", "删除android线程[%zd]的全局引用！[%zd]", jniEnv, _user);
       }
     }
   }
@@ -46,6 +46,10 @@ StreamSession::~StreamSession() {
 
 bool StreamSession::startUp() {
   return _streamClient.startUp();
+}
+  
+void StreamSession::shutDown() {
+  _streamClient.shutDown();
 }
 
 void StreamSession::onStream(const std::shared_ptr<StreamData>& streamDataPtr) {
@@ -101,6 +105,7 @@ void StreamSessionManager::removeStreamClient(unsigned streamId) {
   std::lock_guard<std::mutex> lock(_mutex);
   auto streamSessionPtrIt = _sessionMap.find(streamId);
   if (streamSessionPtrIt != _sessionMap.end()) {
+    streamSessionPtrIt->second->shutDown();
     _sessionMap.erase(streamSessionPtrIt);
     recoveryStreamId(streamId);
   }

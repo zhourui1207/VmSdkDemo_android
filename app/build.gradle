@@ -9,7 +9,7 @@ android {
       keyAlias 'mvssalias'
     }
   }
-  compileSdkVersion 24
+  compileSdkVersion 16
   buildToolsVersion '25.0.0'
   defaultConfig {
     applicationId 'com.jxll.vmnetsdktest'

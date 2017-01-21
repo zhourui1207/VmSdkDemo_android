@@ -17,10 +17,12 @@ import java.util.Enumeration;
 public class StringUtil {
   private static final String TAG="StringUtil";
   private static final String NEW_LINE = "\r";
+
   public static String getHexDump(byte [] buffer)
   {
     return getHexDump(buffer,0);
   }
+
   public static String getHexDump(ByteBuffer byteBuffer)
   {
     byteBuffer.mark();
@@ -33,6 +35,7 @@ public class StringUtil {
     }
     return getHexDump(buffer,0);
   }
+
   public static String getHexDump(byte [] buffer,int len)
   {
     int dataLen=len;
@@ -57,6 +60,7 @@ public class StringUtil {
     }
     return dump;
   }
+
   public static String getStackTraceAsString(Throwable e)
   {
     if (e == null)
@@ -67,6 +71,7 @@ public class StringUtil {
     StringBuffer error = stringWriter.getBuffer();
     return error.toString();
   }
+
   public static String getLocalIpAddress() {
     try {
       for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {

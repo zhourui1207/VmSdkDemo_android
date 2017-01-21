@@ -280,7 +280,6 @@ public class TimeBar extends View {
 
   public void setTotalMilliseconds(long totalMilliseconds) {
     this.totalMilliseconds = totalMilliseconds;
-    invalidate();
   }
 
   public long getTotalMilliseconds() {
@@ -289,16 +288,28 @@ public class TimeBar extends View {
 
   public void setCurrentScaleLevel(int scaleLevel) {
     currentScaleLevel = scaleLevel;
-    invalidate();
   }
 
   public int getCurrentScaleLevel() {
     return currentScaleLevel;
   }
 
+  public long getBeginTime() {
+    return beginTime;
+  }
+
+  public void setBeginTime(long beginTime) {
+    this.beginTime = beginTime;
+  }
+
   public void setCurrentTime(long time) {
+    long offsetTime = time - beginTime;
+    if (offsetTime < 0 || offsetTime > totalMilliseconds) {
+      return;
+    }
     currentTime = time;
-    invalidate();
+    int left = computeLeft(offsetTime, getWidth() - srcWidth);
+    layout(left, getTop(), left + getWidth(), getBottom());
   }
 
   public long getCurrentTime() {
@@ -307,7 +318,6 @@ public class TimeBar extends View {
 
   public void setRecordList(List<RecordTimeCell> recordList) {
     recordTimeCellList = recordList;
-    invalidate();
   }
 
   public void addRecord(RecordTimeCell record) {
@@ -315,7 +325,6 @@ public class TimeBar extends View {
       recordTimeCellList = new ArrayList<>();
     }
     recordTimeCellList.add(record);
-    invalidate();
   }
 
   public void clearRecord() {
@@ -323,7 +332,6 @@ public class TimeBar extends View {
       recordTimeCellList.clear();
       recordTimeCellList = null;
     }
-    invalidate();
   }
 
   /**
@@ -357,6 +365,8 @@ public class TimeBar extends View {
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
+
+//    Log.e("onDraw", "currentTime=" + currentTime);
 
     // 画背景
     canvas.drawColor(backgroundColor);
@@ -531,6 +541,8 @@ public class TimeBar extends View {
     centerScalePath.close();
     canvas.drawPath(centerScalePath, centerScalePaint);
     //---------------------- 画中心刻度结束 ----------------------
+
+//    Log.e("onDraw", "onDraw end!");
   }
 
   /**

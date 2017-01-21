@@ -117,9 +117,9 @@ unsigned MainModule::startStream(const std::string& addr, unsigned port,
     fStreamCallBack streamCallback,
     fStreamConnectStatusCallBack streamConnectStatusCallback, void* pUser,
     unsigned& streamId) {
-  if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
-    return ERR_CODE_NO_CONNECT;
-  }
+//  if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
+//    return ERR_CODE_NO_CONNECT;
+//  }
   if (!_streamSessionManager.addStreamClient(addr, port, streamCallback,
       streamConnectStatusCallback, pUser, streamId)) {
     return ERR_CODE_CREATE_STREAM_THREAD_FAILED;
@@ -128,9 +128,9 @@ unsigned MainModule::startStream(const std::string& addr, unsigned port,
 }
 
 void MainModule::stopStream(unsigned streamId) {
-  if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
-    return;
-  }
+//  if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
+//    return;
+//  }
   _streamSessionManager.removeStreamClient(streamId);
 }
 
