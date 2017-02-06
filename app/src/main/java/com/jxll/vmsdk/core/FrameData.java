@@ -6,12 +6,12 @@ package com.jxll.vmsdk.core;
  */
 
 public interface FrameData {
-  int FRAME_TYPE_YUV = 0;
-  int FRAME_TYPE_RGB = 1;
+    int FRAME_TYPE_YUV = 0;
+    int FRAME_TYPE_RGB = 1;
 
-  int getFrameType();
+    int getFrameType();
 
-  int getWidth();
+    int getWidth();
 
-  int getHeight();
+    int getHeight();
 }

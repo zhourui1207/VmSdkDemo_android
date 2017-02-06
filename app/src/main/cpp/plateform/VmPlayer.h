@@ -23,7 +23,8 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_DecodeNalu2RGB(long decoderHandle, const 
 VMPLAYER_API bool CALL_METHOD VmPlayer_DecodeNalu2YUV(long decoderHandle, const char *inData,
                                                       int inLen, char *outYData, int &outYLen,
                                                       char *outUData, int &outULen, char *outVData,
-                                                      int &outVLen, int &width, int &height, int &framerate);
+                                                      int &outVLen, int &width, int &height,
+                                                      int &framerate);
 VMPLAYER_API int CALL_METHOD VmPlayer_GetFrameWidth(long decoderHandle);
 VMPLAYER_API int CALL_METHOD VmPlayer_GetFrameHeight(long decoderHandle);
 

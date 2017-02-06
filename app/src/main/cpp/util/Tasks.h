@@ -19,33 +19,34 @@
 
 namespace Dream {
 
-using Task = std::function<void()>;
+    using Task = std::function<void()>;
 
-class Tasks : public Noncopyable {
-public:
-  Tasks(int maxSize = QUEUE_MAX_SIZE_DEFAULT, int warSize =
-      QUEUE_WAR_SIZE_DEFAULT);
+    class Tasks : public Noncopyable {
+    public:
+        Tasks(int maxSize = QUEUE_MAX_SIZE_DEFAULT, int warSize =
+        QUEUE_WAR_SIZE_DEFAULT);
 
-  virtual ~Tasks() = default;
+        virtual ~Tasks() = default;
 
-  bool isEmpty();
-  // 增加任务
-  bool addTask(const Task& task);
+        bool isEmpty();
 
-  template<typename F, typename... Args>
-  bool addTaskT(F&& f, Args&&... args) {
-    return addTask(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-  }
+        // 增加任务
+        bool addTask(const Task &task);
 
-  bool removeTask(Task& task);
+        template<typename F, typename... Args>
+        bool addTaskT(F &&f, Args &&... args) {
+            return addTask(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+        }
 
-private:
-  std::queue<Task> _tasks;
-  int _maxSize;
-  int _warSize;
-  int _size;
-  std::mutex _mutex;
-};
+        bool removeTask(Task &task);
+
+    private:
+        std::queue<Task> _tasks;
+        int _maxSize;
+        int _warSize;
+        int _size;
+        std::mutex _mutex;
+    };
 
 } /* namespace Dream */
 

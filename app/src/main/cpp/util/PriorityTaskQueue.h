@@ -15,26 +15,30 @@
 namespace Dream {
 
 // 比较函数
-struct cmp {
-  bool operator()(const TaskPtr& a, const TaskPtr& b) const {
-    return *(a) < *(b);
-  }
-};
+    struct cmp {
+        bool operator()(const TaskPtr &a, const TaskPtr &b) const {
+            return *(a) < *(b);
+        }
+    };
 
-using PriorityQueue = std::priority_queue<TaskPtr, std::vector<TaskPtr>, cmp>;
+    using PriorityQueue = std::priority_queue<TaskPtr, std::vector<TaskPtr>, cmp>;
 
-class PriorityTaskQueue: public BaseTasks {
-public:
-  PriorityTaskQueue(size_t maxSize = QUEUE_MAX_SIZE_DEFAULT, size_t warSize =
-      QUEUE_WAR_SIZE_DEFAULT);
-  virtual ~PriorityTaskQueue();
+    class PriorityTaskQueue : public BaseTasks {
+    public:
+        PriorityTaskQueue(size_t maxSize = QUEUE_MAX_SIZE_DEFAULT, size_t warSize =
+        QUEUE_WAR_SIZE_DEFAULT);
 
-  bool isEmpty() const override;
-  void addTask(const TaskPtr& taskPtr) override;
-  TaskPtr removeTask() override;
-private:
-  PriorityQueue _tasks;
-};
+        virtual ~PriorityTaskQueue();
+
+        bool isEmpty() const override;
+
+        void addTask(const TaskPtr &taskPtr) override;
+
+        TaskPtr removeTask() override;
+
+    private:
+        PriorityQueue _tasks;
+    };
 
 } /* namespace Dream */
 

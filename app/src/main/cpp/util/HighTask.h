@@ -12,18 +12,21 @@
 
 namespace Dream {
 
-class HighTask: public Task {
-public:
-  HighTask(const std::string& name);
-  HighTask(const HighTask&);
-  virtual ~HighTask();
+    class HighTask : public Task {
+    public:
+        HighTask(const std::string &name);
 
-  int doTask() override;
-  const std::string taskType() const override;
+        HighTask(const HighTask &);
 
-private:
-  std::string _name;
-};
+        virtual ~HighTask();
+
+        int doTask() override;
+
+        const std::string taskType() const override;
+
+    private:
+        std::string _name;
+    };
 
 } /* namespace Dream */
 

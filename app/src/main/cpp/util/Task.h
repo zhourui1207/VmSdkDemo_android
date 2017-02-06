@@ -14,48 +14,50 @@
 
 namespace Dream {
 
-enum TaskPriority {
-  LOW = -1,
-  DEFAULT = 0,
-  HIGH = 1
-};
+    enum TaskPriority {
+        LOW = -1,
+        DEFAULT = 0,
+        HIGH = 1
+    };
 
-using time_point = std::chrono::high_resolution_clock::time_point;
+    using time_point = std::chrono::high_resolution_clock::time_point;
 
-class Task {
-public:
-  Task(TaskPriority priority)
-  : _priority(priority) {
+    class Task {
+    public:
+        Task(TaskPriority priority)
+                : _priority(priority) {
 
-  }
-  virtual ~Task();
+        }
 
-  // 派生类重写该方法，任务线程会调用该方法做任务
-  virtual int doTask() = 0;
+        virtual ~Task();
 
-  // 派生类重写任务类型，一般用于调试打印
-  virtual const std::string taskType() const = 0;
+        // 派生类重写该方法，任务线程会调用该方法做任务
+        virtual int doTask() = 0;
 
-  void printTaskType() const;
-  void pushTime(const time_point& time);
+        // 派生类重写任务类型，一般用于调试打印
+        virtual const std::string taskType() const = 0;
 
-  TaskPriority getPriority() { return _priority; }
+        void printTaskType() const;
 
-  bool operator < (const Task& other) const {
-    if (this == &other) {
-      return false;
-    }
-    // 优先级别相同的话，就按push到队列的时间来排序
-    if (_priority == other._priority) {
-      return _timePoint > other._timePoint;
-    }
-    return _priority < other._priority;
-  }
+        void pushTime(const time_point &time);
 
-private:
-  TaskPriority _priority;
-  time_point _timePoint;
-};
+        TaskPriority getPriority() { return _priority; }
+
+        bool operator<(const Task &other) const {
+            if (this == &other) {
+                return false;
+            }
+            // 优先级别相同的话，就按push到队列的时间来排序
+            if (_priority == other._priority) {
+                return _timePoint > other._timePoint;
+            }
+            return _priority < other._priority;
+        }
+
+    private:
+        TaskPriority _priority;
+        time_point _timePoint;
+    };
 
 } /* namespace Dream */
 

@@ -15,6 +15,6 @@ const unsigned MSG_STREAM_VIDEO = 0xd1e2f300;
 const unsigned MSG_STREAM_AUDIO = 0xd1e2f301;
 
 // 保活
-const unsigned MSG_STREAM_ACTIVE  = 0xd1e2f303;
+const unsigned MSG_STREAM_ACTIVE = 0xd1e2f303;
 
 #endif /* PACKETMSGTYPE_H_ */

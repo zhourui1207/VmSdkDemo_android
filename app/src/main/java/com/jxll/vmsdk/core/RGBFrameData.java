@@ -5,37 +5,38 @@ package com.jxll.vmsdk.core;
  */
 
 public class RGBFrameData implements FrameData {
-  private byte[] data;
-  private int width;
-  private int height;
-  @Override
-  public int getFrameType() {
-    return FRAME_TYPE_RGB;
-  }
+    private byte[] data;
+    private int width;
+    private int height;
 
-  @Override
-  public int getWidth() {
-    return width;
-  }
+    private RGBFrameData() {
 
-  @Override
-  public int getHeight() {
-    return height;
-  }
+    }
 
-  private RGBFrameData() {
+    public RGBFrameData(byte[] data, int width, int height) {
+        this.data = new byte[data.length];
+        System.arraycopy(data, 0, this.data, 0, data.length);
+        this.width = width;
+        this.height = height;
+    }
 
-  }
+    @Override
+    public int getFrameType() {
+        return FRAME_TYPE_RGB;
+    }
 
-  public RGBFrameData(byte[] data, int width, int height) {
-    this.data = new byte[data.length];
-    System.arraycopy(data, 0, this.data, 0, data.length);
-    this.width = width;
-    this.height = height;
-  }
+    @Override
+    public int getWidth() {
+        return width;
+    }
 
-  public byte[] getData() {
-    return data;
-  }
+    @Override
+    public int getHeight() {
+        return height;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
 
 }

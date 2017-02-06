@@ -8,20 +8,20 @@ import java.util.List;
  */
 
 public class ChannelsHolder {
-  private List<Channel> channels = new LinkedList<>();
+    private List<Channel> channels = new LinkedList<>();
 
-  public void addItem(int depId, String fdId, int channelId, int channelType, String
-      channelName, int isOnline, int videoState, int channelState, int recordState) {
-    Channel channel = new Channel(depId, fdId, channelId, channelType, channelName, isOnline,
-        videoState, channelState, recordState);
-    channels.add(channel);
-  }
+    public void addItem(int depId, String fdId, int channelId, int channelType, String
+            channelName, int isOnline, int videoState, int channelState, int recordState) {
+        Channel channel = new Channel(depId, fdId, channelId, channelType, channelName, isOnline,
+                videoState, channelState, recordState);
+        channels.add(channel);
+    }
 
-  public int size() {
-    return channels.size();
-  }
+    public int size() {
+        return channels.size();
+    }
 
-  public List<Channel> list() {
-    return channels;
-  }
+    public List<Channel> list() {
+        return channels;
+    }
 }

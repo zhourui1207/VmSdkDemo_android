@@ -10,12 +10,12 @@
 
 namespace Dream {
 
-enum ALARM_TYPE {
-  ALARM_TYPE_EXTERNEL = 0x01,  // 外部告警
-  ALARM_TYPE_DETECTION = 0x02,  // 移动侦测
-  ALARM_TYPE_LOST = 0x03,  // 视频丢失
-  ALARM_TYPE_MASKING = 0x04  // 视频遮盖
-};
+    enum ALARM_TYPE {
+        ALARM_TYPE_EXTERNEL = 0x01,  // 外部告警
+        ALARM_TYPE_DETECTION = 0x02,  // 移动侦测
+        ALARM_TYPE_LOST = 0x03,  // 视频丢失
+        ALARM_TYPE_MASKING = 0x04  // 视频遮盖
+    };
 
 } /* namespace Dream */
 

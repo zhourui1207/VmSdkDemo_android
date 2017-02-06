@@ -10,16 +10,16 @@
 
 namespace Dream {
 
-Task::~Task() {
-  // TODO Auto-generated destructor stub
-}
+    Task::~Task() {
+        // TODO Auto-generated destructor stub
+    }
 
-void Task::printTaskType() const {
-  printf("%s\n", taskType().c_str());
-}
+    void Task::printTaskType() const {
+        printf("%s\n", taskType().c_str());
+    }
 
-void Task::pushTime(const time_point& time) {
-  _timePoint = time;
-}
+    void Task::pushTime(const time_point &time) {
+        _timePoint = time;
+    }
 
 } /* namespace Dream */

@@ -10,29 +10,28 @@
 
 namespace Dream {
 
-LowTask::LowTask(const std::string& name)
-: Task(LOW)
-, _name(name) {
-  printf("构造LowTask\n");
-}
+    LowTask::LowTask(const std::string &name)
+            : Task(LOW), _name(name) {
+        printf("构造LowTask\n");
+    }
 
-LowTask::LowTask(const LowTask&)
-: Task(LOW) {
-  printf("复制构造LowTask\n");
-}
+    LowTask::LowTask(const LowTask &)
+            : Task(LOW) {
+        printf("复制构造LowTask\n");
+    }
 
-LowTask::~LowTask() {
-  printf("析构LowTask\n");
-}
+    LowTask::~LowTask() {
+        printf("析构LowTask\n");
+    }
 
-int LowTask::doTask() {
-  printf("LowTask::doTask\n");
-  return 0;
-}
+    int LowTask::doTask() {
+        printf("LowTask::doTask\n");
+        return 0;
+    }
 
-const std::string LowTask::taskType() const {
-  return _name;
-}
+    const std::string LowTask::taskType() const {
+        return _name;
+    }
 
 
 } /* namespace Dream */

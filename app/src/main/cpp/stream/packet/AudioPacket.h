@@ -15,19 +15,20 @@
 
 namespace Dream {
 
-class AudioPacket: public StreamPacket {
+    class AudioPacket : public StreamPacket {
 
-public:
-  AudioPacket() :
-    StreamPacket(MSG_STREAM_AUDIO) {
+    public:
+        AudioPacket() :
+                StreamPacket(MSG_STREAM_AUDIO) {
 
-  }
-  virtual ~AudioPacket() = default;
+        }
 
-  // ---------------------派生类重写开始---------------------
-  // 无包体，无需覆盖父类方法
-  // ---------------------派生类重写结束---------------------
-};
+        virtual ~AudioPacket() = default;
+
+        // ---------------------派生类重写开始---------------------
+        // 无包体，无需覆盖父类方法
+        // ---------------------派生类重写结束---------------------
+    };
 
 } /* namespace Dream */
 

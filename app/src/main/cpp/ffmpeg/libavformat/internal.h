@@ -46,7 +46,7 @@ typedef struct AVCodecTag {
     unsigned int tag;
 } AVCodecTag;
 
-typedef struct CodecMime{
+typedef struct CodecMime {
     char str[32];
     enum AVCodecID id;
 } CodecMime;
@@ -283,6 +283,7 @@ int ff_get_line(AVIOContext *s, char *buf, int maxlen);
  */
 typedef void (*ff_parse_key_val_cb)(void *context, const char *key,
                                     int key_len, char **dest, int *dest_len);
+
 /**
  * Parse a string with comma-separated key=value pairs. The value strings
  * may be quoted and may contain escaped characters within quoted strings.
@@ -361,7 +362,7 @@ int ff_seek_frame_binary(AVFormatContext *s, int stream_index,
 void ff_update_cur_dts(AVFormatContext *s, AVStream *ref_st, int64_t timestamp);
 
 int ff_find_last_ts(AVFormatContext *s, int stream_index, int64_t *ts, int64_t *pos,
-                    int64_t (*read_timestamp)(struct AVFormatContext *, int , int64_t *, int64_t ));
+                    int64_t (*read_timestamp)(struct AVFormatContext *, int, int64_t *, int64_t));
 
 /**
  * Perform a binary search using read_timestamp().
@@ -374,7 +375,7 @@ int64_t ff_gen_search(AVFormatContext *s, int stream_index,
                       int64_t pos_max, int64_t pos_limit,
                       int64_t ts_min, int64_t ts_max,
                       int flags, int64_t *ts_ret,
-                      int64_t (*read_timestamp)(struct AVFormatContext *, int , int64_t *, int64_t ));
+                      int64_t (*read_timestamp)(struct AVFormatContext *, int, int64_t *, int64_t));
 
 /**
  * Set the time base and wrapping info for a given stream. This will be used
@@ -497,8 +498,7 @@ int ff_stream_add_bitstream_filter(AVStream *st, const char *name, const char *a
  * @param newpath destination path
  * @return        0 or AVERROR on failure
  */
-static inline int ff_rename(const char *oldpath, const char *newpath, void *logctx)
-{
+static inline int ff_rename(const char *oldpath, const char *newpath, void *logctx) {
     int ret = 0;
     if (rename(oldpath, newpath) == -1) {
         ret = AVERROR(errno);
@@ -545,7 +545,7 @@ enum AVWriteUncodedFrameFlags {
      * Query whether the feature is possible on this stream.
      * The frame argument is ignored.
      */
-    AV_WRITE_UNCODED_FRAME_QUERY           = 0x0001,
+            AV_WRITE_UNCODED_FRAME_QUERY = 0x0001,
 
 };
 
@@ -590,6 +590,7 @@ int ff_parse_creation_time_metadata(AVFormatContext *s, int64_t *timestamp, int 
 int ff_standardize_creation_time(AVFormatContext *s);
 
 #define CONTAINS_PAL 2
+
 /**
  * Reshuffles the lines to use the user specified stride.
  *
@@ -599,7 +600,8 @@ int ff_standardize_creation_time(AVFormatContext *s);
  *         non-zero if a new packet was allocated and ppkt has to be freed
  *         CONTAINS_PAL if in addition to a new packet the old contained a palette
  */
-int ff_reshuffle_raw_rgb(AVFormatContext *s, AVPacket **ppkt, AVCodecParameters *par, int expected_stride);
+int ff_reshuffle_raw_rgb(AVFormatContext *s, AVPacket **ppkt, AVCodecParameters *par,
+                         int expected_stride);
 
 /**
  * Retrieves the palette from a packet, either from side data, or

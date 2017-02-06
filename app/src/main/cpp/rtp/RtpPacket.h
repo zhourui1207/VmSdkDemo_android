@@ -10,54 +10,57 @@
 
 namespace Dream {
 
-class RtpPacket
-{
-public:
-  RtpPacket();
-  virtual ~RtpPacket();
+    class RtpPacket {
+    public:
+        RtpPacket();
 
-  int Parse(char* pBuffer, int bufferSize);
+        virtual ~RtpPacket();
 
-  void CreateRtpPacket(unsigned short seq, char* pData, int dataSize, char nPayloadType, unsigned timeStamp, int nSSRC, bool marker = false);
-  bool ParseRtpHeader(unsigned char* pRtpHeader, bool *pMarker, char* pPayloadType, unsigned short * pSequenceNumber, unsigned* pTimeStamp, int* pSsrc);
+        int Parse(char *pBuffer, int bufferSize);
 
-public:
-  int GetPayloadLength()
-  {
-    return m_nPayloadDataLen;
-  }
-  unsigned short GetSequenceNumber()
-  {
-    return m_nSequenceNumber;
-  }
-  char GetPayloadType()
-  {
-    return m_nPayloadType;
-  }
-  unsigned GetTimestamp()
-  {
-    return m_nTimeStamp;
-  }
-  char* GetPayloadData()
-  {
-    return m_pPayloadData;
-  }
-  bool HasMarker()
-  {
-    return m_bMarker;
-  }
-public:
+        void CreateRtpPacket(unsigned short seq, char *pData, int dataSize, char nPayloadType,
+                             unsigned timeStamp, int nSSRC, bool marker = false);
 
-  unsigned short m_nSequenceNumber;
-  char m_nPayloadType;
-  bool m_bMarker;
-  unsigned m_nTimeStamp;
-  int m_nSsrc;
+        bool ParseRtpHeader(unsigned char *pRtpHeader, bool *pMarker, char *pPayloadType,
+                            unsigned short *pSequenceNumber, unsigned *pTimeStamp, int *pSsrc);
 
-  char* m_pBuffer;
-  char* m_pPayloadData;
-  int m_nPayloadDataLen;
-};
+    public:
+        int GetPayloadLength() {
+            return m_nPayloadDataLen;
+        }
+
+        unsigned short GetSequenceNumber() {
+            return m_nSequenceNumber;
+        }
+
+        char GetPayloadType() {
+            return m_nPayloadType;
+        }
+
+        unsigned GetTimestamp() {
+            return m_nTimeStamp;
+        }
+
+        char *GetPayloadData() {
+            return m_pPayloadData;
+        }
+
+        bool HasMarker() {
+            return m_bMarker;
+        }
+
+    public:
+
+        unsigned short m_nSequenceNumber;
+        char m_nPayloadType;
+        bool m_bMarker;
+        unsigned m_nTimeStamp;
+        int m_nSsrc;
+
+        char *m_pBuffer;
+        char *m_pPayloadData;
+        int m_nPayloadDataLen;
+    };
 
 } /* namespace Dream */
 

@@ -8,18 +8,18 @@ import java.util.List;
  */
 
 public class DepTreesHolder {
-  private List<DepTree> depTrees = new LinkedList<>();
+    private List<DepTree> depTrees = new LinkedList<>();
 
-  public void addItem(int depId, String depName, int parentId, int onlineChannelCounts, int offlineChannelCounts) {
-    DepTree depTree = new DepTree(depId, depName, parentId, onlineChannelCounts, offlineChannelCounts);
-    depTrees.add(depTree);
-  }
+    public void addItem(int depId, String depName, int parentId, int onlineChannelCounts, int offlineChannelCounts) {
+        DepTree depTree = new DepTree(depId, depName, parentId, onlineChannelCounts, offlineChannelCounts);
+        depTrees.add(depTree);
+    }
 
-  public int size() {
-    return depTrees.size();
-  }
+    public int size() {
+        return depTrees.size();
+    }
 
-  public List<DepTree> list() {
-    return depTrees;
-  }
+    public List<DepTree> list() {
+        return depTrees;
+    }
 }

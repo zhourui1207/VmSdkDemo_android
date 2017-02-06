@@ -16,33 +16,35 @@
 namespace Dream {
 
 // 登出请求包
-class LogoutReqPacket: public MsgPacket {
+    class LogoutReqPacket : public MsgPacket {
 
-public:
-  LogoutReqPacket() :
-      MsgPacket(MSG_LOGOUT_REQ) {
+    public:
+        LogoutReqPacket() :
+                MsgPacket(MSG_LOGOUT_REQ) {
 
-  }
-  virtual ~LogoutReqPacket() = default;
+        }
 
-  // ---------------------派生类重写开始---------------------
-  // 无包体，无需覆盖父类方法
-  // ---------------------派生类重写结束---------------------
-};
+        virtual ~LogoutReqPacket() = default;
+
+        // ---------------------派生类重写开始---------------------
+        // 无包体，无需覆盖父类方法
+        // ---------------------派生类重写结束---------------------
+    };
 
 // 登出响应包
-class LogoutRespPacket: public MsgPacket {
-public:
-  LogoutRespPacket() :
-      MsgPacket(MSG_LOGOUT_RESP) {
+    class LogoutRespPacket : public MsgPacket {
+    public:
+        LogoutRespPacket() :
+                MsgPacket(MSG_LOGOUT_RESP) {
 
-  }
-  virtual ~LogoutRespPacket() = default;
+        }
 
-  // ---------------------派生类重写开始---------------------
-  // 无包体，无需覆盖父类方法
-  // ---------------------派生类重写结束---------------------
-};
+        virtual ~LogoutRespPacket() = default;
+
+        // ---------------------派生类重写开始---------------------
+        // 无包体，无需覆盖父类方法
+        // ---------------------派生类重写结束---------------------
+    };
 
 } /* namespace Dream */
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
@@ -11,62 +10,62 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.jxll.vmnetsdktest.MainActivity">
 
-  <TextView
-      android:id="@+id/sample_text"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="Hello World!"/>
+    <TextView
+        android:id="@+id/sample_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hello World!" />
 
-  <SurfaceView
-      android:layout_width="match_parent"
-      android:layout_height="250dp"
-      android:layout_marginTop="0dp"
-      android:layout_alignParentLeft="true"
-      android:id="@+id/surfaceView"
-      android:layout_alignParentRight="true"/>
+    <SurfaceView
+        android:id="@+id/surfaceView"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="0dp" />
 
-  <!--<android.opengl.GLSurfaceView-->
-      <!--android:layout_width="match_parent"-->
-      <!--android:layout_height="200dp"-->
-      <!--android:layout_marginTop="20dp"-->
-      <!--android:layout_alignParentLeft="true"-->
-      <!--android:id="@+id/glSurfaceView"/>-->
+    <!--<android.opengl.GLSurfaceView-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="200dp"-->
+    <!--android:layout_marginTop="20dp"-->
+    <!--android:layout_alignParentLeft="true"-->
+    <!--android:id="@+id/glSurfaceView"/>-->
 
-  <Button
-      android:text="播放声音"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_below="@+id/surfaceView"
-      android:layout_toRightOf="@+id/sample_text"
-      android:layout_marginLeft="29dp"
-      android:layout_marginTop="5dp"
-      android:id="@+id/button"/>
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/surfaceView"
+        android:layout_marginLeft="29dp"
+        android:layout_marginTop="5dp"
+        android:layout_toRightOf="@+id/sample_text"
+        android:text="播放声音" />
 
-  <Button
-      android:text="开始录像"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_below="@+id/button"
-      android:layout_alignLeft="@+id/button"
-      android:layout_marginTop="5dp"
-      android:layout_centerHorizontal="true"
-      android:id="@+id/record"/>
+    <Button
+        android:id="@+id/record"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/button"
+        android:layout_below="@+id/button"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="5dp"
+        android:text="开始录像" />
 
-  <com.jxll.widget.time.TimeBar
-      android:layout_marginTop="10dp"
-      android:layout_below="@+id/record"
-      android:layout_width="match_parent"
-      android:layout_height="80dp"
-      android:id="@+id/tb"/>
+    <com.jxll.widget.time.TimeBar
+        android:id="@+id/tb"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_below="@+id/record"
+        android:layout_marginTop="10dp" />
 
-  <TextView
-      android:layout_marginTop="10dp"
-      android:layout_below="@+id/tb"
-      android:layout_width="match_parent"
-      android:layout_height="30dp"
-      android:id="@+id/tv"
-      android:background="@color/colorGray"
-      android:textColor="@color/colorPrimary"/>
+    <TextView
+        android:id="@+id/tv"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:layout_below="@+id/tb"
+        android:layout_marginTop="10dp"
+        android:background="@color/colorGray"
+        android:textColor="@color/colorPrimary" />
 
 
 </RelativeLayout>

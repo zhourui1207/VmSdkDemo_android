@@ -15,19 +15,20 @@
 
 namespace Dream {
 
-class ActivePacket: public StreamPacket {
+    class ActivePacket : public StreamPacket {
 
-public:
-  ActivePacket() :
-    StreamPacket(MSG_STREAM_ACTIVE) {
+    public:
+        ActivePacket() :
+                StreamPacket(MSG_STREAM_ACTIVE) {
 
-  }
-  virtual ~ActivePacket() = default;
+        }
 
-  // ---------------------派生类重写开始---------------------
-  // 无包体，无需覆盖父类方法
-  // ---------------------派生类重写结束---------------------
-};
+        virtual ~ActivePacket() = default;
+
+        // ---------------------派生类重写开始---------------------
+        // 无包体，无需覆盖父类方法
+        // ---------------------派生类重写结束---------------------
+    };
 
 } /* namespace Dream */
 

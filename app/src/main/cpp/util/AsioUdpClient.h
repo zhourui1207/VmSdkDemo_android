@@ -14,21 +14,22 @@
 
 namespace Dream {
 
-class AsioUdpClient {
-public:
-  AsioUdpClient();
-  virtual ~AsioUdpClient();
+    class AsioUdpClient {
+    public:
+        AsioUdpClient();
+
+        virtual ~AsioUdpClient();
 
 //  bool send(const std::shared_ptr<PacketData>& dataPtr);
 
-private:
-  std::string _address;
-  unsigned _port;
+    private:
+        std::string _address;
+        unsigned _port;
 
-  std::unique_ptr<boost::asio::io_service> _ioServicePtr;
-  std::unique_ptr<boost::asio::ip::udp::socket> _socketPtr;  // 套接字智能指针
-  boost::asio::ip::udp::resolver::iterator _endpointIterator;
-};
+        std::unique_ptr<boost::asio::io_service> _ioServicePtr;
+        std::unique_ptr<boost::asio::ip::udp::socket> _socketPtr;  // 套接字智能指针
+        boost::asio::ip::udp::resolver::iterator _endpointIterator;
+    };
 
 } /* namespace Dream */
 

@@ -10,8 +10,10 @@
 #include <mutex>
 
 #ifdef __ANDROID__
+
 #include "GLES2/gl2.h"
 #include "EGL/egl.h"
+
 #endif
 
 #ifdef __cplusplus
@@ -34,71 +36,74 @@ extern "C" {
 
 namespace Dream {
 
-  class Decoder {
-  private:
-    const char *TAG = "Decoder";
+    class Decoder {
+    private:
+        const char *TAG = "Decoder";
 
-  public:
-    Decoder();
+    public:
+        Decoder();
 
-    ~Decoder();
+        ~Decoder();
 
 
-    bool Init(unsigned payloadType);
+        bool Init(unsigned payloadType);
 
-    void Uninit();
+        void Uninit();
 
-    bool DecodeNalu2RGB(const char *inData, int inLen, char *outData, int &outLen, int &width,
-                        int &height, int &framerate);
+        bool DecodeNalu2RGB(const char *inData, int inLen, char *outData, int &outLen, int &width,
+                            int &height, int &framerate);
 
-    bool DecodeNalu2YUV(const char *inData, int inLen, char *outYData, int &outYLen, char *outUData,
-                        int &outULen, char *outVData, int &outVLen, int &width, int &height, int &framerate);
+        bool DecodeNalu2YUV(const char *inData, int inLen, char *outYData, int &outYLen,
+                            char *outUData,
+                            int &outULen, char *outVData, int &outVLen, int &width, int &height,
+                            int &framerate);
 
-    AVCodecID CodecId() {
-      return _codecId;
-    }
+        AVCodecID CodecId() {
+            return _codecId;
+        }
 
-    int Width() {
-      return _width;
-    }
+        int Width() {
+            return _width;
+        }
 
-    int Height() {
-      return _height;
-    }
+        int Height() {
+            return _height;
+        }
 
-  private:
-    int DecodeNalu(const char *inData, int inLen);
+    private:
+        int DecodeNalu(const char *inData, int inLen);
 
-    void DeleteYUVTab();
+        void DeleteYUVTab();
 
-    void CreateYUVTab_16();
+        void CreateYUVTab_16();
 
-    void DisplayYUV_16(unsigned int *pdst1, unsigned char *y, unsigned char *u,
-                       unsigned char *v, int width, int height, int src_ystride, int src_uvstride,
-                       int dst_ystride);
+        void DisplayYUV_16(unsigned int *pdst1, unsigned char *y, unsigned char *u,
+                           unsigned char *v, int width, int height, int src_ystride,
+                           int src_uvstride,
+                           int dst_ystride);
 
-  private:
-    AVCodecID _codecId;
-    bool _inited;
-    AVCodecContext *_codecContext;
-    AVFrame *_frame;
-    std::mutex _mutex;
-    AVPacket avPacket;
-    int _width;
-    int _height;
-    int _framerate;
+    private:
+        AVCodecID _codecId;
+        bool _inited;
+        AVCodecContext *_codecContext;
+        AVFrame *_frame;
+        std::mutex _mutex;
+        AVPacket avPacket;
+        int _width;
+        int _height;
+        int _framerate;
 
-    int *colortab;
-    int *u_b_tab;
-    int *u_g_tab;
-    int *v_g_tab;
-    int *v_r_tab;
+        int *colortab;
+        int *u_b_tab;
+        int *u_g_tab;
+        int *v_g_tab;
+        int *v_r_tab;
 
-    unsigned int *rgb_2_pix;
-    unsigned int *r_2_pix;
-    unsigned int *g_2_pix;
-    unsigned int *b_2_pix;
-  };
+        unsigned int *rgb_2_pix;
+        unsigned int *r_2_pix;
+        unsigned int *g_2_pix;
+        unsigned int *b_2_pix;
+    };
 
 }
 

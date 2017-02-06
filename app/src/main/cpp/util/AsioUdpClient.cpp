@@ -9,13 +9,13 @@
 
 namespace Dream {
 
-AsioUdpClient::AsioUdpClient() {
-  // TODO Auto-generated constructor stub
+    AsioUdpClient::AsioUdpClient() {
+        // TODO Auto-generated constructor stub
 
-}
+    }
 
-AsioUdpClient::~AsioUdpClient() {
-  // TODO Auto-generated destructor stub
-}
+    AsioUdpClient::~AsioUdpClient() {
+        // TODO Auto-generated destructor stub
+    }
 
 } /* namespace Dream */

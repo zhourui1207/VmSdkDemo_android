@@ -158,8 +158,7 @@ static inline int strict_pthread_once(pthread_once_t *once_control, void (*init_
 #define AVOnce char
 #define AV_ONCE_INIT 0
 
-static inline int ff_thread_once(char *control, void (*routine)(void))
-{
+static inline int ff_thread_once(char *control, void (*routine)(void)) {
     if (!*control) {
         routine();
         *control = 1;

@@ -18,30 +18,32 @@
 
 namespace Dream {
 
-using TaskPtr = std::shared_ptr<Task>;
+    using TaskPtr = std::shared_ptr<Task>;
 
-class BaseTasks {
-public:
-  BaseTasks(size_t maxSize, size_t warSize)
-  : _maxSize(maxSize)
-  , _warSize(warSize) {
-    if (_warSize > _maxSize) {
-      _warSize = _maxSize;
-    }
-  }
-  virtual ~BaseTasks() {
+    class BaseTasks {
+    public:
+        BaseTasks(size_t maxSize, size_t warSize)
+                : _maxSize(maxSize), _warSize(warSize) {
+            if (_warSize > _maxSize) {
+                _warSize = _maxSize;
+            }
+        }
 
-  }
+        virtual ~BaseTasks() {
 
-  virtual bool isEmpty() const = 0;
-  virtual void addTask(const TaskPtr& taskPtr) = 0;
-  virtual TaskPtr removeTask() = 0;
+        }
 
-protected:
-  std::mutex _mutex;
-  size_t _maxSize;  // 队列最大长度
-  size_t _warSize;  // 警告阀值
-};
+        virtual bool isEmpty() const = 0;
+
+        virtual void addTask(const TaskPtr &taskPtr) = 0;
+
+        virtual TaskPtr removeTask() = 0;
+
+    protected:
+        std::mutex _mutex;
+        size_t _maxSize;  // 队列最大长度
+        size_t _warSize;  // 警告阀值
+    };
 
 } /* namespace Dream */
 

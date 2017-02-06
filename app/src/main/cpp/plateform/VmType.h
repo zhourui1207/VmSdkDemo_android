@@ -34,68 +34,74 @@
 // 回调函数定义开始---------------------------------------------------------
 // 实时报警回调函数
 // pFdId：设备id； nChannel：通道号； uAlarmType：报警类型； uParam1：参数1； uParam2：参数2
-typedef void (CALLBACK *fRealAlarmCallBack)(const char* pFdId, int nChannelId,
-    unsigned uAlarmType, unsigned uParam1, unsigned uParam2);
+typedef void (CALLBACK *fRealAlarmCallBack)(const char *pFdId, int nChannelId,
+                                            unsigned uAlarmType, unsigned uParam1,
+                                            unsigned uParam2);
+
 // uas连接状态回调函数
 // bIsConnected：true 已连接  false 断开
 typedef void (CALLBACK *fUasConnectStatusCallBack)(bool bIsConnected);
+
 // 码流回调函数
 // uStreamId：码流id； uStreamType：数据类型； payloadType：码流承载类型；pBuffer：数据指针；
 // nLen：数据长度； uTimeStamp：时间戳； pUser：用户参数；sequenceNumber：序列号；isMark：是否是结束
 typedef void (CALLBACK *fStreamCallBack)(unsigned uStreamId,
-    unsigned uStreamType, char payloadType, char* pBuffer, int nLen,
-    unsigned uTimeStamp, unsigned short sequenceNumber, bool isMark, void* pUser);
+                                         unsigned uStreamType, char payloadType, char *pBuffer,
+                                         int nLen,
+                                         unsigned uTimeStamp, unsigned short sequenceNumber,
+                                         bool isMark, void *pUser);
+
 // stream码流连接状态回调
 // uStreamId：码流id； bIsConnected：true 已连接 false 断开； pUser：用户参数
 typedef void (CALLBACK *fStreamConnectStatusCallBack)(unsigned uStreamId,
-    bool bIsConnected, void* pUser);
+                                                      bool bIsConnected, void *pUser);
 // 回调函数定义结束---------------------------------------------------------
 
 // 数据结构定义开始---------------------------------------------------------
 // 行政树
 typedef struct VmDepTree {
-  int nDepId;
-  char sDepName[64];
-  int nParentId;
-  unsigned uOnlineChannelCounts;
-  unsigned uOfflineChannelCounts;
+    int nDepId;
+    char sDepName[64];
+    int nParentId;
+    unsigned uOnlineChannelCounts;
+    unsigned uOfflineChannelCounts;
 } TVmDepTree;
 
 // 视频通道
 typedef struct VmChannel {
-  int nDepId;
-  char sFdId[32];
-  int nChannelId;
-  unsigned uChannelType;
-  char sChannelName[64];
-  unsigned uIsOnLine;
-  unsigned uVideoState;
-  unsigned uChannelState;
-  unsigned uRecordState;
+    int nDepId;
+    char sFdId[32];
+    int nChannelId;
+    unsigned uChannelType;
+    char sChannelName[64];
+    unsigned uIsOnLine;
+    unsigned uVideoState;
+    unsigned uChannelState;
+    unsigned uRecordState;
 } TVmChannel;
 
 // 录像文件
 typedef struct VmRecord {
-  unsigned uBeginTime;
-  unsigned uEndTime;
-  char sPlaybackUrl[256];
-  char sDownloadUrl[256];
+    unsigned uBeginTime;
+    unsigned uEndTime;
+    char sPlaybackUrl[256];
+    char sDownloadUrl[256];
 } TVmRecord;
 
 // 历史报警
 typedef struct VmAlarm {
-  char sAlarmId[40];
-  char sFdId[32];
-  char sFdName[64];
-  int nChannelId;
-  char sChannelName[64];
-  unsigned uChannelBigType;
-  char sAlarmTime[40];
-  unsigned uAlarmCode;
-  char sAlarmName[64];
-  char sAlarmSubName[64];
-  unsigned uAlarmType;
-  char sPhotoUrl[256];
+    char sAlarmId[40];
+    char sFdId[32];
+    char sFdName[64];
+    int nChannelId;
+    char sChannelName[64];
+    unsigned uChannelBigType;
+    char sAlarmTime[40];
+    unsigned uAlarmCode;
+    char sAlarmName[64];
+    char sAlarmSubName[64];
+    unsigned uAlarmType;
+    char sPhotoUrl[256];
 } TVmAlarm;
 // 数据结构定义结束---------------------------------------------------------
 

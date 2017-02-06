@@ -13,41 +13,43 @@
 
 namespace Dream {
 
-class ReadLockGuard : public Noncopyable {
-public:
-  explicit ReadLockGuard(RWLock& mutex)
-  : _mutex(mutex) {
-    _mutex.readLock();
-  }
+    class ReadLockGuard : public Noncopyable {
+    public:
+        explicit ReadLockGuard(RWLock &mutex)
+                : _mutex(mutex) {
+            _mutex.readLock();
+        }
 
-  ReadLockGuard() = delete;
+        ReadLockGuard() = delete;
 
-  virtual ~ReadLockGuard() {
-    _mutex.readUnlock();
-  }
+        virtual ~ReadLockGuard() {
+            _mutex.readUnlock();
+        }
 
-private:
-  RWLock& _mutex;
-};
+    private:
+        RWLock &_mutex;
+    };
 
-class WriteLockGuard {
-public:
-  explicit WriteLockGuard(RWLock& mutex)
-  : _mutex(mutex) {
-    _mutex.writeLock();
-  }
+    class WriteLockGuard {
+    public:
+        explicit WriteLockGuard(RWLock &mutex)
+                : _mutex(mutex) {
+            _mutex.writeLock();
+        }
 
-  WriteLockGuard() = delete;
-  WriteLockGuard(const WriteLockGuard&) = delete;
-  WriteLockGuard& operator=(const WriteLockGuard&) = delete;
+        WriteLockGuard() = delete;
 
-  virtual ~WriteLockGuard() {
-    _mutex.writeUnlock();
-  }
+        WriteLockGuard(const WriteLockGuard &) = delete;
 
-private:
-  RWLock& _mutex;
-};
+        WriteLockGuard &operator=(const WriteLockGuard &) = delete;
+
+        virtual ~WriteLockGuard() {
+            _mutex.writeUnlock();
+        }
+
+    private:
+        RWLock &_mutex;
+    };
 
 } /* namespace Dream */
 

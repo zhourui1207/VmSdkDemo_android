@@ -1,61 +1,61 @@
 apply plugin: 'com.android.application'
 
 android {
-  signingConfigs {
-    config {
-      keyPassword 'Hd1234'
-      storeFile file('/Users/zhourui/Documents/app/MVSS/mvsskey.jks')
-      storePassword 'Hd1234'
-      keyAlias 'mvssalias'
+    signingConfigs {
+        config {
+            keyPassword 'Hd1234'
+            storeFile file('/Users/zhourui/Documents/app/MVSS/mvsskey.jks')
+            storePassword 'Hd1234'
+            keyAlias 'mvssalias'
+        }
     }
-  }
-  compileSdkVersion 23
-  buildToolsVersion '25.0.0'
-  defaultConfig {
-    applicationId 'com.jxll.vmnetsdktest'
-    minSdkVersion 16
-    targetSdkVersion 16
-    versionCode 1
-    versionName "1.0"
-    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    compileSdkVersion 23
+    buildToolsVersion '25.0.0'
+    defaultConfig {
+        applicationId 'com.jxll.vmnetsdktest'
+        minSdkVersion 16
+        targetSdkVersion 16
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++11 -fexceptions"
+                abiFilters 'x86', 'armeabi', 'armeabi-v7a' // 由于不支持64位，所以只保留32位
+            }
+        }
+        signingConfig signingConfigs.config
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            jniDebuggable false
+            signingConfig signingConfigs.config
+        }
+        debug {
+            jniDebuggable true
+        }
+    }
     externalNativeBuild {
-      cmake {
-        cppFlags "-std=c++11 -fexceptions"
-        abiFilters 'x86', 'armeabi', 'armeabi-v7a' // 由于不支持64位，所以只保留32位
-      }
+        cmake {
+            path "CMakeLists.txt"
+        }
     }
-    signingConfig signingConfigs.config
-  }
-  buildTypes {
-    release {
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-      jniDebuggable false
-      signingConfig signingConfigs.config
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
     }
-    debug {
-      jniDebuggable true
+    productFlavors {
     }
-  }
-  externalNativeBuild {
-    cmake {
-      path "CMakeLists.txt"
-    }
-  }
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_7
-    targetCompatibility JavaVersion.VERSION_1_7
-  }
-  productFlavors {
-  }
 }
 
 dependencies {
-  compile fileTree(include: ['*.jar'], dir: 'libs')
-  androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
-    exclude group: 'com.android.support', module: 'support-annotations'
-  })
-  compile 'com.android.support:appcompat-v7:24.2.1'
-  testCompile 'junit:junit:4.12'
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    compile 'com.android.support:appcompat-v7:24.2.1'
+    testCompile 'junit:junit:4.12'
 }
 

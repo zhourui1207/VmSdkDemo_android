@@ -14,177 +14,179 @@
 
 namespace Dream {
 
-class StartTalkReqPacket: public MsgPacket {
-public:
-  enum ACTIVE_FLAG {
-    ACTIVE_FLAG_NO_ACTIVE = 0,  // 无需激活
-    ACTIVE_FLAG_RECEIVER_ACTIVE = 1,  // 接收端主动激活
-    ACTIVE_FLAG_SENDER_ACTIVE = 2  // 发送端主动激活
-  };
+    class StartTalkReqPacket : public MsgPacket {
+    public:
+        enum ACTIVE_FLAG {
+            ACTIVE_FLAG_NO_ACTIVE = 0,  // 无需激活
+            ACTIVE_FLAG_RECEIVER_ACTIVE = 1,  // 接收端主动激活
+            ACTIVE_FLAG_SENDER_ACTIVE = 2  // 发送端主动激活
+        };
 
-  enum TRANS_MODE {
-    TRANS_MODE_UDP = 0,  // udp
-    TRANS_MODE_TCP = 1  // tcp
-  };
+        enum TRANS_MODE {
+            TRANS_MODE_UDP = 0,  // udp
+            TRANS_MODE_TCP = 1  // tcp
+        };
 
-public:
-  StartTalkReqPacket() :
-      MsgPacket(MSG_START_TALK_REQ), _channelId(0), _talkSessionId(0), _activeFlag(
-          ACTIVE_FLAG_NO_ACTIVE), _talkPort(0), _talkTransMode(
-          TRANS_MODE_UDP) {
+    public:
+        StartTalkReqPacket() :
+                MsgPacket(MSG_START_TALK_REQ), _channelId(0), _talkSessionId(0), _activeFlag(
+                ACTIVE_FLAG_NO_ACTIVE), _talkPort(0), _talkTransMode(
+                TRANS_MODE_UDP) {
 
-  }
-  virtual ~StartTalkReqPacket() = default;
+        }
 
-  // ---------------------派生类重写开始---------------------
-  virtual std::size_t computeLength() const override {
-    return MsgPacket::computeLength() + 5 * sizeof(int) + _fdId.length() + 1
-        + _talkIp.length() + 1;
-  }
+        virtual ~StartTalkReqPacket() = default;
 
-  virtual int encode(char* pBuf, std::size_t len) override {
-    std::size_t dataLength = computeLength();
-    if (len < dataLength) {
-      return -1;
-    }
-    int usedLen = MsgPacket::encode(pBuf, len);
-    if (usedLen < 0) {
-      return -1;
-    }
+        // ---------------------派生类重写开始---------------------
+        virtual std::size_t computeLength() const override {
+            return MsgPacket::computeLength() + 5 * sizeof(int) + _fdId.length() + 1
+                   + _talkIp.length() + 1;
+        }
 
-    char* pBody = pBuf + usedLen;
+        virtual int encode(char *pBuf, std::size_t len) override {
+            std::size_t dataLength = computeLength();
+            if (len < dataLength) {
+                return -1;
+            }
+            int usedLen = MsgPacket::encode(pBuf, len);
+            if (usedLen < 0) {
+                return -1;
+            }
 
-    int pos = 0;
-    ENCODE_STRING(pBody + pos, _fdId, pos);
-    ENCODE_INT(pBody + pos, _channelId, pos);
-    ENCODE_INT(pBody + pos, _talkSessionId, pos);
-    ENCODE_INT(pBody + pos, _activeFlag, pos);
-    ENCODE_STRING(pBody + pos, _talkIp, pos);
-    ENCODE_INT(pBody + pos, _talkPort, pos);
-    ENCODE_INT(pBody + pos, _talkTransMode, pos);
-    return dataLength;
-  }
+            char *pBody = pBuf + usedLen;
 
-  virtual int decode(char* pBuf, std::size_t len) override {
-    int usedLen = MsgPacket::decode(pBuf, len);
-    if (usedLen < 0) {
-      return -1;
-    }
+            int pos = 0;
+            ENCODE_STRING(pBody + pos, _fdId, pos);
+            ENCODE_INT(pBody + pos, _channelId, pos);
+            ENCODE_INT(pBody + pos, _talkSessionId, pos);
+            ENCODE_INT(pBody + pos, _activeFlag, pos);
+            ENCODE_STRING(pBody + pos, _talkIp, pos);
+            ENCODE_INT(pBody + pos, _talkPort, pos);
+            ENCODE_INT(pBody + pos, _talkTransMode, pos);
+            return dataLength;
+        }
 
-    char* pBody = pBuf + usedLen;
+        virtual int decode(char *pBuf, std::size_t len) override {
+            int usedLen = MsgPacket::decode(pBuf, len);
+            if (usedLen < 0) {
+                return -1;
+            }
 
-    int pos = 0;
-    DECODE_STRING(pBody + pos, _fdId, pos);
-    DECODE_INT(pBody + pos, _channelId, pos);
-    DECODE_INT(pBody + pos, _talkSessionId, pos);
-    DECODE_INT(pBody + pos, _activeFlag, pos);
-    DECODE_STRING(pBody + pos, _talkIp, pos);
-    DECODE_INT(pBody + pos, _talkPort, pos);
-    DECODE_INT(pBody + pos, _talkTransMode, pos);
+            char *pBody = pBuf + usedLen;
 
-    // 包长和实际长度不符
-    if (computeLength() != length()) {
-      return -1;
-    }
-    return length();
-  }
-  // ---------------------派生类重写结束---------------------
+            int pos = 0;
+            DECODE_STRING(pBody + pos, _fdId, pos);
+            DECODE_INT(pBody + pos, _channelId, pos);
+            DECODE_INT(pBody + pos, _talkSessionId, pos);
+            DECODE_INT(pBody + pos, _activeFlag, pos);
+            DECODE_STRING(pBody + pos, _talkIp, pos);
+            DECODE_INT(pBody + pos, _talkPort, pos);
+            DECODE_INT(pBody + pos, _talkTransMode, pos);
 
-public:
-  std::string _fdId;
-  int _channelId;
-  unsigned _talkSessionId;
-  unsigned _activeFlag;
-  std::string _talkIp;
-  unsigned _talkPort;
-  unsigned _talkTransMode;
-};
+            // 包长和实际长度不符
+            if (computeLength() != length()) {
+                return -1;
+            }
+            return length();
+        }
+        // ---------------------派生类重写结束---------------------
 
-class StartTalkRespPacket: public MsgPacket {
-public:
-  enum ACTIVE_FLAG {
-    ACTIVE_FLAG_NO_ACTIVE = 0,  // 无需激活
-    ACTIVE_FLAG_RECEIVER_ACTIVE = 1,  // 接收端主动激活
-    ACTIVE_FLAG_SENDER_ACTIVE = 2  // 发送端主动激活
-  };
+    public:
+        std::string _fdId;
+        int _channelId;
+        unsigned _talkSessionId;
+        unsigned _activeFlag;
+        std::string _talkIp;
+        unsigned _talkPort;
+        unsigned _talkTransMode;
+    };
 
-  enum TRANS_MODE {
-    TRANS_MODE_UDP = 0,  // udp
-    TRANS_MODE_TCP = 1  // tcp
-  };
+    class StartTalkRespPacket : public MsgPacket {
+    public:
+        enum ACTIVE_FLAG {
+            ACTIVE_FLAG_NO_ACTIVE = 0,  // 无需激活
+            ACTIVE_FLAG_RECEIVER_ACTIVE = 1,  // 接收端主动激活
+            ACTIVE_FLAG_SENDER_ACTIVE = 2  // 发送端主动激活
+        };
 
-public:
-  StartTalkRespPacket() :
-      MsgPacket(MSG_START_TALK_RESP), _channelId(0), _talkSessionId(0), _activeFlag(
-          ACTIVE_FLAG_NO_ACTIVE), _talkPort(0), _talkTransMode(
-          TRANS_MODE_UDP) {
+        enum TRANS_MODE {
+            TRANS_MODE_UDP = 0,  // udp
+            TRANS_MODE_TCP = 1  // tcp
+        };
 
-  }
-  virtual ~StartTalkRespPacket() = default;
+    public:
+        StartTalkRespPacket() :
+                MsgPacket(MSG_START_TALK_RESP), _channelId(0), _talkSessionId(0), _activeFlag(
+                ACTIVE_FLAG_NO_ACTIVE), _talkPort(0), _talkTransMode(
+                TRANS_MODE_UDP) {
 
-  // ---------------------派生类重写开始---------------------
-  virtual std::size_t computeLength() const override {
-    return MsgPacket::computeLength() + 5 * sizeof(int) + _fdId.length() + 1
-        + _talkIp.length() + 1;
-  }
+        }
 
-  virtual int encode(char* pBuf, std::size_t len) override {
-    std::size_t dataLength = computeLength();
-    if (len < dataLength) {
-      return -1;
-    }
-    int usedLen = MsgPacket::encode(pBuf, len);
-    if (usedLen < 0) {
-      return -1;
-    }
+        virtual ~StartTalkRespPacket() = default;
 
-    char* pBody = pBuf + usedLen;
+        // ---------------------派生类重写开始---------------------
+        virtual std::size_t computeLength() const override {
+            return MsgPacket::computeLength() + 5 * sizeof(int) + _fdId.length() + 1
+                   + _talkIp.length() + 1;
+        }
 
-    int pos = 0;
-    ENCODE_STRING(pBody + pos, _fdId, pos);
-    ENCODE_INT(pBody + pos, _channelId, pos);
-    ENCODE_INT(pBody + pos, _talkSessionId, pos);
-    ENCODE_INT(pBody + pos, _activeFlag, pos);
-    ENCODE_STRING(pBody + pos, _talkIp, pos);
-    ENCODE_INT(pBody + pos, _talkPort, pos);
-    ENCODE_INT(pBody + pos, _talkTransMode, pos);
-    return dataLength;
-  }
+        virtual int encode(char *pBuf, std::size_t len) override {
+            std::size_t dataLength = computeLength();
+            if (len < dataLength) {
+                return -1;
+            }
+            int usedLen = MsgPacket::encode(pBuf, len);
+            if (usedLen < 0) {
+                return -1;
+            }
 
-  virtual int decode(char* pBuf, std::size_t len) override {
-    int usedLen = MsgPacket::decode(pBuf, len);
-    if (usedLen < 0) {
-      return -1;
-    }
+            char *pBody = pBuf + usedLen;
 
-    char* pBody = pBuf + usedLen;
+            int pos = 0;
+            ENCODE_STRING(pBody + pos, _fdId, pos);
+            ENCODE_INT(pBody + pos, _channelId, pos);
+            ENCODE_INT(pBody + pos, _talkSessionId, pos);
+            ENCODE_INT(pBody + pos, _activeFlag, pos);
+            ENCODE_STRING(pBody + pos, _talkIp, pos);
+            ENCODE_INT(pBody + pos, _talkPort, pos);
+            ENCODE_INT(pBody + pos, _talkTransMode, pos);
+            return dataLength;
+        }
 
-    int pos = 0;
-    DECODE_STRING(pBody + pos, _fdId, pos);
-    DECODE_INT(pBody + pos, _channelId, pos);
-    DECODE_INT(pBody + pos, _talkSessionId, pos);
-    DECODE_INT(pBody + pos, _activeFlag, pos);
-    DECODE_STRING(pBody + pos, _talkIp, pos);
-    DECODE_INT(pBody + pos, _talkPort, pos);
-    DECODE_INT(pBody + pos, _talkTransMode, pos);
+        virtual int decode(char *pBuf, std::size_t len) override {
+            int usedLen = MsgPacket::decode(pBuf, len);
+            if (usedLen < 0) {
+                return -1;
+            }
 
-    // 包长和实际长度不符
-    if (computeLength() != length()) {
-      return -1;
-    }
-    return length();
-  }
-  // ---------------------派生类重写结束---------------------
+            char *pBody = pBuf + usedLen;
 
-public:
-  std::string _fdId;
-  int _channelId;
-  unsigned _talkSessionId;
-  unsigned _activeFlag;
-  std::string _talkIp;
-  unsigned _talkPort;
-  unsigned _talkTransMode;
-};
+            int pos = 0;
+            DECODE_STRING(pBody + pos, _fdId, pos);
+            DECODE_INT(pBody + pos, _channelId, pos);
+            DECODE_INT(pBody + pos, _talkSessionId, pos);
+            DECODE_INT(pBody + pos, _activeFlag, pos);
+            DECODE_STRING(pBody + pos, _talkIp, pos);
+            DECODE_INT(pBody + pos, _talkPort, pos);
+            DECODE_INT(pBody + pos, _talkTransMode, pos);
+
+            // 包长和实际长度不符
+            if (computeLength() != length()) {
+                return -1;
+            }
+            return length();
+        }
+        // ---------------------派生类重写结束---------------------
+
+    public:
+        std::string _fdId;
+        int _channelId;
+        unsigned _talkSessionId;
+        unsigned _activeFlag;
+        std::string _talkIp;
+        unsigned _talkPort;
+        unsigned _talkTransMode;
+    };
 
 } /* namespace Dream */
 

@@ -48,31 +48,31 @@ enum AVFrameSideDataType {
     /**
      * The data is the AVPanScan struct defined in libavcodec.
      */
-    AV_FRAME_DATA_PANSCAN,
+            AV_FRAME_DATA_PANSCAN,
     /**
      * ATSC A53 Part 4 Closed Captions.
      * A53 CC bitstream is stored as uint8_t in AVFrameSideData.data.
      * The number of bytes of CC data is AVFrameSideData.size.
      */
-    AV_FRAME_DATA_A53_CC,
+            AV_FRAME_DATA_A53_CC,
     /**
      * Stereoscopic 3d metadata.
      * The data is the AVStereo3D struct defined in libavutil/stereo3d.h.
      */
-    AV_FRAME_DATA_STEREO3D,
+            AV_FRAME_DATA_STEREO3D,
     /**
      * The data is the AVMatrixEncoding enum defined in libavutil/channel_layout.h.
      */
-    AV_FRAME_DATA_MATRIXENCODING,
+            AV_FRAME_DATA_MATRIXENCODING,
     /**
      * Metadata relevant to a downmix procedure.
      * The data is the AVDownmixInfo struct defined in libavutil/downmix_info.h.
      */
-    AV_FRAME_DATA_DOWNMIX_INFO,
+            AV_FRAME_DATA_DOWNMIX_INFO,
     /**
      * ReplayGain information in the form of the AVReplayGain struct.
      */
-    AV_FRAME_DATA_REPLAYGAIN,
+            AV_FRAME_DATA_REPLAYGAIN,
     /**
      * This side data contains a 3x3 transformation matrix describing an affine
      * transformation that needs to be applied to the frame for correct
@@ -80,19 +80,19 @@ enum AVFrameSideDataType {
      *
      * See libavutil/display.h for a detailed description of the data.
      */
-    AV_FRAME_DATA_DISPLAYMATRIX,
+            AV_FRAME_DATA_DISPLAYMATRIX,
     /**
      * Active Format Description data consisting of a single byte as specified
      * in ETSI TS 101 154 using AVActiveFormatDescription enum.
      */
-    AV_FRAME_DATA_AFD,
+            AV_FRAME_DATA_AFD,
     /**
      * Motion vectors exported by some codecs (on demand through the export_mvs
      * flag set in the libavcodec AVCodecContext flags2 option).
      * The data is the AVMotionVector struct defined in
      * libavutil/motion_vector.h.
      */
-    AV_FRAME_DATA_MOTION_VECTORS,
+            AV_FRAME_DATA_MOTION_VECTORS,
     /**
      * Recommmends skipping the specified number of samples. This is exported
      * only if the "skip_manual" AVOption is set in libavcodec.
@@ -104,33 +104,33 @@ enum AVFrameSideDataType {
      * u8    reason for end   skip (0=padding silence, 1=convergence)
      * @endcode
      */
-    AV_FRAME_DATA_SKIP_SAMPLES,
+            AV_FRAME_DATA_SKIP_SAMPLES,
     /**
      * This side data must be associated with an audio frame and corresponds to
      * enum AVAudioServiceType defined in avcodec.h.
      */
-    AV_FRAME_DATA_AUDIO_SERVICE_TYPE,
+            AV_FRAME_DATA_AUDIO_SERVICE_TYPE,
     /**
      * Mastering display metadata associated with a video frame. The payload is
      * an AVMasteringDisplayMetadata type and contains information about the
      * mastering display color volume.
      */
-    AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
+            AV_FRAME_DATA_MASTERING_DISPLAY_METADATA,
     /**
      * The GOP timecode in 25 bit timecode format. Data format is 64-bit integer.
      * This is set on the first frame of a GOP that has a temporal reference of 0.
      */
-    AV_FRAME_DATA_GOP_TIMECODE
+            AV_FRAME_DATA_GOP_TIMECODE
 };
 
 enum AVActiveFormatDescription {
-    AV_AFD_SAME         = 8,
-    AV_AFD_4_3          = 9,
-    AV_AFD_16_9         = 10,
-    AV_AFD_14_9         = 11,
-    AV_AFD_4_3_SP_14_9  = 13,
+    AV_AFD_SAME = 8,
+    AV_AFD_4_3 = 9,
+    AV_AFD_16_9 = 10,
+    AV_AFD_14_9 = 11,
+    AV_AFD_4_3_SP_14_9 = 13,
     AV_AFD_16_9_SP_14_9 = 14,
-    AV_AFD_SP_4_3       = 15,
+    AV_AFD_SP_4_3 = 15,
 };
 
 
@@ -143,7 +143,7 @@ enum AVActiveFormatDescription {
 typedef struct AVFrameSideData {
     enum AVFrameSideDataType type;
     uint8_t *data;
-    int      size;
+    int size;
     AVDictionary *metadata;
     AVBufferRef *buf;
 } AVFrameSideData;
@@ -378,10 +378,10 @@ typedef struct AVFrame {
     /**
      * Number of elements in extended_buf.
      */
-    int        nb_extended_buf;
+    int nb_extended_buf;
 
     AVFrameSideData **side_data;
-    int            nb_side_data;
+    int nb_side_data;
 
 /**
  * @defgroup lavu_frame_flags AV_FRAME_FLAGS
@@ -532,32 +532,58 @@ typedef struct AVFrame {
  * they should not be accessed directly outside libavutil.
  */
 int64_t av_frame_get_best_effort_timestamp(const AVFrame *frame);
-void    av_frame_set_best_effort_timestamp(AVFrame *frame, int64_t val);
-int64_t av_frame_get_pkt_duration         (const AVFrame *frame);
-void    av_frame_set_pkt_duration         (AVFrame *frame, int64_t val);
-int64_t av_frame_get_pkt_pos              (const AVFrame *frame);
-void    av_frame_set_pkt_pos              (AVFrame *frame, int64_t val);
-int64_t av_frame_get_channel_layout       (const AVFrame *frame);
-void    av_frame_set_channel_layout       (AVFrame *frame, int64_t val);
-int     av_frame_get_channels             (const AVFrame *frame);
-void    av_frame_set_channels             (AVFrame *frame, int     val);
-int     av_frame_get_sample_rate          (const AVFrame *frame);
-void    av_frame_set_sample_rate          (AVFrame *frame, int     val);
-AVDictionary *av_frame_get_metadata       (const AVFrame *frame);
-void          av_frame_set_metadata       (AVFrame *frame, AVDictionary *val);
-int     av_frame_get_decode_error_flags   (const AVFrame *frame);
-void    av_frame_set_decode_error_flags   (AVFrame *frame, int     val);
-int     av_frame_get_pkt_size(const AVFrame *frame);
-void    av_frame_set_pkt_size(AVFrame *frame, int val);
+
+void av_frame_set_best_effort_timestamp(AVFrame *frame, int64_t val);
+
+int64_t av_frame_get_pkt_duration(const AVFrame *frame);
+
+void av_frame_set_pkt_duration(AVFrame *frame, int64_t val);
+
+int64_t av_frame_get_pkt_pos(const AVFrame *frame);
+
+void av_frame_set_pkt_pos(AVFrame *frame, int64_t val);
+
+int64_t av_frame_get_channel_layout(const AVFrame *frame);
+
+void av_frame_set_channel_layout(AVFrame *frame, int64_t val);
+
+int av_frame_get_channels(const AVFrame *frame);
+
+void av_frame_set_channels(AVFrame *frame, int val);
+
+int av_frame_get_sample_rate(const AVFrame *frame);
+
+void av_frame_set_sample_rate(AVFrame *frame, int val);
+
+AVDictionary *av_frame_get_metadata(const AVFrame *frame);
+
+void av_frame_set_metadata(AVFrame *frame, AVDictionary *val);
+
+int av_frame_get_decode_error_flags(const AVFrame *frame);
+
+void av_frame_set_decode_error_flags(AVFrame *frame, int val);
+
+int av_frame_get_pkt_size(const AVFrame *frame);
+
+void av_frame_set_pkt_size(AVFrame *frame, int val);
+
 AVDictionary **avpriv_frame_get_metadatap(AVFrame *frame);
+
 #if FF_API_FRAME_QP
+
 int8_t *av_frame_get_qp_table(AVFrame *f, int *stride, int *type);
+
 int av_frame_set_qp_table(AVFrame *f, AVBufferRef *buf, int stride, int type);
+
 #endif
+
 enum AVColorSpace av_frame_get_colorspace(const AVFrame *frame);
-void    av_frame_set_colorspace(AVFrame *frame, enum AVColorSpace val);
+
+void av_frame_set_colorspace(AVFrame *frame, enum AVColorSpace val);
+
 enum AVColorRange av_frame_get_color_range(const AVFrame *frame);
-void    av_frame_set_color_range(AVFrame *frame, enum AVColorRange val);
+
+void av_frame_set_color_range(AVFrame *frame, enum AVColorRange val);
 
 /**
  * Get the name of a colorspace.

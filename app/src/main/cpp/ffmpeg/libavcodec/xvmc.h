@@ -50,7 +50,7 @@ struct attribute_deprecated xvmc_pix_fmt {
         - application - set during initialization
         - libavcodec  - unchanged
     */
-    int             xvmc_id;
+    int xvmc_id;
 
     /** Pointer to the block array allocated by XvMCCreateBlocks().
         The array has to be freed by XvMCDestroyBlocks().
@@ -59,41 +59,41 @@ struct attribute_deprecated xvmc_pix_fmt {
         - application - set the pointer during initialization
         - libavcodec  - fills coefficients/pixel data into the array
     */
-    short*          data_blocks;
+    short *data_blocks;
 
     /** Pointer to the macroblock description array allocated by
         XvMCCreateMacroBlocks() and freed by XvMCDestroyMacroBlocks().
         - application - set the pointer during initialization
         - libavcodec  - fills description data into the array
     */
-    XvMCMacroBlock* mv_blocks;
+    XvMCMacroBlock *mv_blocks;
 
     /** Number of macroblock descriptions that can be stored in the mv_blocks
         array.
         - application - set during initialization
         - libavcodec  - unchanged
     */
-    int             allocated_mv_blocks;
+    int allocated_mv_blocks;
 
     /** Number of blocks that can be stored at once in the data_blocks array.
         - application - set during initialization
         - libavcodec  - unchanged
     */
-    int             allocated_data_blocks;
+    int allocated_data_blocks;
 
     /** Indicate that the hardware would interpret data_blocks as IDCT
         coefficients and perform IDCT on them.
         - application - set during initialization
         - libavcodec  - unchanged
     */
-    int             idct;
+    int idct;
 
     /** In MoCo mode it indicates that intra macroblocks are assumed to be in
         unsigned format; same as the XVMC_INTRA_UNSIGNED flag.
         - application - set during initialization
         - libavcodec  - unchanged
     */
-    int             unsigned_intra;
+    int unsigned_intra;
 
     /** Pointer to the surface allocated by XvMCCreateSurface().
         It has to be freed by XvMCDestroySurface() on application exit.
@@ -101,7 +101,7 @@ struct attribute_deprecated xvmc_pix_fmt {
         - application - set during initialization
         - libavcodec  - unchanged
     */
-    XvMCSurface*    p_surface;
+    XvMCSurface *p_surface;
 
 /** Set by the decoder before calling ff_draw_horiz_band(),
     needed by the XvMCRenderSurface function. */
@@ -110,25 +110,25 @@ struct attribute_deprecated xvmc_pix_fmt {
         - application - unchanged
         - libavcodec  - set
     */
-    XvMCSurface*    p_past_surface;
+    XvMCSurface *p_past_surface;
 
     /** Pointer to the surface used as future reference
         - application - unchanged
         - libavcodec  - set
     */
-    XvMCSurface*    p_future_surface;
+    XvMCSurface *p_future_surface;
 
     /** top/bottom field or frame
         - application - unchanged
         - libavcodec  - set
     */
-    unsigned int    picture_structure;
+    unsigned int picture_structure;
 
     /** XVMC_SECOND_FIELD - 1st or 2nd field in the sequence
         - application - unchanged
         - libavcodec  - set
     */
-    unsigned int    flags;
+    unsigned int flags;
 //}@
 
     /** Number of macroblock descriptions in the mv_blocks array
@@ -138,7 +138,7 @@ struct attribute_deprecated xvmc_pix_fmt {
                         with filled_mb_block_num or zero both.
         - libavcodec  - unchanged
     */
-    int             start_mv_blocks_num;
+    int start_mv_blocks_num;
 
     /** Number of new macroblock descriptions in the mv_blocks array (after
         start_mv_blocks_num) that are filled by libavcodec and have to be
@@ -147,7 +147,7 @@ struct attribute_deprecated xvmc_pix_fmt {
                         ff_draw_horiz_band().
         - libavcodec  - increment with one of each stored MB
     */
-    int             filled_mv_blocks_num;
+    int filled_mv_blocks_num;
 
     /** Number of the next free data block; one data block consists of
         64 short values in the data_blocks array.
@@ -160,7 +160,7 @@ struct attribute_deprecated xvmc_pix_fmt {
         - libavcodec  - each decoded macroblock increases it by the number
                         of coded blocks it contains.
     */
-    int             next_free_data_block_num;
+    int next_free_data_block_num;
 };
 
 /**

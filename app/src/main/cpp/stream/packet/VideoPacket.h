@@ -15,19 +15,20 @@
 
 namespace Dream {
 
-class VideoPacket: public StreamPacket {
+    class VideoPacket : public StreamPacket {
 
-public:
-  VideoPacket() :
-    StreamPacket(MSG_STREAM_VIDEO) {
+    public:
+        VideoPacket() :
+                StreamPacket(MSG_STREAM_VIDEO) {
 
-  }
-  virtual ~VideoPacket() = default;
+        }
 
-  // ---------------------派生类重写开始---------------------
-  // 无包体，无需覆盖父类方法
-  // ---------------------派生类重写结束---------------------
-};
+        virtual ~VideoPacket() = default;
+
+        // ---------------------派生类重写开始---------------------
+        // 无包体，无需覆盖父类方法
+        // ---------------------派生类重写结束---------------------
+    };
 
 } /* namespace Dream */
 

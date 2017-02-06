@@ -10,11 +10,12 @@
 
 namespace Dream {
 
-class AsioUdpServer {
-public:
-  AsioUdpServer();
-  virtual ~AsioUdpServer();
-};
+    class AsioUdpServer {
+    public:
+        AsioUdpServer();
+
+        virtual ~AsioUdpServer();
+    };
 
 } /* namespace Dream */
 

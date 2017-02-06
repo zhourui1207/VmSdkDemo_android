@@ -15,26 +15,29 @@
 
 namespace Dream {
 
-class PrintTimer {
-public:
-  PrintTimer(const std::string& name = ""): _name(name) {
-    _millSeconds = getCurrentTimeStamp();
-  }
-  virtual ~PrintTimer() {
-    LOGW("PrintTimer", "计时器[%s]耗时[%zd]\n", _name.c_str(), getCurrentTimeStamp() - _millSeconds);
-  }
+    class PrintTimer {
+    public:
+        PrintTimer(const std::string &name = "") : _name(name) {
+            _millSeconds = getCurrentTimeStamp();
+        }
 
-private:
-  std::time_t getCurrentTimeStamp() {
-    std::chrono::time_point<std::chrono::system_clock,std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-    auto tmp=std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
-    return tmp.count();
-  }
+        virtual ~PrintTimer() {
+            LOGW("PrintTimer", "计时器[%s]耗时[%zd]\n", _name.c_str(),
+                 getCurrentTimeStamp() - _millSeconds);
+        }
 
-private:
-  std::string _name;
-  std::time_t _millSeconds;  // 构造时的毫秒数
-};
+    private:
+        std::time_t getCurrentTimeStamp() {
+            std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now());
+            auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+            return tmp.count();
+        }
+
+    private:
+        std::string _name;
+        std::time_t _millSeconds;  // 构造时的毫秒数
+    };
 
 } /* namespace Dream */
 

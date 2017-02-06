@@ -15,25 +15,31 @@
 #include <windows.h>
 #include <winsock.h>
 #else
+
 #include <arpa/inet.h>
 #include <unistd.h>
+
 #endif
 
 /** sleep 跨平台 */
 #if _WIN32
-  inline void safeSleep(uint32_t ms) {
-    ::Sleep(ms);
-  }
+inline void safeSleep(uint32_t ms) {
+  ::Sleep(ms);
+}
 #else
-  inline void safeSleep(uint32_t ms) {
-    usleep(ms*1000);
-  }
+
+inline void safeSleep(uint32_t ms) {
+    usleep(ms * 1000);
+}
+
 #endif
 
 #ifdef _ANDROID
+
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
+
 #define LOGD(TAG, ...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__) // 定义LOGD类型
 #define LOGI(TAG, ...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__) // 定义LOGI类型
 #define LOGW(TAG, ...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__) // 定义LOGW类型

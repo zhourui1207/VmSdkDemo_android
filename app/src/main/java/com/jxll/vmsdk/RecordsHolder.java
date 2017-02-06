@@ -8,18 +8,18 @@ import java.util.List;
  */
 
 public class RecordsHolder {
-  private List<Record> records = new LinkedList<>();
+    private List<Record> records = new LinkedList<>();
 
-  public void addItem(int beginTime, int endTime, String playbackUrl, String downloadUrl) {
-    Record record = new Record(beginTime, endTime, playbackUrl, downloadUrl);
-    records.add(record);
-  }
+    public void addItem(int beginTime, int endTime, String playbackUrl, String downloadUrl) {
+        Record record = new Record(beginTime, endTime, playbackUrl, downloadUrl);
+        records.add(record);
+    }
 
-  public int size() {
-    return records.size();
-  }
+    public int size() {
+        return records.size();
+    }
 
-  public List<Record> list() {
-    return records;
-  }
+    public List<Record> list() {
+        return records;
+    }
 }

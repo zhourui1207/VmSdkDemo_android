@@ -42,23 +42,25 @@ namespace Dream {
     } while(0);
 
 
-class BasePacket {
+    class BasePacket {
 
-public:
-  BasePacket() = default;
-  virtual ~BasePacket() = default;
+    public:
+        BasePacket() = default;
 
-  // 计算包长度
-  virtual std::size_t computeLength() const = 0;
-  // 设置包长
-  virtual void length(std::size_t len) = 0;
+        virtual ~BasePacket() = default;
 
-  // 将包内容写入buff，返回写入长度
-  virtual int encode(char* pBuf, std::size_t len) = 0;
+        // 计算包长度
+        virtual std::size_t computeLength() const = 0;
 
-  // 将buff内容解析成包，返回已解析的长度
-  virtual int decode(char* pBuf, std::size_t len) = 0;
-};
+        // 设置包长
+        virtual void length(std::size_t len) = 0;
+
+        // 将包内容写入buff，返回写入长度
+        virtual int encode(char *pBuf, std::size_t len) = 0;
+
+        // 将buff内容解析成包，返回已解析的长度
+        virtual int decode(char *pBuf, std::size_t len) = 0;
+    };
 
 } /* namespace Dream */
 

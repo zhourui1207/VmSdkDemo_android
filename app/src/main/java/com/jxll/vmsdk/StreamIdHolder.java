@@ -5,13 +5,13 @@ package com.jxll.vmsdk;
  */
 
 public class StreamIdHolder {
-  private int streamId;
+    private int streamId;
 
-  public int getStreamId() {
-    return streamId;
-  }
+    public int getStreamId() {
+        return streamId;
+    }
 
-  public void setStreamId(int streamId) {
-    this.streamId = streamId;
-  }
+    public void setStreamId(int streamId) {
+        this.streamId = streamId;
+    }
 }

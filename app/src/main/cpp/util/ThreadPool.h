@@ -22,34 +22,38 @@
 
 namespace Dream {
 
-using TaskThreadPtr = std::shared_ptr<TaskThread>;
+    using TaskThreadPtr = std::shared_ptr<TaskThread>;
 
-class ThreadPool : public Noncopyable {
-public:
-  ThreadPool() = delete;
-  ThreadPool(std::size_t size = THREAD_POOL_SIZE_DEFAULT, std::size_t maxSize =
-      THREAD_POOL_MAX_SIZE_DEFAULT, int idleTime =
-      THREAD_POOL_IDLE_TIME_DEFAULT);
+    class ThreadPool : public Noncopyable {
+    public:
+        ThreadPool() = delete;
 
-  virtual ~ThreadPool();
+        ThreadPool(std::size_t size = THREAD_POOL_SIZE_DEFAULT, std::size_t maxSize =
+        THREAD_POOL_MAX_SIZE_DEFAULT, int idleTime =
+        THREAD_POOL_IDLE_TIME_DEFAULT);
 
-  bool addTask(const Task& task);
+        virtual ~ThreadPool();
 
-  void start();
-  void stop();
+        bool addTask(const Task &task);
 
-private:
-  void handleTimeout(const TaskThreadPtr& threadPtr);
+        void start();
 
-private:
-  std::size_t _size;
-  std::size_t _maxSize;
-  int _idleTime;
-  std::atomic<bool> _running;  // 用来允许或禁止添加任务
-  std::vector<TaskThreadPtr> _pool;
-  Tasks _tasks;
-  RWLock _mutex;
-};
+        void stop();
+
+    private:
+        void handleTimeout(const TaskThreadPtr &threadPtr);
+
+        void stopTask();
+
+    private:
+        std::size_t _size;
+        std::size_t _maxSize;
+        int _idleTime;
+        std::atomic<bool> _running;  // 用来允许或禁止添加任务
+        std::vector<TaskThreadPtr> _pool;
+        Tasks _tasks;
+        RWLock _mutex;
+    };
 
 } /* namespace Dream */
 

@@ -36,30 +36,39 @@
 extern const AVClass ffurl_context_class;
 
 typedef struct URLContext {
-    const AVClass *av_class;    /**< information for av_log(). Set by url_open(). */
+    const AVClass *av_class;
+    /**< information for av_log(). Set by url_open(). */
     const struct URLProtocol *prot;
     void *priv_data;
-    char *filename;             /**< specified URL */
+    char *filename;
+    /**< specified URL */
     int flags;
-    int max_packet_size;        /**< if non zero, the stream is packetized with this max packet size */
-    int is_streamed;            /**< true if streamed (no seek possible), default = false */
+    int max_packet_size;
+    /**< if non zero, the stream is packetized with this max packet size */
+    int is_streamed;
+    /**< true if streamed (no seek possible), default = false */
     int is_connected;
     AVIOInterruptCB interrupt_callback;
-    int64_t rw_timeout;         /**< maximum time to wait for (network) read/write operation completion, in mcs */
+    int64_t rw_timeout;
+    /**< maximum time to wait for (network) read/write operation completion, in mcs */
     const char *protocol_whitelist;
     const char *protocol_blacklist;
 } URLContext;
 
 typedef struct URLProtocol {
     const char *name;
-    int     (*url_open)( URLContext *h, const char *url, int flags);
+
+    int     (*url_open)(URLContext *h, const char *url, int flags);
+
     /**
      * This callback is to be used by protocols which open further nested
      * protocols. options are then to be passed to ffurl_open()/ffurl_connect()
      * for those nested protocols.
      */
     int     (*url_open2)(URLContext *h, const char *url, int flags, AVDictionary **options);
+
     int     (*url_accept)(URLContext *s, URLContext **c);
+
     int     (*url_handshake)(URLContext *c);
 
     /**
@@ -74,26 +83,42 @@ typedef struct URLProtocol {
      * enough data has been read is left to the calling function; see
      * retry_transfer_wrapper in avio.c.
      */
-    int     (*url_read)( URLContext *h, unsigned char *buf, int size);
+    int     (*url_read)(URLContext *h, unsigned char *buf, int size);
+
     int     (*url_write)(URLContext *h, const unsigned char *buf, int size);
-    int64_t (*url_seek)( URLContext *h, int64_t pos, int whence);
+
+    int64_t (*url_seek)(URLContext *h, int64_t pos, int whence);
+
     int     (*url_close)(URLContext *h);
+
     int (*url_read_pause)(URLContext *h, int pause);
+
     int64_t (*url_read_seek)(URLContext *h, int stream_index,
                              int64_t timestamp, int flags);
+
     int (*url_get_file_handle)(URLContext *h);
+
     int (*url_get_multi_file_handle)(URLContext *h, int **handles,
                                      int *numhandles);
+
     int (*url_shutdown)(URLContext *h, int flags);
+
     int priv_data_size;
     const AVClass *priv_data_class;
     int flags;
+
     int (*url_check)(URLContext *h, int mask);
+
     int (*url_open_dir)(URLContext *h);
+
     int (*url_read_dir)(URLContext *h, AVIODirEntry **next);
+
     int (*url_close_dir)(URLContext *h);
+
     int (*url_delete)(URLContext *h);
+
     int (*url_move)(URLContext *h_src, URLContext *h_dst);
+
     const char *default_whitelist;
 } URLProtocol;
 
@@ -142,9 +167,9 @@ int ffurl_connect(URLContext *uc, AVDictionary **options);
  * AVERROR code in case of failure
  */
 int ffurl_open_whitelist(URLContext **puc, const char *filename, int flags,
-               const AVIOInterruptCB *int_cb, AVDictionary **options,
-               const char *whitelist, const char* blacklist,
-               URLContext *parent);
+                         const AVIOInterruptCB *int_cb, AVDictionary **options,
+                         const char *whitelist, const char *blacklist,
+                         URLContext *parent);
 
 int ffurl_open(URLContext **puc, const char *filename, int flags,
                const AVIOInterruptCB *int_cb, AVDictionary **options);
@@ -224,6 +249,7 @@ int64_t ffurl_seek(URLContext *h, int64_t pos, int whence);
  * otherwise
  */
 int ffurl_closep(URLContext **h);
+
 int ffurl_close(URLContext *h);
 
 /**
@@ -268,6 +294,7 @@ int ff_check_interrupt(AVIOInterruptCB *cb);
 
 /* udp.c */
 int ff_udp_set_remote_url(URLContext *h, const char *uri);
+
 int ff_udp_get_local_port(URLContext *h);
 
 /**

@@ -328,12 +328,12 @@ enum AVHWFrameTransferDirection {
     /**
      * Transfer the data from the queried hw frame.
      */
-    AV_HWFRAME_TRANSFER_DIRECTION_FROM,
+            AV_HWFRAME_TRANSFER_DIRECTION_FROM,
 
     /**
      * Transfer the data to the queried hw frame.
      */
-    AV_HWFRAME_TRANSFER_DIRECTION_TO,
+            AV_HWFRAME_TRANSFER_DIRECTION_TO,
 };
 
 /**

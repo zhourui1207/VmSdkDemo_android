@@ -18,21 +18,21 @@
 
 namespace Dream {
 
-template<typename T>
-class Singleton: public Noncopyable {
-public:
-  static const std::shared_ptr<T>& getInstance() {
-    static std::once_flag oc; //用于call_once的局部静态变量
-    static std::shared_ptr<T> _instance;
-    std::call_once(oc, [&]() {_instance.reset(new T());});
-    return _instance;
-  }
+    template<typename T>
+    class Singleton : public Noncopyable {
+    public:
+        static const std::shared_ptr<T> &getInstance() {
+            static std::once_flag oc; //用于call_once的局部静态变量
+            static std::shared_ptr<T> _instance;
+            std::call_once(oc, [&]() { _instance.reset(new T()); });
+            return _instance;
+        }
 
-protected:
-  Singleton() = default;  // 默认构造函数隐藏
-  virtual ~Singleton() = default;
+    protected:
+        Singleton() = default;  // 默认构造函数隐藏
+        virtual ~Singleton() = default;
 
-};
+    };
 
 } /* namespace Dream */
 

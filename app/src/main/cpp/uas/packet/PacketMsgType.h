@@ -81,7 +81,7 @@ const unsigned MSG_CONTROL_REQ = 0x0251;
 const unsigned MSG_CONTROL_RESP = 0x0252;
 
 // 报警推送消息
-const unsigned MSG_ALARM_NOTIFY= 0x0261;
+const unsigned MSG_ALARM_NOTIFY = 0x0261;
 
 // 获取报警
 const unsigned MSG_GET_ALARM_REQ = 0x0271;

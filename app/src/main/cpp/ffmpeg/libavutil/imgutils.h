@@ -106,7 +106,7 @@ int av_image_alloc(uint8_t *pointers[4], int linesizes[4],
  * @param dst_linesize linesize for the image plane in dst
  * @param src_linesize linesize for the image plane in src
  */
-void av_image_copy_plane(uint8_t       *dst, int dst_linesize,
+void av_image_copy_plane(uint8_t *dst, int dst_linesize,
                          const uint8_t *src, int src_linesize,
                          int bytewidth, int height);
 
@@ -176,7 +176,7 @@ int av_image_get_buffer_size(enum AVPixelFormat pix_fmt, int width, int height, 
  * (error code) on error
  */
 int av_image_copy_to_buffer(uint8_t *dst, int dst_size,
-                            const uint8_t * const src_data[4], const int src_linesize[4],
+                            const uint8_t *const src_data[4], const int src_linesize[4],
                             enum AVPixelFormat pix_fmt, int width, int height, int align);
 
 /**
