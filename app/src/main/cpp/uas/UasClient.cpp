@@ -21,6 +21,7 @@ namespace Dream {
 
     std::shared_ptr<MsgPacket> UasClient::newPacketPtr(unsigned msgType) {
         std::shared_ptr<MsgPacket> packetPtr;
+//        LOGW("UasClient", "newPacketPtr(%d)\n", msgType);
         switch (msgType) {
             case MSG_LOGIN_RESP:
                 printf("登录返回包\n");
@@ -82,6 +83,7 @@ namespace Dream {
     void UasClient::receive(const std::shared_ptr<MsgPacket> &packetPtr) {
         bool isResp = false;
         unsigned msgType = packetPtr->msgType();
+//        LOGW("UasClient", "receive msgType=[%d]\n", msgType);
         switch (msgType) {
             case MSG_LOGIN_RESP: {
                 isResp = true;

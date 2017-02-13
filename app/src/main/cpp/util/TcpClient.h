@@ -55,7 +55,6 @@ namespace Dream {
 
         // 关闭
         virtual void shutDown() {
-            _pool.stop();
             _tcpClient.shutDown();
         }
 
@@ -107,6 +106,8 @@ namespace Dream {
         void receiveData(const char *pBuf, std::size_t dataLen) {
             bool callReceive = false;  // 是否调用接收函数
 
+//            LOGW("TcpClient", "receiveData datalen=%d\n", dataLen);
+
             // 是读取头
             if (_isHeader) {
                 // 通过头解析包的总长度
@@ -126,13 +127,13 @@ namespace Dream {
                         callReceive = true;
                     }
                 } else {
-                    printf("包头解析长度出错，长度＝[%d]\n", packetLen);
+                    LOGE("TcpClient", "包头解析长度出错，长度＝[%d]\n", packetLen);
                     _tcpClient.shutDown(true);  // 这函数是io线程自身调用，必须加true
                     return;
                 }
             } else {  // 读取body
                 if (dataLen != _readLength) {  // 读取到的长度和想要读取的长度不相等的话，就解析错误，直接关闭客户端
-                    printf("读取到的长度[%zd]和需要读取长度[%d]不相等，无法解析数据\n", dataLen, _readLength);
+                    LOGE("TcpClient", "读取到的长度[%zd]和需要读取长度[%d]不相等，无法解析数据\n", dataLen, _readLength);
                     _tcpClient.shutDown(true);
                     return;
                 }

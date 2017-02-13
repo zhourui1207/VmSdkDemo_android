@@ -347,8 +347,7 @@ public class VmNet {
     }
 
     private static void onStream(int streamId, int streamType, int payloadType, byte[] buffer, int
-            len,
-                                 int timeStamp, int seqNumber, boolean isMark, Object object) {
+            len, int timeStamp, int seqNumber, boolean isMark, Object object) {
         if (object != null) {
             StreamCallback streamCallback = (StreamCallback) object;
             streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,

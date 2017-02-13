@@ -9,7 +9,7 @@
 #include "../util/public/platform.h"
 #include "../util/PrintTimer.h"
 #include "Decoder.h"
-#include "PayloadTypeDef.h"
+#include "../payload/PayloadTypeDef.h"
 
 namespace Dream {
 
@@ -32,7 +32,7 @@ namespace Dream {
         static bool isRegisterAll = false;
         if (!isRegisterAll) {
 //      int ret = SDL_VideoInit(NULL);
-            LOGW("Decoder", "开始注册所有\n");
+            LOGW("Decoder", "开始注册所有，playloadType=%d\n", payloadType);
             avcodec_register_all();
             // 初始化sdl
             isRegisterAll = true;

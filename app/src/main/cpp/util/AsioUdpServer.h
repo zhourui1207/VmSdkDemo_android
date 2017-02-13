@@ -12,7 +12,7 @@ namespace Dream {
 
     class AsioUdpServer {
     public:
-        AsioUdpServer();
+        AsioUdpServer(const std::string address, );
 
         virtual ~AsioUdpServer();
     };

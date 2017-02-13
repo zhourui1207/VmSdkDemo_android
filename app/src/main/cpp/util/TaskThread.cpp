@@ -81,7 +81,9 @@ namespace Dream {
                         == std::cv_status::timeout) {
                         _waiting.store(false);
                         _timeoutCallback(shared_from_this());
+#ifdef _ANDROID
                         dtachAndroidThread(pJniEnv);
+#endif
                         LOGW("TaskThread", "thread stop\n");
                         return;
                     }
@@ -89,7 +91,9 @@ namespace Dream {
 
                 // 如果线程停止，则该线程退出
                 if (!_running.load()) {
+#ifdef _ANDROID
                     dtachAndroidThread(pJniEnv);
+#endif
                     LOGW("TaskThread", "thread stop\n");
                     return;
                 }
@@ -102,8 +106,9 @@ namespace Dream {
             }
             // -------------执行结束-------------------
         }
-
+#ifdef _ANDROID
         dtachAndroidThread(pJniEnv);
+#endif
         LOGW("TaskThread", "thread stop\n");
     }
 

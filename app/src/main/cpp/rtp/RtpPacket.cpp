@@ -33,8 +33,34 @@ namespace Dream {
 
         memcpy(m_pBuffer, pBuffer, bufferSize);
 
-        m_pPayloadData = m_pBuffer + 12;
-        m_nPayloadDataLen = bufferSize - 12;
+        if ((pBuffer[0] & 0x02) == 0x02) {  // 占位标志P，则在该报文的尾部填充一个或多个额外的八位组
+
+        }
+
+        if (m_nPayloadType == 98 && ((pBuffer[12] & 0x1F) == 28)) { // FU Type
+            if (pBuffer[13] & 0x80) {  // 是否是起始帧
+                m_pBuffer[9] = 0x00;
+                m_pBuffer[10] = 0x00;
+                m_pBuffer[11] = 0x00;
+                m_pBuffer[12] = 0x01;
+                m_pPayloadData = m_pBuffer + 9;
+                m_nPayloadDataLen = bufferSize - 9;
+            } else {
+                m_pPayloadData = m_pBuffer + 14;
+                m_nPayloadDataLen = bufferSize - 14;
+            }
+            m_pBuffer[13] = (char) ((pBuffer[12] & 0xE0) + (pBuffer[13] & 0x1F));
+        } else if (m_nPayloadType == 98 && (((pBuffer[12] & 0x1F) == 0x07) || ((pBuffer[12] & 0x1F) == 0x08))) { // sps或pps
+            m_pBuffer[8] = 0x00;
+            m_pBuffer[9] = 0x00;
+            m_pBuffer[10] = 0x00;
+            m_pBuffer[11] = 0x01;
+            m_pPayloadData = m_pBuffer + 8;
+            m_nPayloadDataLen = bufferSize - 8;
+        } else {
+            m_pPayloadData = m_pBuffer + 12;
+            m_nPayloadDataLen = bufferSize - 12;
+        }
 
         return 0;
     }
@@ -67,9 +93,9 @@ namespace Dream {
     bool RtpPacket::ParseRtpHeader(unsigned char *pRtpHeader, bool *pMarker,
                                    char *pPayloadType, unsigned short *pSequenceNumber,
                                    unsigned *pTimeStamp, int *pSsrc) {
-        if (pRtpHeader[0] != 0x80)
+        if (pRtpHeader[0] & 0x80 != 0x80)  // rtp第二版
             return false;
-        if (0x80 & pRtpHeader[1]) {
+        if (0x80 & pRtpHeader[1]) {  // mark标记
             *pMarker = true;
         } else {
             *pMarker = false;

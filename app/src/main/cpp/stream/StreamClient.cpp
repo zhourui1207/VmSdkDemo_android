@@ -21,7 +21,7 @@ namespace Dream {
                 isMatch = true;
                 break;
             default:
-                printf("未匹配到相应的包! msgType=[%d]\n", msgType);
+                LOGW("StreamClient", "未匹配到相应的包! msgType=[%d]\n", msgType);
                 break;
         }
         if (isMatch) {
@@ -45,7 +45,7 @@ namespace Dream {
                 break;
             }
             default: {
-                printf("非码流包!\n");
+                LOGW("StreamClient", "非码流包!\n");
                 break;
             }
         }

@@ -341,17 +341,27 @@ public class VmPlayer {
      * @return
      */
     public synchronized boolean openAudio() {
-        if (audioDecoder != null) {
-            return audioDecoder.startPlay();
+        boolean ret = false;
+        if (videoDecoder != null) {
+            videoDecoder.openAudio();
+            ret = true;
         }
-        return false;
+        if (audioDecoder != null) {
+            ret = audioDecoder.startPlay();
+            audioDecoder.openAudio();
+        }
+        return ret;
     }
 
     /**
      * 关闭声音
      */
     public synchronized void closeAudio() {
+        if (videoDecoder != null) {
+            videoDecoder.closeAudio();
+        }
         if (audioDecoder != null) {
+            audioDecoder.closeAudio();
             audioDecoder.stopPlay();
         }
     }

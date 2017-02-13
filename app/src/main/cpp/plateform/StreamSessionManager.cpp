@@ -5,6 +5,7 @@
  *      Author: zhourui
  */
 
+#include "../payload/PayloadTypeDef.h"
 #include "../rtp/RtpPacket.h"
 #include "StreamSessionManager.h"
 
@@ -55,16 +56,49 @@ namespace Dream {
 
     void StreamSession::onStream(const std::shared_ptr<StreamData> &streamDataPtr) {
         if (_streamCallback) {
+
+//            int j = 0;
+//                    std::string data;
+//                    for (int i = 0; i < streamDataPtr->length(); ++i) {
+//                        char tmp[10];
+//                        memset(tmp, 0, 10);
+//                        sprintf(tmp, "%02x", streamDataPtr->data()[i]);
+//                        data += tmp;
+//                        data += " ";
+//                        if (++j > 19) {
+//                            j = 0;
+//                            data += "\n";
+//                        }
+//                    }
+//                    LOGE("StreamSession 解析前data:", "%s\n", data.data());
+
             // 去掉rtp头后再回调
             auto rtpPacketPtr = std::unique_ptr<RtpPacket>(new RtpPacket);
             if (rtpPacketPtr->Parse(streamDataPtr->data(), streamDataPtr->length()) == 0) {
+            // PS流交给上层应用处理
+//
+//                    int j = 0;
+//                    std::string data;
+//                    for (int i = 0; i < rtpPacketPtr->GetPayloadLength(); ++i) {
+//                        char tmp[10];
+//                        memset(tmp, 0, 10);
+//                        sprintf(tmp, "%02x", rtpPacketPtr->GetPayloadData()[i]);
+//                        data += tmp;
+//                        data += " ";
+//                        if (++j > 19) {
+//                            j = 0;
+//                            data += "\n";
+//                        }
+//                    }
+//                    LOGE("StreamSession 解析后data:", "%s\n", data.data());
+
                 _streamCallback(_streamId, streamDataPtr->streamType(),
                                 rtpPacketPtr->GetPayloadType(), rtpPacketPtr->GetPayloadData(),
                                 rtpPacketPtr->GetPayloadLength(), rtpPacketPtr->GetTimestamp(),
                                 rtpPacketPtr->GetSequenceNumber(), rtpPacketPtr->HasMarker(),
                                 _user);
             } else {
-                printf("rtp 解析失败\n");
+                LOGE("StreamSessionManager", "rtp 解析失败\n");
             }
         }
     }

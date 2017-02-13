@@ -180,7 +180,7 @@ namespace Dream {
             _uasClientPtr->cancelAlarmListener();
             _uasClientPtr->shutDown();
             _uasConnected.store(false);
-            onUasConnectStatus(false);
+//            onUasConnectStatus(false);
         }
         _uasClientPtr.reset();
     }

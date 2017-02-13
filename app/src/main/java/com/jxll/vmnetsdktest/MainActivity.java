@@ -5,7 +5,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -22,9 +21,6 @@ import com.jxll.vmsdk.Channel;
 import com.jxll.vmsdk.ChannelsHolder;
 import com.jxll.vmsdk.DepTree;
 import com.jxll.vmsdk.DepTreesHolder;
-import com.jxll.vmsdk.Record;
-import com.jxll.vmsdk.RecordsHolder;
-import com.jxll.vmsdk.TalkAddressHolder;
 import com.jxll.vmsdk.VmNet;
 import com.jxll.vmsdk.VmPlayer;
 import com.jxll.vmsdk.util.OpenGLESUtil;
@@ -161,29 +157,30 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//        if (audioOpen) {
-//          player.closeAudio();
-//          audioOpen = false;
-//          button.setText("打开声音");
-//        } else {
-//          audioOpen = player.openAudio();
-//          if (audioOpen) {
-//            button.setText("关闭声音");
-//          }
-//        }
-                Log.e("!!!", "stop start");
-                player.stopPlay();
-                Log.e("!!!", "stop end");
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (audioOpen) {
+                    player.closeAudio();
+                    audioOpen = false;
+                    button.setText("打开声音");
+                } else {
+                    audioOpen = player.openAudio();
+                    if (audioOpen) {
+                        button.setText("关闭声音");
+                    }
                 }
-                Log.e("!!!", "startRealplay start");
-                player.startRealplay("201610111654538071", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
-                Log.e("!!!", "startRealplay end");
-
             }
+//                Log.e("!!!", "stop start");
+//                player.stopPlay();
+//                Log.e("!!!", "stop end");
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//                Log.e("!!!", "startRealplay start");
+//                player.startRealplay("201610111654538071", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+//                Log.e("!!!", "startRealplay end");
+//
+//            }
         });
 
         record = (Button) findViewById(R.id.record);
@@ -248,7 +245,26 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         @Override
         protected Void doInBackground(Void... voids) {
             VmNet.init(10);
-            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+
+//            Log.e(TAG, "connect start");
+//            VmNet.connect("10.234.11.3", 5516, MainActivity.this);
+//            Log.e(TAG, "connect end");
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            Log.e(TAG, "disconnect start");
+//            VmNet.disconnect();
+//            Log.e(TAG, "disconnect end");
+
+
+//            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+//            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
+            VmNet.connect("10.151.0.252", 5516, MainActivity.this);
+
+
+//            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
 //      VmNet.connect("118.178.132.146", 5516, MainActivity.this);
             try {
                 Thread.sleep(2000);
@@ -302,27 +318,27 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
                 }
             });
 
-            TalkAddressHolder talkAddressHolder = new TalkAddressHolder();
-            ret = VmNet.startTalk("201607201402389091", 1, talkAddressHolder);
-            if (ret == 0) {
-                Log.e(TAG, "onRealAlarm addr=" + talkAddressHolder.getTalkAddr() + ", port=" + talkAddressHolder.getTalkPort());
-            } else {
-                Log.e(TAG, "startTalk error");
-            }
-
-            RecordsHolder recordsHolder = new RecordsHolder();
-            long currentTime = System.currentTimeMillis();
-            Log.e("currentTime", "currentTime=" + currentTime);
-            ret = VmNet.getRecords(0, 100, "201610111654538071", 1, (int) (currentTime / 1000) - 7200, (int) (currentTime / 1000), true, recordsHolder);
-
-            Log.e("getRecords", "getRecords ret = " + ret + ", size=" + recordsHolder.size());
-            if (ret == 0) {
-                recordTimeCellList.clear();
-                for (Record record : recordsHolder.list()) {
-                    RecordTimeCell recordTimeCell = new RecordTimeCell(record.getBeginTime() * 1000L, record.getEndTime() * 1000L, Color.rgb(150, 255, 150));
-                    recordTimeCellList.add(recordTimeCell);
-                }
-            }
+//            TalkAddressHolder talkAddressHolder = new TalkAddressHolder();
+//            ret = VmNet.startTalk("201607201402389091", 1, talkAddressHolder);
+//            if (ret == 0) {
+//                Log.e(TAG, "onRealAlarm addr=" + talkAddressHolder.getTalkAddr() + ", port=" + talkAddressHolder.getTalkPort());
+//            } else {
+//                Log.e(TAG, "startTalk error");
+//            }
+//
+//            RecordsHolder recordsHolder = new RecordsHolder();
+//            long currentTime = System.currentTimeMillis();
+//            Log.e("currentTime", "currentTime=" + currentTime);
+//            ret = VmNet.getRecords(0, 100, "201610111654538071", 1, (int) (currentTime / 1000) - 7200, (int) (currentTime / 1000), true, recordsHolder);
+//
+//            Log.e("getRecords", "getRecords ret = " + ret + ", size=" + recordsHolder.size());
+//            if (ret == 0) {
+//                recordTimeCellList.clear();
+//                for (Record record : recordsHolder.list()) {
+//                    RecordTimeCell recordTimeCell = new RecordTimeCell(record.getBeginTime() * 1000L, record.getEndTime() * 1000L, Color.rgb(150, 255, 150));
+//                    recordTimeCellList.add(recordTimeCell);
+//                }
+//            }
 
             try {
                 Thread.sleep(1000);
@@ -344,9 +360,14 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
             timeBar.invalidate();
             player = new VmPlayer();
 //      player.startRealplay("201612022115042811", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
-            player.startRealplay("201610111654538071", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
-//      player.startPlayback("201610111654538071", 1, true, 1481242200, 1481299200, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//            player.startRealplay("201702100934040062", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+            player.startRealplay("201702131054154181", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//            player.startRealplay("201701161355294261", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//            player.startRealplay("201701171014494814", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//            player.startRealplay("201701101632040194", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
 
+//      player.startPlayback("201610111654538071", 1, true, 1481242200, 1481299200, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+            Log.e(TAG, " 0x000001BA=" + 0x000001BA + "0xFFFFFFFF=" + 0xFFFFFFFF);
         }
     }
 

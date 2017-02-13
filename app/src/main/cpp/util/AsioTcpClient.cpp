@@ -63,6 +63,7 @@ namespace Dream {
     }
 
     bool AsioTcpClient::send(const std::shared_ptr<PacketData> &dataPtr) {
+//        LOGW("AsioTcpClient", "[%s]开始发送数据...\n", _address.c_str());
         if (_currentStatus.load() != CONNECTED || _ioServicePtr.get() == nullptr) {
 //    printf("当前处于未连接状态，无法发送数据\n");
             return false;
@@ -186,7 +187,9 @@ namespace Dream {
                                     if (!ec) {
                                         // std::shared_ptr<PacketData> dataPtr = std::make_shared<PacketData>(readLen, _receive);
                                         // 原先考虑使用线程池，但是不利于拼包，改成同步
+//                                        LOGW("AsioTcpClient", "接收到数据");
                                         if (_callback) {
+//                                            LOGW("AsioTcpClient", "回调数据");
                                             _callback(_receive, readLen);
                                         }
                                         doReadByLength();
