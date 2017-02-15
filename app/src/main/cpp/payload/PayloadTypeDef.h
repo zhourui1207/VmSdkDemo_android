@@ -1,0 +1,12 @@
+//
+// Created by zhou rui on 16/11/2.
+//
+
+#ifndef PAYLOADTYPEDEF_H
+#define PAYLOADTYPEDEF_H
+
+
+#define MEDIA_PLAYLOAD_PS 96
+#define MEDIA_PAYLOAD_H265 1000
+
+#endif //VMSDKDEMO_ANDROID_PAYLOADTYPEDEF_H

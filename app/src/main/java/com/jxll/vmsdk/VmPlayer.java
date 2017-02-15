@@ -8,6 +8,10 @@ import android.view.SurfaceHolder;
 import com.jxll.vmsdk.core.Decoder;
 import com.jxll.vmsdk.core.StreamData;
 
+import java.lang.ref.WeakReference;
+
+import static com.jxll.vmsdk.VmType.PLAY_STATUS_PLAYING;
+
 /**
  * Created by zhourui on 16/10/28.
  * sdk解码接口，解码接口依赖通信接口
@@ -16,8 +20,8 @@ import com.jxll.vmsdk.core.StreamData;
 public class VmPlayer {
     private final String TAG = "VmPlayer";
     private int currentStatus = VmType.PLAY_STATUS_NONE;
-    private PlayStatusListener playStatusListener;
-    private StreamStatusListener streamStatusListener;
+    private WeakReference<PlayStatusListener> playStatusListener;
+    private WeakReference<StreamStatusListener> streamStatusListener;
     private int errorCode;
     private int playMode = VmType.PLAY_MODE_NONE;  // 播放模式，默认是－1; 0:实时视频； 1:录像回放
     private String fdId = "";
@@ -38,6 +42,61 @@ public class VmPlayer {
     private StartStreamTask startStreamTask;
     private Decoder videoDecoder;
     private Decoder audioDecoder;
+
+    private CheckStreamTimeoutTask checkStreamTimeoutTask;
+
+    /**
+     * 最后接受到码流的时间
+     */
+    private long lastReceiveStreamTime;
+
+    /**
+     * 自动尝试重连次数
+     */
+    private int autoTryReconnectCount = 0;
+
+    /**
+     * 当前尝试重连的次数
+     */
+    private int currentTryReconnectCount = 0;
+
+    /**
+     * 设置自动尝试重连次数
+     *
+     * @param count 0：不重连  <0 永远重连  >0 重连相应地次数，如果尝试次数用完，就是尝试发送超时回调
+     */
+    public void setAutoTryReconnectCount(int count) {
+        autoTryReconnectCount = count;
+        doStartCheckStream();
+    }
+
+    /**
+     * 超时秒数，默认10秒
+     */
+    private int timeoutSeconds = 15;
+
+    /**
+     * 设置超时秒数 >0 才生效
+     *
+     * @param seconds
+     */
+    public void setTimeoutSeconds(int seconds) {
+        timeoutSeconds = seconds;
+    }
+
+    private WeakReference<TimeoutListener> timeoutListener;
+
+    /**
+     * 码流超时回调
+     */
+    public interface TimeoutListener {
+        // 超时
+        void onTimeout();
+    }
+
+    public void setTimeoutListener(TimeoutListener timeoutListener) {
+        this.timeoutListener = new WeakReference<TimeoutListener>(timeoutListener);
+    }
 
     /**
      * 获取是否是中心录像回放
@@ -90,7 +149,10 @@ public class VmPlayer {
         }
         currentStatus = status;
         if (playStatusListener != null) {
-            playStatusListener.onStatusChanged(currentStatus);
+            final PlayStatusListener listener = playStatusListener.get();
+            if (listener != null) {
+                listener.onStatusChanged(currentStatus);
+            }
         }
     }
 
@@ -100,7 +162,7 @@ public class VmPlayer {
      * @param playStatusListener
      */
     public void setPlayStatusListener(PlayStatusListener playStatusListener) {
-        this.playStatusListener = playStatusListener;
+        this.playStatusListener = new WeakReference<PlayStatusListener>(playStatusListener);
     }
 
     /**
@@ -116,7 +178,7 @@ public class VmPlayer {
      * @param statusStatusListener
      */
     public void setStatusStatusListener(StreamStatusListener statusStatusListener) {
-        this.streamStatusListener = statusStatusListener;
+        this.streamStatusListener = new WeakReference<StreamStatusListener>(statusStatusListener);
     }
 
     /**
@@ -150,7 +212,6 @@ public class VmPlayer {
         if (currentStatus != VmType.PLAY_STATUS_NONE) {
             stopPlay();
         }
-        setCurrentStatus(VmType.PLAY_STATUS_BUSY);
 
         playMode = VmType.PLAY_MODE_REALPLAY;
         this.fdId = fdId;
@@ -163,6 +224,8 @@ public class VmPlayer {
         this.context = context;
 
         doOpenStreamTask();
+        doStartCheckStream();
+
         return true;
     }
 
@@ -203,6 +266,9 @@ public class VmPlayer {
         PlayAddressHolder holder = new PlayAddressHolder();
         holder.init(0, videoAddr, videoPort, audioAddr, audioPort);
         doStartStreamTask(holder);
+
+        doStartCheckStream();
+
         return true;
     }
 
@@ -232,7 +298,6 @@ public class VmPlayer {
         if (currentStatus != VmType.PLAY_STATUS_NONE) {
             stopPlay();
         }
-        setCurrentStatus(VmType.PLAY_STATUS_BUSY);
 
         playMode = VmType.PLAY_MODE_PLAYBACK;
         this.fdId = fdId;
@@ -247,6 +312,9 @@ public class VmPlayer {
         this.context = context;
 
         doOpenStreamTask();
+
+        doStartCheckStream();
+
         return true;
     }
 
@@ -287,11 +355,14 @@ public class VmPlayer {
         PlayAddressHolder holder = new PlayAddressHolder();
         holder.init(0, videoAddr, videoPort, audioAddr, audioPort);
         doStartStreamTask(holder);
+
+        doStartCheckStream();
+
         return true;
     }
 
     public synchronized boolean controlPlayback(String action, String param) {
-        if (playMode != VmType.PLAY_MODE_PLAYBACK || currentStatus != VmType.PLAY_STATUS_PLAYING) {
+        if (playMode != VmType.PLAY_MODE_PLAYBACK || currentStatus != PLAY_STATUS_PLAYING) {
             return false;
         }
 
@@ -306,14 +377,16 @@ public class VmPlayer {
      * 停止播放
      */
     public synchronized void stopPlay() {
-        playStatusListener = null;
-        streamStatusListener = null;
+        doStopCheckStream();
+
+//        playStatusListener = null;
+//        streamStatusListener = null;
         setCurrentStatus(VmType.PLAY_STATUS_NONE);
         // 下面皆为同步操作
         doCloseStreamTask(playMode, monitorId);
         doStopStreamTask(videoStreamId, audioStreamId);
         doStopDecodeTask();
-        playMode = VmType.PLAY_MODE_NONE;
+//        playMode = VmType.PLAY_MODE_NONE;
         return;
     }
 
@@ -408,6 +481,7 @@ public class VmPlayer {
     }
 
     private void doOpenStreamTask() {
+        setCurrentStatus(VmType.PLAY_STATUS_BUSY);
         if (openStreamTask != null) {
             openStreamTask.cancel(true);
         }
@@ -480,9 +554,13 @@ public class VmPlayer {
         int mPlayMode;
 
         @Override
+        protected void onPreExecute() {
+            setCurrentStatus(VmType.PLAY_STATUS_OPENSTREAMING);
+        }
+
+        @Override
         protected PlayAddressHolder doInBackground(Void... voids) {
             PlayAddressHolder holder = new PlayAddressHolder();
-            setCurrentStatus(VmType.PLAY_STATUS_OPENSTREAMING);
             mPlayMode = playMode;
             switch (playMode) {
                 case VmType.PLAY_MODE_REALPLAY:
@@ -539,9 +617,13 @@ public class VmPlayer {
         int mAudioStreamId;
 
         @Override
+        protected void onPreExecute() {
+            setCurrentStatus(VmType.PLAY_STATUS_GETSTREAMING);
+        }
+
+        @Override
         protected Void doInBackground(PlayAddressHolder... playAddressHolders) {
             PlayAddressHolder holder = playAddressHolders[0];
-            setCurrentStatus(VmType.PLAY_STATUS_GETSTREAMING);
 
             StreamIdHolder videoStreamIdHolder = new StreamIdHolder();
             mErrorCode = VmNet.startStream(holder.getVideoAddr(), holder.getVideoPort(), new
@@ -573,18 +655,18 @@ public class VmPlayer {
         @Override
         protected void onPostExecute(Void aVoid) {
             errorCode = mErrorCode;
-            boolean closeSmooth = playMode == VmType.PLAY_MODE_PLAYBACK ? true : false;
+            boolean closeSmooth = playMode == VmType.PLAY_MODE_PLAYBACK;
 
             if (mErrorCode == ErrorCode.ERR_CODE_OK) {
                 videoStreamId = mVideoStreamId;
                 // 视频开始解码
                 if (videoDecoder == null) {
-                    videoDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, true, surfaceHolder,
+                    videoDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, true, openAudio, surfaceHolder,
                             context);
                 } else {
                     videoDecoder.startPlay();
                 }
-                setCurrentStatus(VmType.PLAY_STATUS_PLAYING);
+                setCurrentStatus(PLAY_STATUS_PLAYING);
             } else {
                 doCloseStreamTask(playMode, monitorId);
                 setCurrentStatus(VmType.PLAY_STATUS_NONE);
@@ -594,7 +676,7 @@ public class VmPlayer {
                 audioStreamId = mAudioStreamId;
                 // 音频开始解码
                 if (audioDecoder == null) {
-                    audioDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, openAudio,
+                    audioDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, openAudio, openAudio,
                             surfaceHolder, context);
                 } else if (openAudio) {
                     audioDecoder.startPlay();
@@ -617,7 +699,8 @@ public class VmPlayer {
         @Override
         public void onStreamConnectStatus(int streamId, boolean isConnected) {
             if (streamStatusListener != null) {
-                streamStatusListener.onVideoStreamStatus(isConnected);
+                final StreamStatusListener listener = streamStatusListener.get();
+                listener.onVideoStreamStatus(isConnected);
             }
         }
 
@@ -625,6 +708,8 @@ public class VmPlayer {
         public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer, int
                 timeStamp, int seqNumber, boolean isMark) {
 
+            lastReceiveStreamTime = System.currentTimeMillis();
+            currentTryReconnectCount = 0;
 //      Log.e(TAG, "!!");
             if (videoDecoder != null) {
                 videoDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_VIDEO, payloadType,
@@ -639,7 +724,8 @@ public class VmPlayer {
         @Override
         public void onStreamConnectStatus(int streamId, boolean isConnected) {
             if (streamStatusListener != null) {
-                streamStatusListener.onAudioStreamStatus(isConnected);
+                final StreamStatusListener listener = streamStatusListener.get();
+                listener.onAudioStreamStatus(isConnected);
             }
         }
 
@@ -655,4 +741,95 @@ public class VmPlayer {
         }
     }
 
+    private void doStartCheckStream() {
+        doStopCheckStream();
+        currentTryReconnectCount = 0;
+        checkStream();
+    }
+
+    private void checkStream() {
+        checkStreamTimeoutTask = new CheckStreamTimeoutTask();
+        checkStreamTimeoutTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    }
+
+    private void doStopCheckStream() {
+        lastReceiveStreamTime = 0;
+        if (checkStreamTimeoutTask != null) {
+            checkStreamTimeoutTask.cancel(true);
+        }
+    }
+
+    private void TimeoutCallback() {
+        if (timeoutListener == null) {
+            return;
+        }
+        final TimeoutListener listener = timeoutListener.get();
+        if (listener != null) {
+            Log.w(TAG, "回调码流超时接口");
+            listener.onTimeout();
+        }
+    }
+
+    /**
+     * 检查码流超时任务，因为考虑到符合流，所以暂时只考虑检测视频流
+     */
+    private class CheckStreamTimeoutTask extends AsyncTask<Void, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            /**
+             * 如果正在播放中状态，并且最后收到码流的时间距离现在大于15秒时被认定为超时
+             */
+            try {
+                // 延时一秒检测
+                Thread.sleep(1000);
+
+//                Log.e(TAG, "检测码流");
+
+                if (lastReceiveStreamTime <= 0) {  // 如果最后接收时间小于等于0，表示刚开始计算时间
+                    lastReceiveStreamTime = System.currentTimeMillis();
+                } else if ((lastReceiveStreamTime > 0) && ((System.currentTimeMillis() - lastReceiveStreamTime) > (timeoutSeconds * 1000))) {
+                    Log.e(TAG, "检测码流 超时!");
+                    return true;
+                }
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+//            Log.e(TAG, "检测码流未超时 lastReceiveStreamTime=" + lastReceiveStreamTime);
+            return false;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean timout) {
+            if (timout) {  // 超时
+                // 判断是否重连
+                if (autoTryReconnectCount < 0 || // 小于0表示永远重连
+                        (autoTryReconnectCount > 0 && currentTryReconnectCount < autoTryReconnectCount)) {  // 需要重连
+                    // 重连次数加1
+                    ++currentTryReconnectCount;
+                    // 重连
+                    reconnect();
+                } else {  // 不需要重连的话，就回调给上层超时消息
+                    TimeoutCallback();
+                }
+            } else {  // 没超时的话继续检查码流
+                checkStream();
+            }
+        }
+    }
+
+    /**
+     * 重连
+     */
+    private void reconnect() {
+        Log.w(TAG, "开始重连... 当前次数=" + currentTryReconnectCount);
+        stopPlay();
+
+        // 如果是通过fdid取流，需要从打开码流开始，如果是从videoAddress方式播放的话，貌似就没用了
+        doOpenStreamTask();
+        // 继续检查码流
+        checkStream();
+    }
 }

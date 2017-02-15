@@ -100,10 +100,11 @@ public class FlvSave {
             Log.e(TAG, StringUtil.getStackTraceAsString(e));
             return false;
         }
-        mTimestamp = timestamp;
-        if (mTimestamp == 0) {
-            mTimestamp = System.currentTimeMillis();
-        }
+        mTimestamp = System.currentTimeMillis();
+//        mTimestamp = timestamp;
+//        if (mTimestamp == 0) {
+//            mTimestamp = System.currentTimeMillis();
+//        }
         return true;
     }
 
@@ -124,9 +125,11 @@ public class FlvSave {
         int dateSize = 9 + size;
         byte[] tagHeader = {0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         setInt(dateSize, tagHeader, 1, 3);
-        if (timestamp == 0) {
-            timestamp = System.currentTimeMillis();
-        }
+
+        timestamp = System.currentTimeMillis();
+//        if (timestamp == 0) {
+//            timestamp = System.currentTimeMillis();
+//        }
         setLong(((timestamp - mTimestamp) < 0 ? 0 : (timestamp - mTimestamp)), tagHeader, 4, 3);
         mPreviousTagSize = 11 + dateSize;
 

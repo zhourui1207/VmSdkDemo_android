@@ -55,6 +55,7 @@ public class Decoder {
     private int decodeType = VmType.DECODE_TYPE_INTELL;
     private SurfaceHolder surfaceHolder;
     private Context context;  // 上下文，获取是否支持OpenGLES2.0
+    private boolean openAudio = false;
 
     private boolean isRunning = false;
 
@@ -73,15 +74,16 @@ public class Decoder {
         this.decodeType = decodeType;
     }
 
-    public Decoder(int decodeType, boolean closeOpengles, boolean closeSmooth, boolean autoPlay,
-                   SurfaceHolder
-                           surfaceHolder, Context context) {
+    public Decoder(int decodeType, boolean closeOpengles, boolean closeSmooth, boolean autoPlay, boolean openAudio,
+                   SurfaceHolder surfaceHolder, Context context) {
         Log.i(TAG, "构造解码器 decodeType=" + decodeType + ", autoPlay=" + autoPlay);
         this.decodeType = decodeType;
         this.closeOpengles = closeOpengles;
         this.closeSmooth = closeSmooth;
         this.surfaceHolder = surfaceHolder;
         this.context = context;
+        this.openAudio = openAudio;
+
         if (autoPlay) {
             startPlay();
         }
@@ -123,15 +125,11 @@ public class Decoder {
     }
 
     public synchronized void openAudio() {
-        if (playThread != null) {
-            playThread.openAudio();
-        }
+        openAudio = true;
     }
 
     public synchronized void closeAudio() {
-        if (playThread != null) {
-            playThread.closeAudio();
-        }
+        openAudio = false;
     }
 
     public synchronized boolean startPlay() {
@@ -372,11 +370,11 @@ public class Decoder {
                                         isFirst = false;
                                         break;
                                     } else {
-                                        if ((videoBuf[4] & 0x1F) == 7) {  // sps
+                                        if ((videoBuf[4] & 0x1F) == 0x07) {  // sps
                                             dataType = DATA_TYPE_VIDEO_SPS;
-                                        } else if ((videoBuf[4] & 0x1F) == 8) {  // pps
+                                        } else if ((videoBuf[4] & 0x1F) == 0x08) {  // pps
                                             dataType = DATA_TYPE_VIDEO_PPS;
-                                        } else if (videoBuf[4] == 0x65) {  // I帧
+                                        } else if ((videoBuf[4] & 0x1F) == 0x05) {  // I帧
                                             dataType = DATA_TYPE_VIDEO_IFRAME;
                                         } else {  // 否则都当做P帧
                                             dataType = DATA_TYPE_VIDEO_PFRAME;
@@ -456,7 +454,7 @@ public class Decoder {
 
         // 根据0x00 00 00 01 来进行分段
         private int mergeBuffer(byte[] NalBuf, int NalBufUsed, byte[] SockBuf, int SockBufUsed,
-                                      int SockRemain) {
+                                int SockRemain) {
             int i = 0;
 
             if (true) {
@@ -518,7 +516,7 @@ public class Decoder {
 
         private int currentPayloadType;
 
-        private boolean openAudio = false;
+        // private boolean openAudio = false;
 
         // 软件解码相关
         private long decoderHandle;
@@ -574,7 +572,9 @@ public class Decoder {
         }
 
         public synchronized boolean screenshot(String fileName) {
+            Log.w(TAG, "screenshot fileName=" + fileName);
             if (lastSpsBuffer == null || lastPpsBuffer == null || lastIFrameBuffer == null) {
+                Log.e(TAG, "screenshot failed， buffr error! lastSpsBuffer=" + lastSpsBuffer + ", lastPpsBuffer=" + lastPpsBuffer + ", lastIFrameBuffer=" + lastIFrameBuffer);
                 return false;
             }
 
@@ -583,10 +583,6 @@ public class Decoder {
                 fileOutputStream = new FileOutputStream(fileName);
             } catch (FileNotFoundException e) {
                 Log.e(TAG, StringUtil.getStackTraceAsString(e));
-                return false;
-            }
-
-            if (fileOutputStream == null) {
                 return false;
             }
 
@@ -611,6 +607,7 @@ public class Decoder {
 
 //      Log.e(TAG, "ret=" + ret);
             if (ret <= 0) {
+                Log.e(TAG, "screenshot decode failed ret=" + ret);
                 return false;
             }
 
@@ -848,12 +845,14 @@ public class Decoder {
                     } else if (dataType == DATA_TYPE_VIDEO_IFRAME) {
                         tmpIFrameBuffer = new byte[data.length];
                         System.arraycopy(data, 0, tmpIFrameBuffer, 0, data.length);
+//                        lastIFrameBuffer = tmpIFrameBuffer;
 //            lastIFrameBuffer = new byte[data.length];
 //            System.arraycopy(data, 0, lastIFrameBuffer, 0, data.length);
                         isFistPFrame = true;
-//            Log.e(TAG, "IFrame");
+//                        Log.e(TAG, "IFrame");
                     } else if (dataType == DATA_TYPE_VIDEO_PFRAME && isFistPFrame && tmpIFrameBuffer !=
                             null) {
+//                        Log.e(TAG, "PFrame");
                         lastIFrameBuffer = tmpIFrameBuffer;
                         lastPFrameBuffer = new byte[data.length];
                         System.arraycopy(data, 0, lastPFrameBuffer, 0, data.length);
@@ -1052,13 +1051,13 @@ public class Decoder {
             }
         }
 
-        public void openAudio() {
-            openAudio = true;
-        }
-
-        public void closeAudio() {
-            openAudio = false;
-        }
+//        public void openAudio() {
+//            openAudio = true;
+//        }
+//
+//        public void closeAudio() {
+//            openAudio = false;
+//        }
 
         private class Display extends Thread implements SurfaceHolder.Callback {
             private long renderHandle;

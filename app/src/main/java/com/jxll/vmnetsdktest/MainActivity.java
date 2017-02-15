@@ -190,7 +190,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
                 String saveDir = "/sdcard/MVSS/Screenshot";
                 File dir = new File(saveDir);
                 dir.mkdir();
-                String fname = saveDir + "/" + "测试" + ".jpeg";
+                String fname = saveDir + "/" + "gb122" + ".jpeg";
 
                 player.screenshot(fname);
             }
@@ -360,11 +360,18 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
             timeBar.invalidate();
             player = new VmPlayer();
 //      player.startRealplay("201612022115042811", 1, true, 1, false, false, surfaceView.getHolder(), MainActivity.this);
-//            player.startRealplay("201702100934040062", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
-            player.startRealplay("201702131054154181", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+            // gb122
+//            player.startRealplay("201701171014494814", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+            // gb_hk119
+//            player.startRealplay("201702131054154181", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
 //            player.startRealplay("201701161355294261", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
 //            player.startRealplay("201701171014494814", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+            // 119
 //            player.startRealplay("201701101632040194", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+            // 23.142
+            player.startRealplay("201701161355294261", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+            player.setAutoTryReconnectCount(3);
+            player.setTimeoutSeconds(10);
 
 //      player.startPlayback("201610111654538071", 1, true, 1481242200, 1481299200, 0, false, false, surfaceView.getHolder(), MainActivity.this);
             Log.e(TAG, " 0x000001BA=" + 0x000001BA + "0xFFFFFFFF=" + 0xFFFFFFFF);

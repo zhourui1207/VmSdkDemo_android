@@ -8,11 +8,15 @@
 #ifndef ASIOUDPSERVER_H_
 #define ASIOUDPSERVER_H_
 
+#include <string>
+
 namespace Dream {
 
     class AsioUdpServer {
     public:
-        AsioUdpServer(const std::string address, );
+      AsioUdpServer(const std::string& address) {
+        
+      }
 
         virtual ~AsioUdpServer();
     };
