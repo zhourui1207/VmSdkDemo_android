@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 public class Decoder {
     // 应用启动时，加载VmNet动态库
     static {
+        System.loadLibrary("ijkffmpeg");
         System.loadLibrary("VmPlayer");
     }
 
