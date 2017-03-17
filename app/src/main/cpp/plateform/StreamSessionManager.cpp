@@ -90,7 +90,7 @@ namespace Dream {
 //                            data += "\n";
 //                        }
 //                    }
-//                    LOGE("StreamSession 解析后data:", "%s\n", data.data());
+//                    LOGE("StreamSession 解析后data", "数据长度:%d,数据:%s\n", rtpPacketPtr->GetPayloadLength(), data.data());
 
                 _streamCallback(_streamId, streamDataPtr->streamType(),
                                 rtpPacketPtr->GetPayloadType(), rtpPacketPtr->GetPayloadData(),

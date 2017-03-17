@@ -157,6 +157,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (player == null) {
+                    return;
+                }
                 if (audioOpen) {
                     player.closeAudio();
                     audioOpen = false;
@@ -259,9 +262,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 //            Log.e(TAG, "disconnect end");
 
 
+            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
 //            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
-//            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
-            VmNet.connect("10.151.0.252", 5516, MainActivity.this);
+//            VmNet.connect("10.151.0.252", 5516, MainActivity.this);
 
 
 //            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
@@ -367,9 +370,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 //            player.startRealplay("201701161355294261", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
 //            player.startRealplay("201701171014494814", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
             // 119
-//            player.startRealplay("201701101632040194", 1, false, 2, false, false, surfaceView.getHolder(), MainActivity.this);
+            player.startRealplay("201702100934040062", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
             // 23.142
-            player.startRealplay("201701161355294261", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
+//            player.startRealplay("201701161355294261", 1, true, 0, false, false, surfaceView.getHolder(), MainActivity.this);
             player.setAutoTryReconnectCount(3);
             player.setTimeoutSeconds(10);
 

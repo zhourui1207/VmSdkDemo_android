@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
 public class Decoder {
     // 应用启动时，加载VmNet动态库
     static {
-        System.loadLibrary("ijkffmpeg");
+        System.loadLibrary("ijkffmpeg");  // 某些设备型号必须要加上依赖的动态库
         System.loadLibrary("VmPlayer");
     }
 
@@ -306,7 +306,7 @@ public class Decoder {
                     int streamType = streamData.getStreamType();
 
                     // 需要发送的数据
-                    int dataType;
+                    int dataType = DATA_TYPE_VIDEO_PFRAME;
                     byte[] data;
                     int begin = 0;
                     int len;
@@ -317,7 +317,6 @@ public class Decoder {
                     if (isFirst) {
                         resetVideoBuffer(payloadType, timestamp);
                     }
-
 
                     if (streamType == VmType.STREAM_TYPE_AUDIO) {  // 如果是音频，则不需要拼包和分包
                         dataType = DATA_TYPE_AUDIO;
@@ -333,6 +332,7 @@ public class Decoder {
                             begin = psStreamUtil.filterPsHeader(streamData.getBuffer(), 0, streamData.getBuffer().length);
 //                            Log.e(TAG, "filterPsHeader begin=" + begin);
                             if (begin < streamData.getBuffer().length) {  // 表示有数据可以使用
+//                                Log.e(TAG, "有效长度=" + (streamData.getBuffer().length - begin));
                                 if (!psStreamUtil.isFindDataStart()) {
                                     continue;
                                 }
@@ -350,6 +350,8 @@ public class Decoder {
                                     dataType = DATA_TYPE_AUDIO;
                                     sendData(dataType, payloadType, timestamp, dataForDecode, 0, audioLen);
                                 }
+                            } else {
+//                                Log.e(TAG, "无可用数据");
                             }
                         }
 
@@ -371,6 +373,7 @@ public class Decoder {
                                         isFirst = false;
                                         break;
                                     } else {
+                                        boolean send = true;
                                         if ((videoBuf[4] & 0x1F) == 0x07) {  // sps
                                             dataType = DATA_TYPE_VIDEO_SPS;
                                         } else if ((videoBuf[4] & 0x1F) == 0x08) {  // pps
@@ -386,7 +389,9 @@ public class Decoder {
                                         len = videoBufUsed - 4;  // 最后会多4个字节的0x00 00 00 01
 
 //                                        Log.e(TAG, "一帧数据");
-                                        sendData(dataType, payloadType, timestamp, data, begin, len);
+                                        if (send) {
+                                            sendData(dataType, payloadType, timestamp, data, begin, len);
+                                        }
                                     }
                                 }
                             }
