@@ -9,13 +9,6 @@
 
 #include <mutex>
 
-#ifdef __ANDROID__
-
-#include "GLES2/gl2.h"
-#include "EGL/egl.h"
-
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

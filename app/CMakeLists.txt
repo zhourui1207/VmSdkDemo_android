@@ -23,7 +23,6 @@ add_definitions(-DPHONE_PLATEFORM)
 include_directories(/usr/local/Cellar/boost/1.61.0_1/include/)
 include_directories(src/main/cpp/ffmpeg/)
 include_directories(/Users/zhourui/Library/Android/sdk/ndk-bundle/sources/android/support/include)
-include_directories(src/main/cpp/sdl/)
 
 # 它相当于g++命令的-L选项的作用，也相当于环境变量中增加LD_LIBRARY_PATH的路径的作用
 # link_directories("")
@@ -57,6 +56,7 @@ add_library( VmPlayer
 
              src/main/cpp/VmPlayer-lib.cpp
              src/main/cpp/plateform/VmPlayer.cpp
+             src/main/cpp/encdec/AACEncoder.cpp
              src/main/cpp/encdec/Decoder.cpp
              src/main/cpp/render/EGLRender.cpp)
 

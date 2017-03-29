@@ -202,7 +202,8 @@ public class VmPlayer {
      * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
      */
     public synchronized boolean startRealplay(String fdId, int channelId, boolean isSub, int
-            decodeType, boolean closeOpengles, boolean openAudio, SurfaceHolder surfaceHolder, Context
+            decodeType, boolean closeOpengles, boolean openAudio, SurfaceHolder surfaceHolder,
+                                              Context
                                                       context) {
 //    if (playMode == VmType.PLAY_MODE_PLAYBACK) {
 //      return false;
@@ -467,9 +468,9 @@ public class VmPlayer {
      * @param file 截图后生成文件路径
      * @return
      */
-    public synchronized boolean screenshot(String file) {
+    public synchronized boolean screenshot(String file, ScreenshotCallback callback) {
         if (videoDecoder != null) {
-            return videoDecoder.screenshot(file);
+            return videoDecoder.screenshot(file, callback);
         }
         return false;
     }
@@ -567,7 +568,8 @@ public class VmPlayer {
                     mErrorCode = VmNet.openRealplayStream(fdId, channelId, isSub, holder);
                     break;
                 case VmType.PLAY_MODE_PLAYBACK:
-                    mErrorCode = VmNet.openPlaybackStream(fdId, channelId, isCenter, beginTime, endTime,
+                    mErrorCode = VmNet.openPlaybackStream(fdId, channelId, isCenter, beginTime,
+                            endTime,
                             holder);
                     break;
                 default:
@@ -603,7 +605,8 @@ public class VmPlayer {
         @Override
         protected void onCancelled(PlayAddressHolder holder) {
             if (mErrorCode == ErrorCode.ERR_CODE_OK) {
-                Log.e(TAG, "取消打开码流 mPlatMode=" + mPlayMode + ", monitorId=" + holder.getMonitorId());
+                Log.e(TAG, "取消打开码流 mPlatMode=" + mPlayMode + ", monitorId=" + holder.getMonitorId
+                        ());
                 doCloseStreamTask(mPlayMode, holder.getMonitorId());
             }
         }
@@ -639,14 +642,16 @@ public class VmPlayer {
 //          .getAudioPort() == 0) {
 //        return null;
 //      }
+            if (holder.getAudioAddr() != null && holder.getAudioAddr().length() > 0 && holder
+                    .getAudioPort() >= 0) {
+                StreamIdHolder audioStreamIdHolder = new StreamIdHolder();
+                // 若音频取流失败，则不做任何处理 todo:现在的音频类型是有问题的，因为音频的头居然使用的是视频的头
+                int ret = VmNet.startStream(holder.getAudioAddr(), holder.getAudioPort(), new
+                        AudioStreamCallbackI(), audioStreamIdHolder);
 
-            StreamIdHolder audioStreamIdHolder = new StreamIdHolder();
-            // 若音频取流失败，则不做任何处理 todo:现在的音频类型是有问题的，因为音频的头居然使用的是视频的头
-            int ret = VmNet.startStream(holder.getAudioAddr(), holder.getAudioPort(), new
-                    AudioStreamCallbackI(), audioStreamIdHolder);
-
-            if (ret == ErrorCode.ERR_CODE_OK) {
-                mAudioStreamId = audioStreamIdHolder.getStreamId();
+                if (ret == ErrorCode.ERR_CODE_OK) {
+                    mAudioStreamId = audioStreamIdHolder.getStreamId();
+                }
             }
 
             return null;
@@ -661,7 +666,8 @@ public class VmPlayer {
                 videoStreamId = mVideoStreamId;
                 // 视频开始解码
                 if (videoDecoder == null) {
-                    videoDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, true, openAudio, surfaceHolder,
+                    videoDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, true,
+                            openAudio, surfaceHolder,
                             context);
                 } else {
                     videoDecoder.startPlay();
@@ -676,7 +682,8 @@ public class VmPlayer {
                 audioStreamId = mAudioStreamId;
                 // 音频开始解码
                 if (audioDecoder == null) {
-                    audioDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, openAudio, openAudio,
+                    audioDecoder = new Decoder(decodeType, closeOpengles, closeSmooth, openAudio,
+                            openAudio,
                             surfaceHolder, context);
                 } else if (openAudio) {
                     audioDecoder.startPlay();
@@ -688,7 +695,8 @@ public class VmPlayer {
         @Override
         protected void onCancelled(Void aVoid) {
             if (errorCode == ErrorCode.ERR_CODE_OK) {
-                Log.e(TAG, "取消取流 mVideoStreamId=" + mVideoStreamId + ", mAudioStreamId=" + mAudioStreamId);
+                Log.e(TAG, "取消取流 mVideoStreamId=" + mVideoStreamId + ", mAudioStreamId=" +
+                        mAudioStreamId);
                 doStopStreamTask(mVideoStreamId, mAudioStreamId);
             }
         }
@@ -705,14 +713,16 @@ public class VmPlayer {
         }
 
         @Override
-        public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer, int
+        public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer,
+                                    int
                 timeStamp, int seqNumber, boolean isMark) {
 
             lastReceiveStreamTime = System.currentTimeMillis();
             currentTryReconnectCount = 0;
 //      Log.e(TAG, "!!");
             if (videoDecoder != null) {
-                videoDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_VIDEO, payloadType,
+                videoDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_VIDEO,
+                        payloadType,
                         buffer,
                         timeStamp, seqNumber, isMark));
             }
@@ -730,11 +740,13 @@ public class VmPlayer {
         }
 
         @Override
-        public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer, int
+        public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer,
+                                    int
                 timeStamp, int seqNumber, boolean isMark) {
 
             if (audioDecoder != null) {
-                audioDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_AUDIO, payloadType,
+                audioDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_AUDIO,
+                        payloadType,
                         buffer,
                         timeStamp, seqNumber, isMark));
             }
@@ -788,7 +800,8 @@ public class VmPlayer {
 
                 if (lastReceiveStreamTime <= 0) {  // 如果最后接收时间小于等于0，表示刚开始计算时间
                     lastReceiveStreamTime = System.currentTimeMillis();
-                } else if ((lastReceiveStreamTime > 0) && ((System.currentTimeMillis() - lastReceiveStreamTime) > (timeoutSeconds * 1000))) {
+                } else if ((lastReceiveStreamTime > 0) && ((System.currentTimeMillis() -
+                        lastReceiveStreamTime) > (timeoutSeconds * 1000))) {
                     Log.e(TAG, "检测码流 超时!");
                     return true;
                 }
@@ -806,7 +819,8 @@ public class VmPlayer {
             if (timout) {  // 超时
                 // 判断是否重连
                 if (autoTryReconnectCount < 0 || // 小于0表示永远重连
-                        (autoTryReconnectCount > 0 && currentTryReconnectCount < autoTryReconnectCount)) {  // 需要重连
+                        (autoTryReconnectCount > 0 && currentTryReconnectCount <
+                                autoTryReconnectCount)) {  // 需要重连
                     // 重连次数加1
                     ++currentTryReconnectCount;
                     // 重连

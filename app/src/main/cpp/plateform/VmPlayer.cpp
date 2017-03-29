@@ -7,6 +7,7 @@
 #include "VmPlayer.h"
 #include "../encdec/Decoder.h"
 #include "../render/EGLRender.h"
+#include "../encdec/AACEncoder.h"
 
 VMPLAYER_API bool CALL_METHOD VmPlayer_DecoderInit(unsigned payloadType, long &decoderHandle) {
     Dream::Decoder *pDecoder = new Dream::Decoder();
@@ -64,6 +65,34 @@ VMPLAYER_API int CALL_METHOD VmPlayer_GetFrameHeight(long decoderHandle) {
         return 0;
     }
     return pDecoder->Height();
+}
+
+VMPLAYER_API bool CALL_METHOD VmPlayer_ACCEncoderInit(int samplerate, long &encoderHandle) {
+    Dream::AACEncoder *pEncoder = new Dream::AACEncoder();
+    if (!pEncoder->Init(samplerate)) {
+        delete pEncoder;
+        return false;
+    }
+    encoderHandle = (long) pEncoder;
+    return true;
+}
+
+VMPLAYER_API void CALL_METHOD VmPlayer_ACCEncoderUninit(long decoderHandle) {
+    Dream::AACEncoder *pEncoder = (Dream::AACEncoder *) decoderHandle;
+    if (pEncoder == nullptr) {
+        return;
+    }
+    pEncoder->Uninit();
+    delete pEncoder;
+}
+
+VMPLAYER_API bool CALL_METHOD VmPlayer_AACEncodePCM2AAC(long decoderHandle, const char *inData,
+                                                      int inLen, char *outData, int &outLen) {
+    Dream::AACEncoder *pEncoder = (Dream::AACEncoder *) decoderHandle;
+    if (pEncoder == nullptr) {
+        return false;
+    }
+    return pEncoder->EncodePCM2AAC(inData, inLen, outData, outLen);
 }
 
 VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(void *nativeWindow, long &renderHandle) {

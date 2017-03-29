@@ -9,10 +9,12 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
+import android.os.AsyncTask;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 
+import com.jxll.vmsdk.ScreenshotCallback;
 import com.jxll.vmsdk.VmType;
 import com.jxll.vmsdk.util.FlvSave;
 import com.jxll.vmsdk.util.G711;
@@ -50,6 +52,7 @@ public class Decoder {
     private final int DATA_TYPE_VIDEO_PPS = 2;  // pps数据
     private final int DATA_TYPE_VIDEO_IFRAME = 3;  // I帧数据
     private final int DATA_TYPE_VIDEO_PFRAME = 4;  // P帧数据
+    private final int DATA_TYPE_VIDEO_OTHER = 5;  // 其他数据
 
     private final int DATA_TYPE_AUDIO = 11;  // 音频数据
 
@@ -75,7 +78,8 @@ public class Decoder {
         this.decodeType = decodeType;
     }
 
-    public Decoder(int decodeType, boolean closeOpengles, boolean closeSmooth, boolean autoPlay, boolean openAudio,
+    public Decoder(int decodeType, boolean closeOpengles, boolean closeSmooth, boolean autoPlay,
+                   boolean openAudio,
                    SurfaceHolder surfaceHolder, Context context) {
         Log.i(TAG, "构造解码器 decodeType=" + decodeType + ", autoPlay=" + autoPlay);
         this.decodeType = decodeType;
@@ -103,6 +107,13 @@ public class Decoder {
     private static native int GetFrameWidth(long decoderHandle);
 
     private static native int GetFrameHeight(long decoderHandle);
+
+    private static native long AACEncoderInit(int samplerate);
+
+    private static native void AACEncoderUninit(long encoderHandle);
+
+    private static native int AACEncodePCM2AAC(long encoderHandle, byte[] inData, int inLen, byte[]
+            outData);
 
     private static native long RenderInit(Surface surface);
 
@@ -144,7 +155,8 @@ public class Decoder {
                 handleFrameThread.start();
             }
             if (playThread == null) {
-                playThread = new PlayThread(decodeType, closeOpengles, this.closeSmooth, surfaceHolder);
+                playThread = new PlayThread(decodeType, closeOpengles, this.closeSmooth,
+                        surfaceHolder);
                 playThread.start();
             }
         } catch (Exception e) {
@@ -179,18 +191,6 @@ public class Decoder {
             return true;
         }
 
-        FileOutputStream fileOutputStream;
-        try {
-            fileOutputStream = new FileOutputStream(fileName);
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, StringUtil.getStackTraceAsString(e));
-            return false;
-        }
-
-        if (fileOutputStream == null) {
-            return false;
-        }
-
         isRunning = true;
         try {
             if (handleFrameThread == null) {
@@ -198,7 +198,7 @@ public class Decoder {
                 handleFrameThread.start();
             }
             if (recordThread == null) {
-                recordThread = new RecordThread(fileOutputStream);
+                recordThread = new RecordThread(fileName);
                 recordThread.start();
             }
         } catch (Exception e) {
@@ -224,7 +224,7 @@ public class Decoder {
         }
     }
 
-    public synchronized boolean screenshot(String fileName) {
+    public synchronized boolean screenshot(String fileName, ScreenshotCallback callback) {
         if (recordThread != null && handleFrameThread != null) {
             return true;
         }
@@ -233,7 +233,7 @@ public class Decoder {
             return false;
         }
 
-        return playThread.screenshot(fileName);
+        return playThread.screenshot(fileName, callback);
     }
 
     public void pauseDisplay() {
@@ -329,7 +329,8 @@ public class Decoder {
                         // 这里需要判断是否是PS流，如果是复合的PS流，还需要再分出视频和音频流
                         boolean isVideo = true;
                         if (payloadTypeOld == PAYLOAD_TYPE_PS) {
-                            begin = psStreamUtil.filterPsHeader(streamData.getBuffer(), 0, streamData.getBuffer().length);
+                            begin = psStreamUtil.filterPsHeader(streamData.getBuffer(), 0,
+                                    streamData.getBuffer().length);
 //                            Log.e(TAG, "filterPsHeader begin=" + begin);
                             if (begin < streamData.getBuffer().length) {  // 表示有数据可以使用
 //                                Log.e(TAG, "有效长度=" + (streamData.getBuffer().length - begin));
@@ -345,10 +346,12 @@ public class Decoder {
 //                                    Log.e(TAG, "音频数据 beginNew=" + begin);
                                     int lenNow = streamData.getBuffer().length - begin;
                                     byte[] dataForDecode = new byte[lenNow * 2];
-                                    int audioLen = G711.decode(streamData.getBuffer(), begin, lenNow, dataForDecode);
+                                    int audioLen = G711.decode(streamData.getBuffer(), begin,
+                                            lenNow, dataForDecode);
 
                                     dataType = DATA_TYPE_AUDIO;
-                                    sendData(dataType, payloadType, timestamp, dataForDecode, 0, audioLen);
+                                    sendData(dataType, payloadType, timestamp, dataForDecode, 0,
+                                            audioLen);
                                 }
                             } else {
 //                                Log.e(TAG, "无可用数据");
@@ -361,7 +364,8 @@ public class Decoder {
 
                             while (packetLen - streamBufUsed > 0) {
                                 // 分帧
-                                int nalLen = mergeBuffer(videoBuf, videoBufUsed, streamData.getBuffer(),
+                                int nalLen = mergeBuffer(videoBuf, videoBufUsed, streamData
+                                                .getBuffer(),
                                         streamBufUsed, packetLen - streamBufUsed);
                                 videoBufUsed += nalLen;
                                 streamBufUsed += nalLen;
@@ -374,12 +378,15 @@ public class Decoder {
                                         break;
                                     } else {
                                         boolean send = true;
+//                                        Log.e(TAG, "videoBuf[4]=" + videoBuf[4]);
                                         if ((videoBuf[4] & 0x1F) == 0x07) {  // sps
                                             dataType = DATA_TYPE_VIDEO_SPS;
                                         } else if ((videoBuf[4] & 0x1F) == 0x08) {  // pps
                                             dataType = DATA_TYPE_VIDEO_PPS;
                                         } else if ((videoBuf[4] & 0x1F) == 0x05) {  // I帧
                                             dataType = DATA_TYPE_VIDEO_IFRAME;
+                                        } else if ((videoBuf[4] & 0x1F) == 0x06) {
+                                            dataType = DATA_TYPE_VIDEO_OTHER;
                                         } else {  // 否则都当做P帧
                                             dataType = DATA_TYPE_VIDEO_PFRAME;
                                         }
@@ -390,7 +397,8 @@ public class Decoder {
 
 //                                        Log.e(TAG, "一帧数据");
                                         if (send) {
-                                            sendData(dataType, payloadType, timestamp, data, begin, len);
+                                            sendData(dataType, payloadType, timestamp, data,
+                                                    begin, len);
                                         }
                                     }
                                 }
@@ -414,13 +422,13 @@ public class Decoder {
             if (data != null) {
                 // 解析出es元数据后，看线程是否需要使用该数据，发送数据到相应的线程
                 if (playThread != null) {
-                    EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld, timestampOld, data,
-                            begin, len);
+                    EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld,
+                            timestampOld, data, begin, len);
                     playThread.addBuffer(esStreamData);
                 }
                 if (recordThread != null) {
-                    EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld, timestampOld, data,
-                            begin, len);
+                    EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld,
+                            timestampOld, data, begin, len);
                     recordThread.addBuffer(esStreamData);
                 }
                 // 发送完之后再重置视频缓存
@@ -537,9 +545,6 @@ public class Decoder {
         private byte[] tmpIFrameBuffer;  // 临时的I帧，用来存储还没更新lastPFrameBuffer时的数据
         private boolean isFistPFrame = true;
 
-        // 音频相关
-        private AudioTrack audioDecoder;
-
         // oepngles渲染
         private boolean useOpengles = false;
 
@@ -554,15 +559,19 @@ public class Decoder {
 
         private Display displayThread;
 
+        private PlayAudio playAudioThread;
+
         private long timestamp;
 
         // 播放数据
-        private BlockingBuffer playBuffer = new BlockingBuffer(BUFFER_MAX_SIZE, BUFFER_WARNING_SIZE);
+        private BlockingBuffer playBuffer = new BlockingBuffer(BUFFER_MAX_SIZE,
+                BUFFER_WARNING_SIZE);
 
         // surface是否被创建
         private boolean surfaceCreated = false;
         private int surfaceWidth;
         private int surfaceHeight;
+        private boolean isPause = false;
 
         public PlayThread(int decodeType, boolean closeOpengles, boolean closeSmooth, SurfaceHolder
                 surfaceHolder) {
@@ -577,10 +586,23 @@ public class Decoder {
             }
         }
 
-        public synchronized boolean screenshot(String fileName) {
+        public synchronized boolean screenshot(String fileName, final ScreenshotCallback callback) {
             Log.w(TAG, "screenshot fileName=" + fileName);
+            if (callback != null) {
+                new ScreenshotTask(fileName, callback).executeOnExecutor(AsyncTask
+                        .THREAD_POOL_EXECUTOR);
+            } else {
+                return screenshotAndSave(fileName);
+            }
+
+            return true;
+        }
+
+        private boolean screenshotAndSave(String fileName) {
             if (lastSpsBuffer == null || lastPpsBuffer == null || lastIFrameBuffer == null) {
-                Log.e(TAG, "screenshot failed， buffr error! lastSpsBuffer=" + lastSpsBuffer + ", lastPpsBuffer=" + lastPpsBuffer + ", lastIFrameBuffer=" + lastIFrameBuffer);
+                Log.e(TAG, "screenshot failed， buffr error! lastSpsBuffer=" + lastSpsBuffer + ", " +
+                        "lastPpsBuffer=" + lastPpsBuffer + ", lastIFrameBuffer=" +
+                        lastIFrameBuffer);
                 return false;
             }
 
@@ -606,7 +628,8 @@ public class Decoder {
             int ret = DecodeNalu2RGB(screenshotDecoderHandle, lastIFrameBuffer, lastIFrameBuffer
                     .length, rgbData, frameConfHolder);
             if (ret <= 0) {
-                ret = DecodeNalu2RGB(screenshotDecoderHandle, lastPFrameBuffer, lastPFrameBuffer.length,
+                ret = DecodeNalu2RGB(screenshotDecoderHandle, lastPFrameBuffer, lastPFrameBuffer
+                                .length,
                         rgbData, frameConfHolder);
             }
             DecoderUninit(screenshotDecoderHandle);
@@ -630,34 +653,57 @@ public class Decoder {
                 Log.e(TAG, StringUtil.getStackTraceAsString(e));
                 return false;
             }
-
             return true;
         }
 
-        private synchronized void createAudioDecoder() {
-            if (audioDecoder != null) {
-                return;
+        private class ScreenshotTask extends AsyncTask<Void, Void, Boolean> {
+            private ScreenshotCallback screenshotCallback;
+            private String fileName;
+
+            private ScreenshotTask() {
             }
-            //音频解码器
-            int samp_rate = 8000;
-            int maxjitter = AudioTrack.getMinBufferSize(samp_rate,
-                    AudioFormat.CHANNEL_CONFIGURATION_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT);
-            audioDecoder = new AudioTrack(AudioManager.STREAM_MUSIC, samp_rate, AudioFormat
-                    .CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                    maxjitter, AudioTrack.MODE_STREAM);
-            audioDecoder.play();
+
+            public ScreenshotTask(String fileName, ScreenshotCallback screenshotCallback) {
+                this.screenshotCallback = screenshotCallback;
+                this.fileName = fileName;
+            }
+
+            @Override
+            protected Boolean doInBackground(Void... params) {
+                if (this.fileName == null) {
+                    return false;
+                }
+
+                return screenshotAndSave(fileName);
+            }
+
+            @Override
+            protected void onPostExecute(Boolean aBoolean) {
+                if (this.screenshotCallback != null) {
+                    if (aBoolean) {
+                        this.screenshotCallback.onSuccess(this.fileName);
+                    } else {
+                        this.screenshotCallback.onFailed("");
+                    }
+                }
+            }
         }
 
-        private synchronized void releaseAudioDecoder() {
-            if (audioDecoder == null) {
-                return;
+        private void createAudioThread() {
+            if (playAudioThread == null) {
+                playAudioThread = new PlayAudio();
+                playAudioThread.start();
             }
-            audioDecoder.release();
-            audioDecoder = null;
         }
 
-        private synchronized void createDecoder(int payloadType) {
+        private void releaseAudioThread() {
+            if (playAudioThread != null) {
+                playAudioThread.shutDown();
+                playAudioThread = null;
+            }
+        }
+
+        private void createDecoder(int payloadType) {
             currentPayloadType = payloadType;
             // 窗口不存在则直接跳过
             if (!surfaceCreated) {
@@ -703,7 +749,8 @@ public class Decoder {
                         if (surfaceHolder != null && surfaceHolder.getSurface() != null) {
 //              Log.e(TAG, "createDecoder");
                             mediaCodecDecoder = MediaCodec.createDecoderByType(mime);
-                            mediaCodecDecoder.configure(mediaFormat, surfaceHolder.getSurface(), null, 0);
+                            mediaCodecDecoder.configure(mediaFormat, surfaceHolder.getSurface(),
+                                    null, 0);
 //              mediaCodecDecoder.configure(mediaFormat, null, null, 0);  //
 // todo:不传入surface，只用来解码，自己来显示
                             mediaCodecDecoder.start();
@@ -776,6 +823,7 @@ public class Decoder {
                 displayThread.shutDown();
                 displayThread = null;
             }
+            releaseAudioThread();
         }
 
         //    FileOutputStream fileOutputStream;
@@ -798,21 +846,29 @@ public class Decoder {
 
                     int dataType = esStreamData.getDataType();
 
+                    // 如果队列中大于100帧没有处理，则做丢帧处理，只对p帧丢包，别的包不可以丢
+                    if (playBuffer.size() > 100 && (dataType == DATA_TYPE_VIDEO_PFRAME ||
+                            dataType == DATA_TYPE_AUDIO)) {
+                        // todo: 发现问题，如果夹带着有音频包并且需要播放音频，这一个线程吃不消，
+                        // 一旦队列超过100后，丢失掉视频帧也无法将队列数量降下来，将这个放音频处理上面看看
+                        Log.e(TAG, "buffer over 100, miss data");
+                        continue;
+                    }
+
                     // 如果是音频的话，则只需要执行这段代码即可
                     if (dataType == DATA_TYPE_AUDIO) {
                         if (openAudio) {
-                            createAudioDecoder();
-                            audioDecoder.write(esStreamData.getData(), 0, esStreamData.getData().length);
+                            createAudioThread();
+                            if (playAudioThread != null) {
+                                playAudioThread.addBuffer(esStreamData);
+                            }
+                        } else {
+                            releaseAudioThread();
                         }
                         continue;
                     }
 
 //                    Log.e(TAG, "播放视频");
-
-                    // 如果队列中大于100帧没有处理，则做丢帧处理，只对p帧丢包，别的包不可以丢
-                    if (playBuffer.size() > 100 && dataType == DATA_TYPE_VIDEO_PFRAME) {
-                        continue;
-                    }
 
                     // 如果是没显示过，那么需要从sps开始解码
                     if (!showed && dataType != DATA_TYPE_VIDEO_SPS) {
@@ -856,8 +912,9 @@ public class Decoder {
 //            System.arraycopy(data, 0, lastIFrameBuffer, 0, data.length);
                         isFistPFrame = true;
 //                        Log.e(TAG, "IFrame");
-                    } else if (dataType == DATA_TYPE_VIDEO_PFRAME && isFistPFrame && tmpIFrameBuffer !=
-                            null) {
+                    } else if (dataType == DATA_TYPE_VIDEO_PFRAME && isFistPFrame &&
+                            tmpIFrameBuffer !=
+                                    null) {
 //                        Log.e(TAG, "PFrame");
                         lastIFrameBuffer = tmpIFrameBuffer;
                         lastPFrameBuffer = new byte[data.length];
@@ -872,13 +929,16 @@ public class Decoder {
 
                         int canShow;
                         if (useOpengles) {
-                            canShow = DecodeNalu2YUV(decoderHandle, data, data.length, yBuffer, uBuffer,
+                            canShow = DecodeNalu2YUV(decoderHandle, data, data.length, yBuffer,
+                                    uBuffer,
                                     vBuffer, frameConfHolder);
 
 //                            Log.e(TAG, "解码canShow=" + canShow);
                             if (canShow >= 0) {
-                                int tmpWidth = frameConfHolder.getWidth() > 0 ? frameConfHolder.getWidth() : w;
-                                int tmpHeight = frameConfHolder.getHeight() > 0 ? frameConfHolder.getHeight() : h;
+                                int tmpWidth = frameConfHolder.getWidth() > 0 ? frameConfHolder
+                                        .getWidth() : w;
+                                int tmpHeight = frameConfHolder.getHeight() > 0 ? frameConfHolder
+                                        .getHeight() : h;
                                 int tmpFramerate = frameConfHolder.getFramerate();
                                 if (tmpFramerate > 0 && framerate != tmpFramerate) {
                                     Log.w(TAG, "码率改变 " + framerate + " --> " + tmpFramerate);
@@ -897,13 +957,15 @@ public class Decoder {
                                     vBuffer = new byte[uvSize];
 
                                     // 重新解一次码
-                                    canShow = DecodeNalu2YUV(decoderHandle, data, data.length, yBuffer, uBuffer,
+                                    canShow = DecodeNalu2YUV(decoderHandle, data, data.length,
+                                            yBuffer, uBuffer,
                                             vBuffer, frameConfHolder);
                                 }
                                 // 可以显示
                                 if (canShow > 0 && displayThread != null) {
                                     // 异步处理
-                                    YUVFrameData yuvFrameData = new YUVFrameData(yBuffer, uBuffer, vBuffer, w, h);
+                                    YUVFrameData yuvFrameData = new YUVFrameData(yBuffer,
+                                            uBuffer, vBuffer, w, h);
 //                                    Log.e(TAG, "可以显示");
                                     displayThread.addBuffer(yuvFrameData);
                                 }
@@ -913,8 +975,10 @@ public class Decoder {
                                     frameConfHolder);
 //              Log.e(TAG, "canShow=" + canShow + " , dataType=" + dataType);
                             if (canShow >= 0) {
-                                int tmpWidth = frameConfHolder.getWidth() > 0 ? frameConfHolder.getWidth() : w;
-                                int tmpHeight = frameConfHolder.getHeight() > 0 ? frameConfHolder.getHeight() : h;
+                                int tmpWidth = frameConfHolder.getWidth() > 0 ? frameConfHolder
+                                        .getWidth() : w;
+                                int tmpHeight = frameConfHolder.getHeight() > 0 ? frameConfHolder
+                                        .getHeight() : h;
                                 int tmpFramerate = frameConfHolder.getFramerate();
                                 if (tmpFramerate > 0 && framerate != tmpFramerate) {
                                     Log.w(TAG, "码率改变 " + framerate + " --> " + tmpFramerate);
@@ -933,7 +997,8 @@ public class Decoder {
 //                  }
 
                                     // 重新解一次码
-                                    canShow = DecodeNalu2RGB(decoderHandle, data, data.length, pixelBuffer,
+                                    canShow = DecodeNalu2RGB(decoderHandle, data, data.length,
+                                            pixelBuffer,
                                             frameConfHolder);
                                 }
                                 // 可以显示
@@ -941,7 +1006,8 @@ public class Decoder {
                                     // 异步处理
                                     // draw(surfaceHolder);
                                     if (displayThread != null) {
-                                        RGBFrameData rgbFrameData = new RGBFrameData(pixelBuffer, w, h);
+                                        RGBFrameData rgbFrameData = new RGBFrameData(pixelBuffer,
+                                                w, h);
                                         displayThread.addBuffer(rgbFrameData);
                                     }
                                 }
@@ -995,7 +1061,6 @@ public class Decoder {
                         } catch (Exception e) {
                             Log.w(TAG, StringUtil.getStackTraceAsString(e));
                             releaseDecoder();
-                            releaseAudioDecoder();
                         }
                     }
                 }
@@ -1004,7 +1069,6 @@ public class Decoder {
                 Log.w(TAG, StringUtil.getStackTraceAsString(e));
             }
             releaseDecoder();
-            releaseAudioDecoder();
             Log.i(TAG, "解码线程结束...");
         }
 
@@ -1037,24 +1101,13 @@ public class Decoder {
             }
         }
 
-        @Override
-        protected void finalize() throws Throwable {
-            super.finalize();
-//      if (surfaceHolder != null) {
-//        surfaceHolder.removeCallback(this);
-//      }
-        }
 
         public void pauseDisplay() {
-            if (displayThread != null) {
-                displayThread.pauseDisplay();
-            }
+            isPause = true;
         }
 
         public void continueDisplay() {
-            if (displayThread != null) {
-                displayThread.continueDisplay();
-            }
+            isPause = false;
         }
 
 //        public void openAudio() {
@@ -1065,6 +1118,76 @@ public class Decoder {
 //            openAudio = false;
 //        }
 
+        private class PlayAudio extends Thread {
+            // 解码出来后的数据队列
+            private BlockingBuffer audioBuffer = new BlockingBuffer(100, 80);  //
+            // 最多放延迟25帧，再多的话，内存会崩溃
+
+            private AudioTrack audioDecoder;
+
+            public PlayAudio() {
+
+            }
+
+            public boolean addBuffer(Object object) {
+                return audioBuffer.addObjectForce(object);
+            }
+
+            public void shutDown() {
+                this.interrupt();
+                try {
+                    this.join();
+                } catch (InterruptedException e) {
+                    Log.e(TAG, StringUtil.getStackTraceAsString(e));
+                }
+            }
+
+            private void createAudioDecoder() {
+                if (audioDecoder != null) {
+                    return;
+                }
+                //音频解码器
+                int samp_rate = 8000;
+                int maxjitter = AudioTrack.getMinBufferSize(samp_rate,
+                        AudioFormat.CHANNEL_CONFIGURATION_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT);
+                audioDecoder = new AudioTrack(AudioManager.STREAM_MUSIC, samp_rate, AudioFormat
+                        .CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                        maxjitter, AudioTrack.MODE_STREAM);
+                audioDecoder.play();
+            }
+
+            private void releaseAudioDecoder() {
+                if (audioDecoder != null) {
+                    audioDecoder.release();
+                    audioDecoder = null;
+                }
+            }
+
+            @Override
+            public void run() {
+                try {
+                    while (isRunning && !this.isInterrupted()) {
+                        if (isPause) {
+                            sleep(200);
+                            continue;
+                        }
+                        EsStreamData esStreamData = (EsStreamData) audioBuffer
+                                .removeObjectBlocking();
+                        if (!isRunning || esStreamData == null) {
+                            break;
+                        }
+                        createAudioDecoder();
+                        audioDecoder.write(esStreamData.getData(), 0, esStreamData.getData()
+                                .length);
+                    }
+                } catch (InterruptedException e) {
+
+                }
+                releaseAudioDecoder();
+            }
+        }
+
         private class Display extends Thread implements SurfaceHolder.Callback {
             private long renderHandle;
             private int width;
@@ -1072,7 +1195,6 @@ public class Decoder {
             private Bitmap videoBitmap;
             private ByteBuffer rgbBuffer;
             private long lastDisplay;
-            private boolean isPause = false;
 
             // 解码出来后的数据队列
             private BlockingBuffer frameBuffer = new BlockingBuffer(15, 10);  // 最多放延迟25帧，再多的话，内存会崩溃
@@ -1118,11 +1240,13 @@ public class Decoder {
                 }
             }
 
-            private void drawRGB(SurfaceHolder surfaceHolder, byte[] frameData, int width, int height) {
+            private void drawRGB(SurfaceHolder surfaceHolder, byte[] frameData, int width, int
+                    height) {
                 if (this.width != width || this.height != height) {
                     this.width = width;
                     this.height = height;
-                    videoBitmap = Bitmap.createBitmap(this.width, this.height, Bitmap.Config.RGB_565);
+                    videoBitmap = Bitmap.createBitmap(this.width, this.height, Bitmap.Config
+                            .RGB_565);
                 }
                 rgbBuffer = ByteBuffer.wrap(frameData, 0, frameData.length);
                 videoBitmap.copyPixelsFromBuffer(rgbBuffer);
@@ -1137,10 +1261,12 @@ public class Decoder {
 
                     if (canvas != null) {
                         // 适应surfaceview屏幕大小
-                        int displayWidth = surfaceWidth > 0 ? surfaceWidth : surfaceHolder.getSurfaceFrame()
+                        int displayWidth = surfaceWidth > 0 ? surfaceWidth : surfaceHolder
+                                .getSurfaceFrame()
                                 .width();
-                        int displayHeight = surfaceHeight > 0 ? surfaceHeight : surfaceHolder.getSurfaceFrame
-                                ().height();
+                        int displayHeight = surfaceHeight > 0 ? surfaceHeight : surfaceHolder
+                                .getSurfaceFrame
+                                        ().height();
                         float scaleWidth = ((float) displayWidth) / w;
                         float scaleHeight = ((float) displayHeight) / h;
                         Matrix matrix = new Matrix();
@@ -1152,12 +1278,6 @@ public class Decoder {
                     surfaceHolder.unlockCanvasAndPost(canvas);
                 } catch (Exception e) {
                 }
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                super.finalize();
-                // releaseRender();  // 这里不在同一个线程里执行是无法释放的
             }
 
             private void createRender() {
@@ -1207,7 +1327,8 @@ public class Decoder {
 //                }
 
                                 RGBFrameData rgbFrameData = (RGBFrameData) frameData;
-                                drawRGB(surfaceHolder, rgbFrameData.getData(), rgbFrameData.getWidth(), rgbFrameData
+                                drawRGB(surfaceHolder, rgbFrameData.getData(), rgbFrameData
+                                        .getWidth(), rgbFrameData
                                         .getHeight());
                             } else if (frameType == FrameData.FRAME_TYPE_YUV) {
 //                // 窗口不存在则直接跳过
@@ -1223,8 +1344,10 @@ public class Decoder {
                                 byte[] uData = yuvFrameData.getuData();
                                 byte[] vData = yuvFrameData.getvData();
 
-                                DrawYUV(renderHandle, yData, yData.length, uData, uData.length, vData, vData
-                                        .length, yuvFrameData.getWidth(), yuvFrameData.getHeight());
+                                DrawYUV(renderHandle, yData, yData.length, uData, uData.length,
+                                        vData, vData
+                                                .length, yuvFrameData.getWidth(), yuvFrameData
+                                                .getHeight());
 //                DrawYUV(renderHandle, yData, yData.length, uData, uData.length, vData, vData
 //                    .length, surfaceWidth, surfaceHeight);
                             }
@@ -1257,7 +1380,8 @@ public class Decoder {
 
                         // 流畅显示的解决方案
                         // 当缓冲区帧过多时，不调用该流畅方案，即解码时尽量保证匀速
-                        while (isRunning && !this.isInterrupted() && display && (frameBuffer.size() < 5) &&
+                        while (isRunning && !this.isInterrupted() && display && (frameBuffer.size
+                                () < 5) &&
                                 getInputCount() < 5 && lastDisplay > 0) {
                             // －10毫秒的是为了应对，网络波动，这样在网络先堵塞，后流畅的情况下，会在短时间内接收到大量包，如果还平滑的话会延时太大
                             if (System.nanoTime() - lastDisplay > (interval * 1000000 - 5000000)) {
@@ -1278,14 +1402,6 @@ public class Decoder {
                 }
                 releaseRender();
                 Log.w(TAG, "显示线程结束...");
-            }
-
-            public void pauseDisplay() {
-                isPause = true;
-            }
-
-            public void continueDisplay() {
-                isPause = false;
             }
 
             @Override
@@ -1312,17 +1428,35 @@ public class Decoder {
     // 录像线程
     private class RecordThread extends Thread {
         // 录像数据
-        private BlockingBuffer recordBuffer = new BlockingBuffer(BUFFER_MAX_SIZE, BUFFER_WARNING_SIZE);
+        private BlockingBuffer recordBuffer = new BlockingBuffer(BUFFER_MAX_SIZE,
+                BUFFER_WARNING_SIZE);
         private FlvSave flvSave;
-        private FileOutputStream fileOutputStream;
+        private String fileName;
         private byte[] sps;  // 需要写入的sps
+
+        private long aacEncoder;
+
+        private byte[] audioDecodeBuffer;
 
         private RecordThread() {
 
         }
 
-        public RecordThread(FileOutputStream fileOutputStream) {
-            this.fileOutputStream = fileOutputStream;
+        public RecordThread(String fileName) {
+            this.fileName = fileName;
+        }
+
+        private void initAACEncoder() {
+            if (aacEncoder == 0) {
+                aacEncoder = AACEncoderInit(8000);
+            }
+        }
+
+        private void uninitAACEncoder() {
+            if (aacEncoder != 0) {
+                AACEncoderUninit(aacEncoder);
+                aacEncoder = 0;
+            }
         }
 
         public boolean addBuffer(Object object) {
@@ -1340,7 +1474,7 @@ public class Decoder {
 
         @Override
         public void run() {
-            if (fileOutputStream == null) {
+            if (fileName == null) {
                 return;
             }
             Log.i(TAG, "录像线程开始...");
@@ -1349,8 +1483,13 @@ public class Decoder {
             boolean confWrited = false;  // 配置是否写入
 
             if (flvSave == null) {
-                flvSave = new FlvSave(fileOutputStream);
-                if (!flvSave.writeStart()) {  // 如果写头失败的话，返回
+                try {
+                    flvSave = new FlvSave(fileName);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                    return;
+                }
+                if (!flvSave.writeStart(true)) {  // 如果写头失败的话，返回
                     return;
                 }
             }
@@ -1372,17 +1511,31 @@ public class Decoder {
                         flvSave.writeConfiguretion(sps, 0, sps.length, data, 4,
                                 data.length - 4, esStreamData.getTimestamp());
                         confWrited = true;
-                    } else if (confWrited) {
-                        flvSave.writeNalu(dataType == DATA_TYPE_VIDEO_IFRAME, data, 4, data.length - 4,
-                                esStreamData.getTimestamp());
+                    } else if (confWrited && (dataType == DATA_TYPE_VIDEO_IFRAME || dataType ==
+                            DATA_TYPE_VIDEO_PFRAME)) {
+                        flvSave.writeNalu(dataType == DATA_TYPE_VIDEO_IFRAME, data, 4, data
+                                .length - 4, esStreamData.getTimestamp());
+                    } else if (confWrited && dataType == DATA_TYPE_AUDIO) {
+//                        initAACEncoder();
+//                        if (aacEncoder != 0) {
+//                            if (audioDecodeBuffer == null) {
+//                                audioDecodeBuffer = new byte[1024*10];
+//                            }
+//                            int decodeLen = AACEncodePCM2AAC(aacEncoder, data, data.length, audioDecodeBuffer);
+//                            if (decodeLen > 0) {
+//                                flvSave.writeAudioPcm(audioDecodeBuffer, 0, decodeLen, esStreamData.getTimestamp());
+//                            }
+//                        }
                     }
                 }
             } catch (Exception e) {
                 Log.w(TAG, StringUtil.getStackTraceAsString(e));
             }
+            uninitAACEncoder();
             if (flvSave != null) {
                 flvSave.save();
             }
+
             Log.i(TAG, "录像线程结束...");
         }
     }
@@ -1398,8 +1551,9 @@ public class Decoder {
 
         }
 
-        public EsStreamData(int dataType, int payloadType, int timestamp, byte[] data, int begin, int
-                len) {
+        public EsStreamData(int dataType, int payloadType, int timestamp, byte[] data, int begin,
+                            int
+                                    len) {
             this.dataType = dataType;
             this.payloadType = payloadType;
             this.timestamp = timestamp;

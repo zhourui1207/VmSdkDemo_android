@@ -214,7 +214,7 @@ jint Java_com_jxll_vmsdk_core_Decoder_DecodeNalu2YUV(JNIEnv *env, jobject ob,
 
 jint Java_com_jxll_vmsdk_core_Decoder_GetFrameWidth(JNIEnv *env, jobject ob,
                                                     jlong decoderHandle) {
-    LOGI("Java_com_jxll_vmsdk_core_Decoder_GetFrameWidth(%d)", decoderHandle);
+    LOGI("Java_com_jxll_vmsdk_core_Decoder_GetFrameWidth(%lld)", decoderHandle);
     return VmPlayer_GetFrameWidth(decoderHandle);
 }
 
@@ -222,6 +222,49 @@ jint Java_com_jxll_vmsdk_core_Decoder_GetFrameHeight(JNIEnv *env, jobject ob,
                                                      jlong decoderHandle) {
     LOGI("Java_com_jxll_vmsdk_core_Decoder_GetFrameHeight(%lld)", decoderHandle);
     return VmPlayer_GetFrameHeight(decoderHandle);
+}
+
+jlong Java_com_jxll_vmsdk_core_Decoder_AACEncoderInit(JNIEnv *env, jobject ob,
+                                                   jint samplerate) {
+    long encoderHandle = 0;
+    LOGI("Java_com_jxll_vmsdk_core_Decoder_AACEncoderInit(%d)", samplerate);
+    bool ret = VmPlayer_ACCEncoderInit(samplerate, encoderHandle);
+    if (!ret) {
+        encoderHandle = 0;
+    }
+    return encoderHandle;
+}
+
+void Java_com_jxll_vmsdk_core_Decoder_AACEncoderUninit(JNIEnv *env, jobject ob,
+                                                    jlong encoderHandle) {
+    LOGI("Java_com_jxll_vmsdk_core_Decoder_AACEncoderUninit(%lld)", encoderHandle);
+    VmPlayer_ACCEncoderUninit(encoderHandle);
+}
+
+jint Java_com_jxll_vmsdk_core_Decoder_AACEncodePCM2AAC(JNIEnv *env, jobject ob,
+                                                     jlong encoderHandle,
+                                                     jbyteArray inData, jint inLen,
+                                                     jbyteArray outData) {
+
+    jbyte *inBuf = env->GetByteArrayElements(inData, 0);
+    jbyte *outBuf = outData != nullptr ? env->GetByteArrayElements(outData, 0) : nullptr;
+
+    int outlen = outData != nullptr ? env->GetArrayLength(outData) : 0;
+
+    bool ret = VmPlayer_AACEncodePCM2AAC(encoderHandle, (const char *) inBuf, inLen, (char *) outBuf,
+                                       outlen);
+
+    if (!ret) {
+        outlen = -1;
+    }
+
+    env->ReleaseByteArrayElements(inData, inBuf, 0);
+
+    if (outBuf != nullptr) {
+        env->ReleaseByteArrayElements(outData, outBuf, 0);
+    }
+
+    return outlen;
 }
 
 jlong Java_com_jxll_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,

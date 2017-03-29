@@ -28,6 +28,13 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_DecodeNalu2YUV(long decoderHandle, const 
 VMPLAYER_API int CALL_METHOD VmPlayer_GetFrameWidth(long decoderHandle);
 VMPLAYER_API int CALL_METHOD VmPlayer_GetFrameHeight(long decoderHandle);
 
+VMPLAYER_API bool CALL_METHOD VmPlayer_ACCEncoderInit(int samplerate, long &encoderHandle);
+
+VMPLAYER_API void CALL_METHOD VmPlayer_ACCEncoderUninit(long decoderHandle);
+
+VMPLAYER_API bool CALL_METHOD VmPlayer_AACEncodePCM2AAC(long decoderHandle, const char *inData,
+                                                        int inLen, char *outData, int &outLen);
+
 VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(void *nativeWindow, long &renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderUninit(long renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderChangeSize(long renderHandle, int width, int height);

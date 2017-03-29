@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
                 dir.mkdir();
                 String fname = saveDir + "/" + "gb122" + ".jpeg";
 
-                player.screenshot(fname);
+//                player.screenshot(fname);
             }
 //        if (recording) {
 //          player.stopRecord();

@@ -37,10 +37,10 @@ public class G711 {
             7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,  
             7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 };  
   
-    public static int encode(byte[] src, int offset, int len, byte[] res) {  
+    public static int encode(byte[] src, int offset, int len, byte[] res) {
         int j = offset;  
         int count = len / 2;  
-        short sample = 0;  
+        short sample;
   
         for (int i = 0; i < count; i++) {  
             sample = (short) (((src[j++] & 0xff) | (src[j++]) << 8));  
