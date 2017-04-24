@@ -89,7 +89,7 @@ target_link_libraries( # Specifies the target library.
                        ${log-lib} )
 
 target_link_libraries(VmPlayer
-                      "/Users/zhourui/Documents/c++workspace/DreamEngine/VmSdkDemo_android/app/src/main/jniLibs/${ANDROID_ABI}/libijkffmpeg.so"
+                      "/Users/zhourui/Documents/c++workspace/DreamEngine/VmSdkDemo_android/app/src/main/jniLibs/${ANDROID_ABI}/libJWEncdec.so"
                       EGL
                       GLESv2
                       ${log-lib}

@@ -1,7 +1,6 @@
 #include <android/log.h>
 #include <atomic>
 #include <jni.h>
-#include <string>
 
 #include "plateform/VmNet.h"
 #include "plateform/ErrorCode.h"
@@ -13,7 +12,7 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__) // 定义LOGE类型
 #define LOGF(...) __android_log_print(ANDROID_LOG_FATAL, TAG, __VA_ARGS__) // 定义LOGF类型
 
-const char *CLASS_PATH_VMNET = "com/jxll/vmsdk/VmNet";
+const char *CLASS_PATH_VMNET = "com/joyware/vmsdk/VmNet";
 
 const char *METHOD_NAME_ON_SERVER_CONNECT_STATUS = "onServerConnectStatus";
 const char *METHOD_SIG_ON_SERVER_CONNECT_STATUS = "(Z)V";
@@ -149,14 +148,14 @@ void onRealAlarm(const char *sFdId, int nChannel, unsigned nAlarmType, unsigned 
 // 接口函数-------------------------------------------------------------------------
 extern "C" {
 
-jboolean Java_com_jxll_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
+jboolean Java_com_joyware_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
                                         jint maxThreadCount) {
     // 如果已经被初始化，那么应该先执行unInit释放资源后再重新init
     if (g_init.load() == INITED) {
         return false;
     }
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_Init(%d)", maxThreadCount);
+    LOGI("Java_com_joyware_vmsdk_VmNet_Init(%d)", maxThreadCount);
     g_init.store(INITING);
 
     // 保存java虚拟机对象
@@ -222,9 +221,9 @@ jboolean Java_com_jxll_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
     return bInit;
 }
 
-void Java_com_jxll_vmsdk_VmNet_UnInit(JNIEnv *env, jobject) {
+void Java_com_joyware_vmsdk_VmNet_UnInit(JNIEnv *env, jobject) {
     if (g_init.load() == INITED && g_pJavaVM) {
-        LOGI("Java_com_jxll_vmsdk_VmNet_UnInit() start\n");
+        LOGI("Java_com_joyware_vmsdk_VmNet_UnInit() start\n");
 
         g_init.store(UNINITING);
 
@@ -235,11 +234,11 @@ void Java_com_jxll_vmsdk_VmNet_UnInit(JNIEnv *env, jobject) {
         g_vmNet = nullptr;
         LOGI("DeleteGlobalRef[%lld] end\n", g_vmNet);
         g_init.store(NO_INIT);
-        LOGI("Java_com_jxll_vmsdk_VmNet_UnInit() end\n");
+        LOGI("Java_com_joyware_vmsdk_VmNet_UnInit() end\n");
     }
 }
 
-jint Java_com_jxll_vmsdk_VmNet_Connect(JNIEnv *env, jobject, jstring serverAddr,
+jint Java_com_joyware_vmsdk_VmNet_Connect(JNIEnv *env, jobject, jstring serverAddr,
                                        jint serverPort) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -247,21 +246,21 @@ jint Java_com_jxll_vmsdk_VmNet_Connect(JNIEnv *env, jobject, jstring serverAddr,
 
     const char *sServerAddr = nullptr;
     sServerAddr = env->GetStringUTFChars(serverAddr, 0);
-    LOGI("Java_com_jxll_vmsdk_VmNet_Connect(%s, %d)", sServerAddr, serverPort);
+    LOGI("Java_com_joyware_vmsdk_VmNet_Connect(%s, %d)", sServerAddr, serverPort);
 
     return VmNet_Connect(sServerAddr, serverPort, onServerConnectStatus);
 }
 
-void Java_com_jxll_vmsdk_VmNet_Disconnect(JNIEnv *env, jobject) {
+void Java_com_joyware_vmsdk_VmNet_Disconnect(JNIEnv *env, jobject) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_Disconnect()");
+    LOGI("Java_com_joyware_vmsdk_VmNet_Disconnect()");
 
     VmNet_Disconnect();
 }
 
-jint Java_com_jxll_vmsdk_VmNet_Login(JNIEnv *env, jobject, jstring loginName,
+jint Java_com_joyware_vmsdk_VmNet_Login(JNIEnv *env, jobject, jstring loginName,
                                      jstring loginPwd) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -271,21 +270,21 @@ jint Java_com_jxll_vmsdk_VmNet_Login(JNIEnv *env, jobject, jstring loginName,
     sLoginName = env->GetStringUTFChars(loginName, 0);
     const char *sLoginPwd = nullptr;
     sLoginPwd = env->GetStringUTFChars(loginPwd, 0);
-    LOGI("Java_com_jxll_vmsdk_VmNet_Login(%s, ******)", sLoginName);
+    LOGI("Java_com_joyware_vmsdk_VmNet_Login(%s, ******)", sLoginName);
 
     return VmNet_Login(sLoginName, sLoginPwd);
 }
 
-void Java_com_jxll_vmsdk_VmNet_Logout(JNIEnv *env, jobject) {
+void Java_com_joyware_vmsdk_VmNet_Logout(JNIEnv *env, jobject) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_Logout()");
+    LOGI("Java_com_joyware_vmsdk_VmNet_Logout()");
 
     VmNet_Logout();
 }
 
-jint Java_com_jxll_vmsdk_VmNet_GetDepTrees(JNIEnv *env, jobject, jint pageNo, jint pageSize,
+jint Java_com_joyware_vmsdk_VmNet_GetDepTrees(JNIEnv *env, jobject, jint pageNo, jint pageSize,
                                            jobject depTreesHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -295,7 +294,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetDepTrees(JNIEnv *env, jobject, jint pageNo, ji
         return ERR_CODE_PARAM_ILLEGAL;
     }
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_GetDepTrees(%d, %d)", pageNo, pageSize);
+    LOGI("Java_com_joyware_vmsdk_VmNet_GetDepTrees(%d, %d)", pageNo, pageSize);
 
     TVmDepTree depTrees[pageSize];
     unsigned uSize = 0;
@@ -329,7 +328,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetDepTrees(JNIEnv *env, jobject, jint pageNo, ji
     return ret;
 }
 
-jint Java_com_jxll_vmsdk_VmNet_GetChannels(JNIEnv *env, jobject, jint pageNo, jint pageSize,
+jint Java_com_joyware_vmsdk_VmNet_GetChannels(JNIEnv *env, jobject, jint pageNo, jint pageSize,
                                            jint depId, jobject channelsHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -339,7 +338,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetChannels(JNIEnv *env, jobject, jint pageNo, ji
         return ERR_CODE_PARAM_ILLEGAL;
     }
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_GetChannels(%d, %d, %d)", pageNo, pageSize, depId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_GetChannels(%d, %d, %d)", pageNo, pageSize, depId);
 
     TVmChannel channels[pageSize];
     unsigned uSize = 0;
@@ -375,7 +374,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetChannels(JNIEnv *env, jobject, jint pageNo, ji
     return ret;
 }
 
-jint Java_com_jxll_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, jint pageSize,
+jint Java_com_joyware_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, jint pageSize,
                                           jstring fdId, jint channelId, jint beginTime,
                                           jint endTime, jboolean isCenter,
                                           jobject recordsHolder) {
@@ -390,7 +389,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, jin
     const char *sFdId = nullptr;
     sFdId = env->GetStringUTFChars(fdId, 0);
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_GetRecords(%d, %d, %s, %d, %d, %d, %d)", pageNo, pageSize,
+    LOGI("Java_com_joyware_vmsdk_VmNet_GetRecords(%d, %d, %s, %d, %d, %d, %d)", pageNo, pageSize,
          sFdId, channelId, beginTime, endTime, isCenter);
 
     TVmRecord records[pageSize];
@@ -427,7 +426,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, jin
     return ret;
 }
 
-jint Java_com_jxll_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, jint pageSize,
+jint Java_com_joyware_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, jint pageSize,
                                          jstring fdId, jint channelId, jint channelBigType,
                                          jstring beginTime, jstring endTime,
                                          jobject alarmsHolder) {
@@ -446,7 +445,7 @@ jint Java_com_jxll_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, jint
     const char *sEndTime = nullptr;
     sEndTime = env->GetStringUTFChars(endTime, 0);
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_GetAlarms(%d, %d, %s, %d, %d, %s, %s)", pageNo, pageSize,
+    LOGI("Java_com_joyware_vmsdk_VmNet_GetAlarms(%d, %d, %s, %d, %d, %s, %s)", pageNo, pageSize,
          sFdId, channelId, channelBigType, sBeginTime, sEndTime);
 
     TVmAlarm alarms[pageSize];
@@ -495,26 +494,26 @@ jint Java_com_jxll_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, jint
     return ret;
 }
 
-void Java_com_jxll_vmsdk_VmNet_StartReceiveRealAlarm(JNIEnv *env, jobject) {
+void Java_com_joyware_vmsdk_VmNet_StartReceiveRealAlarm(JNIEnv *env, jobject) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_StartReceiveRealAlarm()");
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartReceiveRealAlarm()");
 
     VmNet_StartReceiveRealAlarm(onRealAlarm);
 }
 
-void Java_com_jxll_vmsdk_VmNet_StopReceiveRealAlarm(JNIEnv *env, jobject) {
+void Java_com_joyware_vmsdk_VmNet_StopReceiveRealAlarm(JNIEnv *env, jobject) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_StopReceiveRealAlarm()");
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopReceiveRealAlarm()");
 
     VmNet_StopReceiveRealAlarm();
 }
 
-jint Java_com_jxll_vmsdk_VmNet_OpenRealplayStream(JNIEnv *env, jobject, jstring fdId,
+jint Java_com_joyware_vmsdk_VmNet_OpenRealplayStream(JNIEnv *env, jobject, jstring fdId,
                                                   jint channelId, jboolean isSub,
                                                   jobject playAddressHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
@@ -526,7 +525,7 @@ jint Java_com_jxll_vmsdk_VmNet_OpenRealplayStream(JNIEnv *env, jobject, jstring 
     char sVideoAddr[100];
     char sAudioAddr[100];
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_OpenRealplayStream(%s, %d, %d)", sFdId, channelId, isSub);
+    LOGI("Java_com_joyware_vmsdk_VmNet_OpenRealplayStream(%s, %d, %d)", sFdId, channelId, isSub);
     int ret = VmNet_OpenRealplayStream(sFdId, channelId, isSub, uMonitorId, sVideoAddr, uVideoPort,
                                        sAudioAddr, uAudioPort);
 
@@ -554,16 +553,16 @@ jint Java_com_jxll_vmsdk_VmNet_OpenRealplayStream(JNIEnv *env, jobject, jstring 
     return ret;
 }
 
-void Java_com_jxll_vmsdk_VmNet_CloseRealplayStream(JNIEnv *env, jobject, jint monitorId) {
+void Java_com_joyware_vmsdk_VmNet_CloseRealplayStream(JNIEnv *env, jobject, jint monitorId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_CloseRealplayStream(%d)", monitorId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_CloseRealplayStream(%d)", monitorId);
 
     VmNet_CloseRealplayStream(monitorId);
 }
 
-jint Java_com_jxll_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jstring fdId,
+jint Java_com_joyware_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jstring fdId,
                                          jint channelId, jobject talkAddressHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -573,7 +572,7 @@ jint Java_com_jxll_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jstring fdId,
     unsigned uTalkId, uTalkPort = 0;
     char sTalkAddr[100];
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_StartTalk(%s, %d)", sFdId, channelId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartTalk(%s, %d)", sFdId, channelId);
     int ret = 0;
 //  int ret = VmNet_StartTalk(sFdId, channelId, uTalkId, sTalkAddr, uTalkPort);
 //
@@ -598,16 +597,16 @@ jint Java_com_jxll_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jstring fdId,
     return ret;
 }
 
-void Java_com_jxll_vmsdk_VmNet_StopTalk(JNIEnv *env, jobject, jint talkId) {
+void Java_com_joyware_vmsdk_VmNet_StopTalk(JNIEnv *env, jobject, jint talkId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_StopTalk(%d)", talkId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopTalk(%d)", talkId);
 
 //  VmNet_StopTalk(talkId);
 }
 
-jint Java_com_jxll_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring fdId,
+jint Java_com_joyware_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring fdId,
                                                   jint channelId, jboolean isCenter,
                                                   jint beginTime, jint endTime,
                                                   jobject playAddressHolder) {
@@ -620,7 +619,7 @@ jint Java_com_jxll_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring 
     char sVideoAddr[100];
     char sAudioAddr[100];
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_OpenPlaybackStream(%s, %d, %d, %d, %d)", sFdId, channelId,
+    LOGI("Java_com_joyware_vmsdk_VmNet_OpenPlaybackStream(%s, %d, %d, %d, %d)", sFdId, channelId,
          isCenter, beginTime, endTime);
     int ret = VmNet_OpenPlaybackStream(sFdId, channelId, isCenter, beginTime, endTime, uMonitorId,
                                        sVideoAddr, uVideoPort, sAudioAddr, uAudioPort);
@@ -649,16 +648,16 @@ jint Java_com_jxll_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring 
     return ret;
 }
 
-void Java_com_jxll_vmsdk_VmNet_ClosePlaybackStream(JNIEnv *env, jobject, jint monitorId) {
+void Java_com_joyware_vmsdk_VmNet_ClosePlaybackStream(JNIEnv *env, jobject, jint monitorId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_ClosePlaybackStream(%d)", monitorId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_ClosePlaybackStream(%d)", monitorId);
 
     VmNet_ClosePlaybackStream(monitorId);
 }
 
-jint Java_com_jxll_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorId, jint controlId,
+jint Java_com_joyware_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorId, jint controlId,
                                                jstring action, jstring param) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -669,13 +668,13 @@ jint Java_com_jxll_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monito
     const char *sParam = nullptr;
     sParam = env->GetStringUTFChars(param, 0);
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_ControlPlayback(%d, %d, %s, %s)", monitorId, controlId, sAction,
+    LOGI("Java_com_joyware_vmsdk_VmNet_ControlPlayback(%d, %d, %s, %s)", monitorId, controlId, sAction,
          sParam);
 
     return VmNet_ControlPlayback(monitorId, controlId, sAction, sParam);
 }
 
-jint Java_com_jxll_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address, jint port,
+jint Java_com_joyware_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address, jint port,
                                            jobject cb, jobject streamIdHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -687,7 +686,7 @@ jint Java_com_jxll_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address
     // 这里一定要传递GlobalRef给码流线程，如果直接传cb的话，由于是局部变量，后面回调时会失败，记得释放时删除
     jobject gCb = env->NewGlobalRef(cb);
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_StartStream(%s, %d, %zd)", sAddress, port, gCb);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartStream(%s, %d, %zd)", sAddress, port, gCb);
     unsigned uStreamId = 0;
     int ret = VmNet_StartStream(sAddress, port, onStream, onStreamConnectStatus, gCb, uStreamId);
 
@@ -709,16 +708,16 @@ jint Java_com_jxll_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address
     return ret;
 }
 
-void Java_com_jxll_vmsdk_VmNet_StopStream(JNIEnv *env, jobject, jint streamId) {
+void Java_com_joyware_vmsdk_VmNet_StopStream(JNIEnv *env, jobject, jint streamId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_jxll_vmsdk_VmNet_StopStream(%d)", streamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStream(%d)", streamId);
 
     VmNet_StopStream(streamId);
 }
 
-void Java_com_jxll_vmsdk_VmNet_SendControl(JNIEnv *env, jobject, jstring fdId, jint channelId,
+void Java_com_joyware_vmsdk_VmNet_SendControl(JNIEnv *env, jobject, jstring fdId, jint channelId,
                                            jint controlType, jint param1, jint param2) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
@@ -727,7 +726,7 @@ void Java_com_jxll_vmsdk_VmNet_SendControl(JNIEnv *env, jobject, jstring fdId, j
     const char *sFdId = nullptr;
     sFdId = env->GetStringUTFChars(fdId, 0);
 
-    LOGI("Java_com_jxll_vmsdk_VmNet_SendControl(%s, %d, %d, %d, %d)", sFdId, channelId,
+    LOGI("Java_com_joyware_vmsdk_VmNet_SendControl(%s, %d, %d, %d, %d)", sFdId, channelId,
          controlType, param1, param2);
 
     VmNet_SendControl(sFdId, channelId, controlType, param1, param2);

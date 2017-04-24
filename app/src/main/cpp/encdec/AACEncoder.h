@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 #include "libavcodec/avcodec.h"
+#include "libswresample/swresample.h"
 
 #ifdef __cplusplus
 }
@@ -36,7 +37,7 @@ namespace Dream {
         bool EncodePCM2AAC(const char *inData, int inLen, char *outData, int &outLen);
 
     private:
-        int encodePCM(const char *inData, int inLen);
+        int encodePCM();
 
     private:
         int _samplerate;
@@ -45,10 +46,17 @@ namespace Dream {
         AVCodecID _codecId;
         bool _inited;
         AVCodecContext *_codecContext;
+        AVCodecContext *_inputCodecContext;
         AVFrame *_frame;
+        AVFrame *_convertFrame;
         std::mutex _mutex;
-        AVPacket avPacket;
-
+        AVPacket _avPacket;
+        SwrContext *_swrContext;
+        uint8_t *_frameBuf;  // 转换前音频
+        size_t _frameCurrentSize;
+        size_t _frameTotalSize;
+        uint8_t **_convertData;
+        size_t _convertSize;
     };
 }
 

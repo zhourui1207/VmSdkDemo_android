@@ -12,7 +12,7 @@ android {
     compileSdkVersion 23
     buildToolsVersion '25.0.0'
     defaultConfig {
-        applicationId 'com.jxll.vmnetsdktest'
+        applicationId 'com.joyware.vmnetsdktest'
         minSdkVersion 16
         targetSdkVersion 16
         versionCode 1
