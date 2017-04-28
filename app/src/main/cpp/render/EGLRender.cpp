@@ -8,9 +8,9 @@
 
 namespace Dream {
 
-    EGLRender::EGLRender() : _inited(false), _program(0), _position(-1), _coord(-1), _y(-1), _u(-1),
-                             _v(-1), _texYId(0), _texUId(0), _texVId(0), _display(0), _context(0),
-                             _surface(0), _nativeWindow(0) {
+    EGLRender::EGLRender() : _inited(false), _width(0), _height(0), _program(0), _position(-1),
+                             _coord(-1), _y(-1), _u(-1), _v(-1), _texYId(0), _texUId(0), _texVId(0),
+                             _display(0), _context(0), _surface(0), _nativeWindow(0) {
 
     }
 
@@ -129,12 +129,39 @@ namespace Dream {
         _inited = false;
     }
 
-    void EGLRender::ChangeSize(int width, int height) {
+    void EGLRender::SurfaceCreated() {
+        if (!_inited || _nativeWindow == nullptr) {
+            return;
+        }
+    }
+
+    void EGLRender::SurfaceDestroyed() {
+        if (!_inited || _nativeWindow == nullptr) {
+            return;
+        }
+    }
+
+    void EGLRender::SurfaceChanged(int width, int height) {
         if (!_inited || _nativeWindow == nullptr) {
             return;
         }
 
-        glViewport(0, 0, width, height);
+        _width = width;
+        _height = height;
+
+        glViewport(0, 0, _width, _height);
+    }
+
+    void EGLRender::ScaleTo(bool scaleEnable, int centerX, int centerY, float widthScale, float heightScale) {
+        if (!_inited || _nativeWindow == nullptr) {
+            return;
+        }
+
+        if (scaleEnable) {
+            glViewport(0, 0, _width / widthScale, _height / heightScale);
+        } else {
+            glViewport(0, 0, _width, _height);
+        }
     }
 
     bool EGLRender::DrawYUV(const char *yData, int yLen, const char *uData, int uLen,

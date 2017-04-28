@@ -83,10 +83,17 @@ namespace Dream {
 
         void Uninit();
 
+        void SurfaceCreated();
+
+        void SurfaceDestroyed();
+
         /**
          * 改变现实视图的大小
          */
-        void ChangeSize(int width, int height);
+        void SurfaceChanged(int width, int height);
+
+        void
+        ScaleTo(bool scaleEnable, int centerX, int centerY, float widthScale, float heightScale);
 
         /**
          * 绘图，必须传入不为空的nativeWindow
@@ -124,6 +131,9 @@ namespace Dream {
 
     private:
         bool _inited;
+
+        int _width;
+        int _height;
 
         // gpu传入参数
         GLuint _program;

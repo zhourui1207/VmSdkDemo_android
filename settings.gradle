@@ -1,4 +1,4 @@
-include ':app'
+include ':app', ':jwopenui'
 // 子目录third_party下的android_support模块
 // include '12'
 // 也可以这样写

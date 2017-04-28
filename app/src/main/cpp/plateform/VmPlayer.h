@@ -37,7 +37,12 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_AACEncodePCM2AAC(long decoderHandle, cons
 
 VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(void *nativeWindow, long &renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderUninit(long renderHandle);
-VMPLAYER_API void CALL_METHOD VmPlayer_RenderChangeSize(long renderHandle, int width, int height);
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceCreated(long renderHandle);
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceDestroyed(long renderHandle);
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceChanged(long renderHandle, int width, int height);
+VMPLAYER_API void CALL_METHOD
+VmPlayer_RenderScaleTo(long renderHandle, bool scaleEnable, int centerX, int centerY,
+                       float widthScale, float heightScale);
 VMPLAYER_API bool CALL_METHOD VmPlayer_RenderDrawYUV(long renderHandle, const char *yData, int yLen,
                                                      const char *uData, int uLen, const char *vData,
                                                      int vLen, int width, int height);

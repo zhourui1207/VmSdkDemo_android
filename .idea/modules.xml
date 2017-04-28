@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/VmSdkDemo_android.iml" filepath="$PROJECT_DIR$/VmSdkDemo_android.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/jwopenui/jwopenui.iml" filepath="$PROJECT_DIR$/jwopenui/jwopenui.iml" />
     </modules>
   </component>
 </project>

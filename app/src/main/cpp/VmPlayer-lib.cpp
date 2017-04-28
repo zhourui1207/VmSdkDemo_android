@@ -38,7 +38,7 @@ bool FrameConfigHolderInit(JNIEnv *env, int width, int height, int framerate,
 }
 
 jlong Java_com_joyware_vmsdk_core_Decoder_DecoderInit(JNIEnv *env, jobject ob,
-                                                   jint payloadType) {
+                                                      jint payloadType) {
     long decoderHandle = 0;
     LOGI("Java_com_joyware_vmsdk_VmPlayer_DecoderInit(%d)", payloadType);
     bool ret = VmPlayer_DecoderInit(payloadType, decoderHandle);
@@ -49,16 +49,16 @@ jlong Java_com_joyware_vmsdk_core_Decoder_DecoderInit(JNIEnv *env, jobject ob,
 }
 
 void Java_com_joyware_vmsdk_core_Decoder_DecoderUninit(JNIEnv *env, jobject ob,
-                                                    jlong decoderHandle) {
+                                                       jlong decoderHandle) {
     LOGI("Java_com_joyware_vmsdk_VmPlayer_DecoderUninit(%lld)", decoderHandle);
     VmPlayer_DecoderUninit(decoderHandle);
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2RGB(JNIEnv *env, jobject ob,
-                                                     jlong decoderHandle,
-                                                     jbyteArray inData, jint inLen,
-                                                     jbyteArray outData,
-                                                     jobject frameConfigHolder) {
+                                                        jlong decoderHandle,
+                                                        jbyteArray inData, jint inLen,
+                                                        jbyteArray outData,
+                                                        jobject frameConfigHolder) {
 //  LOGE("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", outData);
 
     jbyte *inBuf = env->GetByteArrayElements(inData, 0);
@@ -89,11 +89,11 @@ jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2RGB(JNIEnv *env, jobject ob,
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2YUV(JNIEnv *env, jobject ob,
-                                                     jlong decoderHandle,
-                                                     jbyteArray inData, jint inLen,
-                                                     jbyteArray yData, jbyteArray uData,
-                                                     jbyteArray vData,
-                                                     jobject frameConfigHolder) {
+                                                        jlong decoderHandle,
+                                                        jbyteArray inData, jint inLen,
+                                                        jbyteArray yData, jbyteArray uData,
+                                                        jbyteArray vData,
+                                                        jobject frameConfigHolder) {
     //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
 
     jbyte *inBuf = env->GetByteArrayElements(inData, 0);
@@ -130,19 +130,19 @@ jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2YUV(JNIEnv *env, jobject ob,
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_GetFrameWidth(JNIEnv *env, jobject ob,
-                                                    jlong decoderHandle) {
+                                                       jlong decoderHandle) {
     LOGI("Java_com_joyware_vmsdk_core_Decoder_GetFrameWidth(%lld)", decoderHandle);
     return VmPlayer_GetFrameWidth(decoderHandle);
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_GetFrameHeight(JNIEnv *env, jobject ob,
-                                                     jlong decoderHandle) {
+                                                        jlong decoderHandle) {
     LOGI("Java_com_joyware_vmsdk_core_Decoder_GetFrameHeight(%lld)", decoderHandle);
     return VmPlayer_GetFrameHeight(decoderHandle);
 }
 
 jlong Java_com_joyware_vmsdk_core_Decoder_AACEncoderInit(JNIEnv *env, jobject ob,
-                                                   jint samplerate) {
+                                                         jint samplerate) {
     long encoderHandle = 0;
     LOGI("Java_com_joyware_vmsdk_core_Decoder_AACEncoderInit(%d)", samplerate);
     bool ret = VmPlayer_ACCEncoderInit(samplerate, encoderHandle);
@@ -153,23 +153,24 @@ jlong Java_com_joyware_vmsdk_core_Decoder_AACEncoderInit(JNIEnv *env, jobject ob
 }
 
 void Java_com_joyware_vmsdk_core_Decoder_AACEncoderUninit(JNIEnv *env, jobject ob,
-                                                    jlong encoderHandle) {
+                                                          jlong encoderHandle) {
     LOGI("Java_com_joyware_vmsdk_core_Decoder_AACEncoderUninit(%lld)", encoderHandle);
     VmPlayer_ACCEncoderUninit(encoderHandle);
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_AACEncodePCM2AAC(JNIEnv *env, jobject ob,
-                                                     jlong encoderHandle,
-                                                     jbyteArray inData, jint inLen,
-                                                     jbyteArray outData) {
+                                                          jlong encoderHandle,
+                                                          jbyteArray inData, jint inLen,
+                                                          jbyteArray outData) {
 
     jbyte *inBuf = env->GetByteArrayElements(inData, 0);
     jbyte *outBuf = outData != nullptr ? env->GetByteArrayElements(outData, 0) : nullptr;
 
     int outlen = outData != nullptr ? env->GetArrayLength(outData) : 0;
 
-    bool ret = VmPlayer_AACEncodePCM2AAC(encoderHandle, (const char *) inBuf, inLen, (char *) outBuf,
-                                       outlen);
+    bool ret = VmPlayer_AACEncodePCM2AAC(encoderHandle, (const char *) inBuf, inLen,
+                                         (char *) outBuf,
+                                         outlen);
 
     if (!ret) {
         outlen = -1;
@@ -185,7 +186,7 @@ jint Java_com_joyware_vmsdk_core_Decoder_AACEncodePCM2AAC(JNIEnv *env, jobject o
 }
 
 jlong Java_com_joyware_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
-                                                  jobject surface) {
+                                                     jobject surface) {
     long renderHandle = 0;
     LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderInit()");
     ANativeWindow *pNativeWindow = ANativeWindow_fromSurface(env, surface);
@@ -198,21 +199,40 @@ jlong Java_com_joyware_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
 }
 
 void Java_com_joyware_vmsdk_core_Decoder_RenderUninit(JNIEnv *env, jobject ob,
-                                                   jlong renderHandle) {
+                                                       jlong renderHandle) {
     LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderUninit(%lld)", renderHandle);
-    VmPlayer_RenderUninit(renderHandle);
+    VmPlayer_RenderUninit((long) renderHandle);
 }
 
-void Java_com_joyware_vmsdk_core_Decoder_RenderChangeSize(JNIEnv *env, jobject ob, jlong renderHandle,
-                                                       jint width, jint height) {
-//  LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderChangeSize(%lld, %d, %d)", renderHandle, width, height);
-    VmPlayer_RenderChangeSize(renderHandle, width, height);
+void Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceCreated(JNIEnv *env, jobject ob,
+                                                      jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceCreated(%lld)", renderHandle);
+    VmPlayer_RenderSurfaceCreated((long) renderHandle);
+}
+
+void Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceDestroyed(JNIEnv *env, jobject ob,
+                                                      jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceDestroyed(%lld)", renderHandle);
+    VmPlayer_RenderSurfaceDestroyed((long) renderHandle);
+}
+
+void
+Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceChanged(JNIEnv *env, jobject ob, jlong renderHandle,
+                                                     jint width, jint height) {
+    VmPlayer_RenderSurfaceChanged((long) renderHandle, width, height);
+}
+
+void Java_com_joyware_vmsdk_core_Decoder_RenderScaleTo(JNIEnv *env, jobject ob, jlong renderHandle,
+                                                       jboolean enable, jint centerX, jint centerY,
+                                                       jfloat widthScale, jfloat heightScale) {
+    VmPlayer_RenderScaleTo((long) renderHandle, enable, centerX, centerY, widthScale, heightScale);
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_DrawYUV(JNIEnv *env, jobject ob, jlong renderHandle,
-                                              jbyteArray yData, jint yLen, jbyteArray uData,
-                                              jint uLen, jbyteArray vData, jint vLen,
-                                              jint width, jint height) {
+                                                 jbyteArray yData, jint yStart, jint yLen,
+                                                 jbyteArray uData, jint uStart, jint uLen,
+                                                 jbyteArray vData, jint vStart, jint vLen,
+                                                 jint width, jint height) {
     //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
 
     jbyte *yBuf = env->GetByteArrayElements(yData, 0);
@@ -220,8 +240,9 @@ jint Java_com_joyware_vmsdk_core_Decoder_DrawYUV(JNIEnv *env, jobject ob, jlong 
     jbyte *vBuf = env->GetByteArrayElements(vData, 0);
 
     int outlen = -1;
-    bool ret = VmPlayer_RenderDrawYUV(renderHandle, (const char *) yBuf, yLen, (const char *) uBuf,
-                                      uLen, (const char *) vBuf, vLen, width, height);
+    bool ret = VmPlayer_RenderDrawYUV((long) renderHandle, (const char *) (yBuf + yStart), yLen,
+                                      (const char *) (uBuf + uStart), uLen,
+                                      (const char *) (vBuf + vStart), vLen, width, height);
     if (ret) {
         outlen = 0;
     } else {
@@ -236,12 +257,12 @@ jint Java_com_joyware_vmsdk_core_Decoder_DrawYUV(JNIEnv *env, jobject ob, jlong 
 }
 
 jint Java_com_joyware_vmsdk_core_Decoder_OfflineScreenRendering(JNIEnv *env, jobject ob,
-                                                             jlong renderHandle,
-                                                             jbyteArray yData, jint yLen,
-                                                             jbyteArray uData,
-                                                             jint uLen, jbyteArray vData,
-                                                             jint vLen, jint width, jint height,
-                                                             jbyteArray outData) {
+                                                                jlong renderHandle,
+                                                                jbyteArray yData, jint yLen,
+                                                                jbyteArray uData,
+                                                                jint uLen, jbyteArray vData,
+                                                                jint vLen, jint width, jint height,
+                                                                jbyteArray outData) {
     //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
 
     jbyte *yBuf = env->GetByteArrayElements(yData, 0);
