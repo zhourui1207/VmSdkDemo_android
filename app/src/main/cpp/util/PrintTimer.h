@@ -10,7 +10,6 @@
 #define PRINTTIMER_H_
 
 #include "public/platform.h"
-#include <chrono>
 #include <stdio.h>
 
 namespace Dream {
@@ -24,14 +23,6 @@ namespace Dream {
         virtual ~PrintTimer() {
             LOGW("PrintTimer", "计时器[%s]耗时[%zd]\n", _name.c_str(),
                  getCurrentTimeStamp() - _millSeconds);
-        }
-
-    private:
-        std::time_t getCurrentTimeStamp() {
-            std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now());
-            auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
-            return tmp.count();
         }
 
     private:

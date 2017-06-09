@@ -45,6 +45,7 @@ namespace Dream {
         fStreamCallBack _streamCallback;  // 码流回调
         fStreamConnectStatusCallBack _streamConnectStatusCallback;  // 码流连接状态回调
         void *_user;  // 用户传进来的指针，无需释放内存
+        std::mutex _mutex;
     };
 
     class StreamSessionManager {

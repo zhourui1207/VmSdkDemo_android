@@ -9,8 +9,6 @@
 #ifndef ASIOTCPCLIENT_H_
 #define ASIOTCPCLIENT_H_
 
-#define BOOST_SYSTEM_NO_DEPRECATED  // 定义一下，不然会报错 boost::system::throws 重定义
-
 #include <atomic>
 #include <boost/asio.hpp>
 #include <functional>
@@ -41,8 +39,8 @@ namespace Dream {
     private:
         static const bool RECEIVE_MODE = true;  // 默认为自由接收模式
         static const unsigned RECONNECT_INTERVAL = 10000;  // 默认重连时间间隔
-        static const unsigned DEFAULT_READ_SIZE = 100 * 1024;  // 接收时的默认缓存大小
-        static const unsigned DEFAULT_WRITE_SIZE = 100 * 1024;  // 发送时的默认缓存大小
+        static const unsigned DEFAULT_READ_SIZE = 50 * 1024;  // 接收时的默认缓存大小
+        static const unsigned DEFAULT_WRITE_SIZE = 50 * 1024;  // 发送时的默认缓存大小
 
     public:
         AsioTcpClient() = delete;
@@ -90,6 +88,9 @@ namespace Dream {
 
         // 返回true表示成功加发送数据添加到发送缓存队列中，并不表示发送出去；返回false一般是未连接的情况
         bool send(const std::shared_ptr<PacketData> &dataPtr);
+
+        // 同步发送
+        bool sendSync(const std::shared_ptr<PacketData> &dataPtr);
 
     private:
         bool doInit();
@@ -146,6 +147,7 @@ namespace Dream {
 
         char *_receive;  // 接收数据缓存
         SendQueue _sendQueue;  // 发送队列
+        std::mutex _mutex;
     };
 
 } /* namespace Dream */

@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "ThreadPool.h"
+#include "public/platform.h"
 
 namespace Dream {
 
@@ -23,10 +24,12 @@ namespace Dream {
     }
 
     ThreadPool::~ThreadPool() {
-        stop();
+
     }
 
     bool ThreadPool::addTask(const Task &task) {
+//        LOGW("ThreadPool", "addTask");
+        std::unique_lock<std::mutex> lock{_threadMutex};
         if (_running.load()) {
             // 添加到任务队列
             if (_tasks.addTask(task)) {
@@ -68,16 +71,21 @@ namespace Dream {
     }
 
     void ThreadPool::start() {
+        std::unique_lock<std::mutex> lock{_threadMutex};
         if (!_running.load()) {
             _running.store(true);
         }
     }
 
     void ThreadPool::stop() {
+        std::unique_lock<std::mutex> lock{_threadMutex};
         if (_running.load()) {
             _running.store(false);
         }
+        _tasks.clearTask();
+//        LOGW("ThreadPool", "stopTask start");
         stopTask();
+//        LOGW("ThreadPool", "stopTask success");
     }
 
     void ThreadPool::handleTimeout(const TaskThreadPtr &threadPtr) {
@@ -97,7 +105,9 @@ namespace Dream {
         for (std::size_t i = 0; i < _pool.size(); ++i) {
             _pool[i]->stop();
         }
+//        LOGW("ThreadPool", "clear start");
         _pool.clear();
+//        LOGW("ThreadPool", "clear end");
     }
 
 } /* namespace Dream */

@@ -95,12 +95,8 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_AACEncodePCM2AAC(long decoderHandle, cons
     return pEncoder->EncodePCM2AAC(inData, inLen, outData, outLen);
 }
 
-VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(void *nativeWindow, long &renderHandle) {
+VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(long &renderHandle) {
     Dream::EGLRender *pRender = new Dream::EGLRender();
-    if (!pRender->Init(nativeWindow)) {
-        delete pRender;
-        return false;
-    }
     renderHandle = (long) pRender;
     return true;
 }
@@ -110,8 +106,39 @@ VMPLAYER_API void CALL_METHOD VmPlayer_RenderUninit(long renderHandle) {
     if (pRender == nullptr) {
         return;
     }
-    pRender->Uninit();
     delete pRender;
+}
+
+VMPLAYER_API bool CALL_METHOD VmPlayer_RenderStart(long renderHandle) {
+    Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;
+    if (pRender != nullptr) {
+        return pRender->Start();
+    }
+    return false;
+}
+
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderFinish(long renderHandle) {
+    Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;
+    if (pRender == nullptr) {
+        return;
+    }
+    pRender->Finish();
+}
+
+VMPLAYER_API bool CALL_METHOD VmPlayer_RenderCreateSurface(long renderHandle, void *nativeWindow) {
+    Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;
+    if (pRender != nullptr) {
+        return pRender->CreateSurface(nativeWindow);
+    }
+    return false;
+}
+
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderDestroySurface(long renderHandle) {
+    Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;
+    if (pRender == nullptr) {
+        return;
+    }
+    pRender->DestroySurface();
 }
 
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceCreated(long renderHandle) {
@@ -140,16 +167,16 @@ VmPlayer_RenderSurfaceChanged(long renderHandle, int width, int height) {
 }
 
 VMPLAYER_API void CALL_METHOD
-VmPlayer_RenderScaleTo(long renderHandle, bool scaleEnable, int centerX, int centerY,
-                       float widthScale, float heightScale) {
+VmPlayer_RenderScaleTo(long renderHandle, bool scaleEnable, int left, int top,
+                       int width, int height) {
     Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;
     if (pRender == nullptr) {
         return;
     }
-    pRender->ScaleTo(scaleEnable, centerX, centerY, widthScale, heightScale);
+    pRender->ScaleTo(scaleEnable, left, top, width, height);
 }
 
-VMPLAYER_API bool CALL_METHOD VmPlayer_RenderDrawYUV(long renderHandle, const char *yData, int yLen,
+VMPLAYER_API int CALL_METHOD VmPlayer_RenderDrawYUV(long renderHandle, const char *yData, int yLen,
                                                      const char *uData, int uLen, const char *vData,
                                                      int vLen, int width, int height) {
     Dream::EGLRender *pRender = (Dream::EGLRender *) renderHandle;

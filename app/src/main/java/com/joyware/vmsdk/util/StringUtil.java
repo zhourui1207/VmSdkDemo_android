@@ -113,4 +113,19 @@ public class StringUtil {
     public static void logInfo(String info) {
         Log.i(TAG, info);
     }
+
+    public static String byte2hex(byte [] buffer, int start, int len){
+        String h = "";
+
+        for(int i = start; i < start + len; i++){
+            String temp = Integer.toHexString(buffer[i] & 0xFF);
+            if(temp.length() == 1){
+                temp = "0" + temp;
+            }
+            h = h + " "+ temp;
+        }
+
+        return h;
+
+    }
 }

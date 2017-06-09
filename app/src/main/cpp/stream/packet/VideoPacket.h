@@ -7,8 +7,8 @@
  *
  */
 
-#ifndef VIDEOPACKET_H_
-#define VIDEOPACKET_H_
+#ifndef DREAM_VIDEOPACKET_H_
+#define DREAM_VIDEOPACKET_H_
 
 #include "../../util/StreamPacket.h"
 #include "PacketStreamType.h"

@@ -13,7 +13,9 @@ namespace Dream {
 
     RtpPacket::RtpPacket() :
             m_nSequenceNumber(0), m_nPayloadType(0), m_bMarker(false), m_nTimeStamp(0), m_nSsrc(
-            0), m_pBuffer(nullptr), m_pPayloadData(nullptr), m_nPayloadDataLen(0) {
+            0), m_pBuffer(nullptr), m_nBufferLen(0), m_pPayloadData(nullptr), m_nPayloadDataLen(0),
+            m_bForceFu(
+                    false) {
     }
 
     RtpPacket::~RtpPacket() {
@@ -37,7 +39,7 @@ namespace Dream {
 
         }
 
-        if (m_nPayloadType == 98 && ((pBuffer[12] & 0x1F) == 28)) { // FU Type
+        if ((m_nPayloadType == 98 || (m_nPayloadType == 96 && m_bForceFu)) && ((pBuffer[12] & 0x1F) == 28)) { // FU Type
             if (pBuffer[13] & 0x80) {  // 是否是起始帧
                 m_pBuffer[9] = 0x00;
                 m_pBuffer[10] = 0x00;
@@ -50,7 +52,9 @@ namespace Dream {
                 m_nPayloadDataLen = bufferSize - 14;
             }
             m_pBuffer[13] = (char) ((pBuffer[12] & 0xE0) + (pBuffer[13] & 0x1F));
-        } else if (m_nPayloadType == 98 && (((pBuffer[12] & 0x1F) == 0x07) || ((pBuffer[12] & 0x1F) == 0x08))) { // sps或pps
+        } else if ((m_nPayloadType == 98 || (m_nPayloadType == 96 && m_bForceFu)) &&
+                   (((pBuffer[12] & 0x1F) == 0x07) || ((pBuffer[12] & 0x1F) == 0x08) ||
+                    ((pBuffer[12] & 0x1F) == 0x06) || ((pBuffer[12] & 0x1F) == 0x01))) { // sps或pps
             m_pBuffer[8] = 0x00;
             m_pBuffer[9] = 0x00;
             m_pBuffer[10] = 0x00;
@@ -68,7 +72,8 @@ namespace Dream {
     void RtpPacket::CreateRtpPacket(unsigned short seq, char *pData,
                                     int dataSize, char nPayloadType, unsigned timeStamp, int nSSRC,
                                     bool marker) {
-        m_pBuffer = new char[12 + dataSize];
+        m_nBufferLen = 12 + dataSize;
+        m_pBuffer = new char[m_nBufferLen];
 
         m_pBuffer[0] = 0x80;
         m_pBuffer[1] = (marker ? 0x80 : 0x00) | nPayloadType;

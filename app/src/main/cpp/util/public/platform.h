@@ -8,8 +8,16 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+#include <chrono>
 #include <stdint.h>
 #include <string>
+
+inline std::time_t getCurrentTimeStamp() {
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now());
+    auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+    return (time_t) tmp.count();
+}
 
 #ifdef _WIN32
 #include <windows.h>

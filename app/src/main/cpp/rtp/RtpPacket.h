@@ -5,8 +5,8 @@
  *      Author: zhourui
  */
 
-#ifndef RTPPACKET_H_
-#define RTPPACKET_H_
+#ifndef _RTPPACKET_H_
+#define _RTPPACKET_H_
 
 namespace Dream {
 
@@ -49,6 +49,18 @@ namespace Dream {
             return m_bMarker;
         }
 
+        char* GetBuffer() {
+            return m_pBuffer;
+        }
+
+        int GetBudderLen() {
+            return m_nBufferLen;
+        }
+
+        void ForceFu() {
+            m_bForceFu = true;
+        }
+
     public:
 
         unsigned short m_nSequenceNumber;
@@ -58,8 +70,11 @@ namespace Dream {
         int m_nSsrc;
 
         char *m_pBuffer;
+        int m_nBufferLen;
         char *m_pPayloadData;
         int m_nPayloadDataLen;
+
+        bool m_bForceFu;
     };
 
 } /* namespace Dream */

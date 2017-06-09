@@ -33,16 +33,9 @@ namespace Dream {
         void start();  // 启动
         void restart();  // 重启
         void stop();  // 停止
-        void weakUp() {  // 唤醒
-            // 这里必须加上锁，不然会出现唤醒操作在线程等待前执行，那么那样线程会一直等待着，而线程池一直以为线程已经醒了，就无法给线程发放任务了
-            std::unique_lock<std::mutex> lock{_mutex};
-            _waiting.store(false);
-            _condition.notify_one();
-        }
+        void weakUp();
 
-        bool isWaiting() {
-            return _waiting.load();
-        }
+        bool isWaiting();
 
     private:
         void run();
@@ -52,8 +45,9 @@ namespace Dream {
     protected:
         ThreadPtr _threadPtr;
         std::mutex _mutex;
-        std::atomic<bool> _running;
-        std::atomic<bool> _waiting;
+        bool _running;
+        bool _waiting;
+        bool _exited = false;
         Tasks &_tasks;
         std::condition_variable _condition;
         int _idleTime;  // 空闲回收时间，单位是秒

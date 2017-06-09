@@ -18,6 +18,8 @@
 #include "../util/ThreadPool.h"
 #include "StreamSessionManager.h"
 #include "VmType.h"
+#include "../opensdk/RtpUdpServer.h"
+#include "../opensdk/StreamHeartbeatServer.h"
 
 namespace Dream {
 
@@ -36,6 +38,9 @@ namespace Dream {
         }
 
         virtual ~MainModule() {
+            clearAllStream();
+            stopUasClient();
+            stopTalk();
             _pool.stop();
         }
 
@@ -51,6 +56,19 @@ namespace Dream {
         void cancelUasConnectStatusCallback() {
             _uasConnectStatusCallback = nullptr;
         }
+
+        bool startTalk(fStreamCallBackV3 streamCallback, void *pUser);
+
+        bool sendTalk(const std::string& remoteAddress, unsigned short remotePort, const char* data, size_t dataLen);
+
+        void stopTalk();
+
+        bool startStreamHeartbeatServer();
+
+        bool sendHeartbeat(const std::string& remoteAddress, unsigned short remotePort, unsigned heartbeatType,
+                           const std::string &monitorId, const std::string &srcId);
+
+        void stopStreamHeartbeatServer();
 
         // 尝试连接服务器，异步连接，返回并不代表已经连接成功
         unsigned connect(const std::string &serverAddr, unsigned port);
@@ -113,6 +131,8 @@ namespace Dream {
         // 停止获取码流
         void stopStream(unsigned streamId);
 
+        void clearAllStream();
+
         // 控制指令
         void sendCmd(const std::string &fdId, int channelId, unsigned controlType,
                      unsigned param1, unsigned param2);
@@ -155,7 +175,8 @@ namespace Dream {
         std::unique_ptr<UasClient> _uasClientPtr;  // uas客户端线程
         fUasConnectStatusCallBack _uasConnectStatusCallback;  // uas状态回调函数
         fRealAlarmCallBack _realAlarmCallback;  // 实时报警回调
-
+        std::unique_ptr<RtpUdpServer> _talkServer;  // rtpUdp线程
+        std::unique_ptr<StreamHeartbeatServer> _streamHeartbeatServer;  // 码流心跳线程
         StreamSessionManager _streamSessionManager; // 流sessions
     };
 

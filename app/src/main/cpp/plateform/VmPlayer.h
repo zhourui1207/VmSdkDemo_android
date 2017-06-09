@@ -35,15 +35,18 @@ VMPLAYER_API void CALL_METHOD VmPlayer_ACCEncoderUninit(long decoderHandle);
 VMPLAYER_API bool CALL_METHOD VmPlayer_AACEncodePCM2AAC(long decoderHandle, const char *inData,
                                                         int inLen, char *outData, int &outLen);
 
-VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(void *nativeWindow, long &renderHandle);
+VMPLAYER_API bool CALL_METHOD VmPlayer_RenderInit(long &renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderUninit(long renderHandle);
+VMPLAYER_API bool CALL_METHOD VmPlayer_RenderStart(long renderHandle);
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderFinish(long renderHandle);
+VMPLAYER_API bool CALL_METHOD VmPlayer_RenderCreateSurface(long renderHandle, void *nativeWindow);
+VMPLAYER_API void CALL_METHOD VmPlayer_RenderDestroySurface(long renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceCreated(long renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceDestroyed(long renderHandle);
 VMPLAYER_API void CALL_METHOD VmPlayer_RenderSurfaceChanged(long renderHandle, int width, int height);
 VMPLAYER_API void CALL_METHOD
-VmPlayer_RenderScaleTo(long renderHandle, bool scaleEnable, int centerX, int centerY,
-                       float widthScale, float heightScale);
-VMPLAYER_API bool CALL_METHOD VmPlayer_RenderDrawYUV(long renderHandle, const char *yData, int yLen,
+VmPlayer_RenderScaleTo(long renderHandle, bool scaleEnable, int left, int top, int width, int height);
+VMPLAYER_API int CALL_METHOD VmPlayer_RenderDrawYUV(long renderHandle, const char *yData, int yLen,
                                                      const char *uData, int uLen, const char *vData,
                                                      int vLen, int width, int height);
 VMPLAYER_API bool CALL_METHOD VmPlayer_RenderOffScreenRendering(long renderHandle,
@@ -53,6 +56,8 @@ VMPLAYER_API bool CALL_METHOD VmPlayer_RenderOffScreenRendering(long renderHandl
                                                                 int vLen, int width, int height,
                                                                 char *outRgbData,
                                                                 int &outRgbLen);
+
+
 #ifdef __cplusplus
 }
 #endif

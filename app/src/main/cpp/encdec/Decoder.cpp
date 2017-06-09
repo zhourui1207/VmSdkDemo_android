@@ -6,10 +6,9 @@
 
 #include <stdio.h>
 
-#include "../util/public/platform.h"
-#include "../util/PrintTimer.h"
 #include "Decoder.h"
 #include "../payload/PayloadTypeDef.h"
+#include "../util/public/platform.h"
 
 namespace Dream {
 

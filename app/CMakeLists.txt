@@ -19,10 +19,14 @@ endif()
 add_definitions(-DPHONE_PLATEFORM)
 #add_definitions(-D__ANDROID__)
 
+#定义一下，不然会报错 boost::system::throws 重定义
+#add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
+
 # 相当于g++ 中的 -I参数
 include_directories(/usr/local/Cellar/boost/1.61.0_1/include/)
 include_directories(src/main/cpp/ffmpeg/)
-include_directories(/Users/zhourui/Library/Android/sdk/ndk-bundle/sources/android/support/include)
+include_directories(src/main/cpp/pb/)
+include_directories(/Users/zhourui/Library/Android/sdk/ndk-bundle/sources/android/support/include/)
 
 # 它相当于g++命令的-L选项的作用，也相当于环境变量中增加LD_LIBRARY_PATH的路径的作用
 # link_directories("")
@@ -40,14 +44,21 @@ add_library( # Sets the name of the library.
               src/main/cpp/plateform/VmNet.cpp
               src/main/cpp/plateform/MainModule.cpp
               src/main/cpp/plateform/StreamSessionManager.cpp
+              src/main/cpp/opensdk/RtpUdpServer.cpp
+              src/main/cpp/opensdk/StreamHeartbeatServer.cpp
               src/main/cpp/rtp/RtpPacket.cpp
               src/main/cpp/stream/StreamClient.cpp
               src/main/cpp/uas/UasClient.cpp
               src/main/cpp/util/AsioTcpClient.cpp
+              src/main/cpp/util/AsioUdpServer.cpp
               src/main/cpp/util/ThreadPool.cpp
               src/main/cpp/util/TaskThread.cpp
               src/main/cpp/util/Tasks.cpp
-              src/main/cpp/util/Timer.cpp )
+              src/main/cpp/util/Timer.cpp
+              src/main/cpp/dp/HB.pb.cc
+              src/main/cpp/rtsp/RtspTcpClient.cpp
+              src/main/cpp/rtsp/md5.cpp
+              src/main/cpp/rtsp/authTools.cpp)
 
 
 add_library( VmPlayer
@@ -86,6 +97,7 @@ target_link_libraries( # Specifies the target library.
                        # included in the NDK.
                        # 使用android_support.a库
                        /Users/zhourui/Library/Android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/libs/${ANDROID_ABI}/libandroid_support.a
+                       "/Users/zhourui/Documents/c++workspace/DreamEngine/VmSdkDemo_android/app/src/main/jniLibs/${ANDROID_ABI}/libprotobuf-lite.so"
                        ${log-lib} )
 
 target_link_libraries(VmPlayer

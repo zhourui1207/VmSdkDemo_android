@@ -8,8 +8,8 @@
 #ifndef STRINGUTIL_H_
 #define STRINGUTIL_H_
 
-#include <cstring>
 #include <iconv.h>
+#include <string>
 
 #ifdef _WIN32
 #pragma comment(lib,"iconv.lib")

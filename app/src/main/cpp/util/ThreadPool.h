@@ -52,6 +52,7 @@ namespace Dream {
         std::atomic<bool> _running;  // 用来允许或禁止添加任务
         std::vector<TaskThreadPtr> _pool;
         Tasks _tasks;
+        std::mutex _threadMutex;
         RWLock _mutex;
     };
 

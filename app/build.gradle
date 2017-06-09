@@ -20,7 +20,7 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                cppFlags "-std=c++11 -fexceptions"
+                cppFlags "-std=c++11 -fexceptions -frtti"
                 abiFilters 'x86', 'armeabi', 'armeabi-v7a' // 由于不支持64位，所以只保留32位
             }
         }

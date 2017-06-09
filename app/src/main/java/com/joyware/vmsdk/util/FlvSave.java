@@ -6,6 +6,7 @@ package com.joyware.vmsdk.util;
 
 import android.util.Log;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -84,7 +85,7 @@ public class FlvSave {
 
     //不包含 0x00 0x00 0x00 0x01
     public final boolean writeConfiguretion(byte[] sps, int spsstart, int spsSize, byte[] pps,
-                                            int ppsstart, int ppsSize, long timestamp) {
+                                            int ppsstart, int ppsSize) {
         if (mOut == null) {
             return false;
         }
@@ -131,8 +132,7 @@ public class FlvSave {
     }
 
     //不包含 0x00 0x00 0x00 0x01
-    public final boolean writeNalu(boolean isIFrame, byte[] buffer, int start, int size, long
-            timestamp) {
+    public final boolean writeNalu(boolean isIFrame, byte[] buffer, int start, int size) {
         if (mOut == null) {
             return false;
         }
@@ -149,7 +149,7 @@ public class FlvSave {
         byte[] tagHeader = {0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         setInt(dateSize, tagHeader, 1, 3);
 
-        timestamp = System.currentTimeMillis();
+        long timestamp = System.currentTimeMillis();
 //        if (timestamp == 0) {
 //            timestamp = System.currentTimeMillis();
 //        }
@@ -317,7 +317,7 @@ public class FlvSave {
         }
     }
 
-    public void save() {
+    public boolean save() {
         if (mOut != null) {
             try {
 //                mOut.
@@ -333,6 +333,24 @@ public class FlvSave {
             } catch (IOException e) {
                 Log.e(TAG, StringUtil.getStackTraceAsString(e));
             }
+            return true;
+        }
+
+        return false;
+    }
+
+    public void cancel() {
+        if (mOut != null) {
+            try {
+//                mOut.
+//                writeMetaData();
+                mOut.close();
+            } catch (IOException e) {
+                Log.e(TAG, StringUtil.getStackTraceAsString(e));
+            }
+
+            File file = new File(mFileName);
+            file.delete();
         }
     }
 

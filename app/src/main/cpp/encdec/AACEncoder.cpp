@@ -204,9 +204,11 @@ namespace Dream {
         int ret = encodePCM();
 
         _frameCurrentSize = 0;
-        if (leaveLen > 0) {  // 还有剩余长度
+        if ((leaveLen > 0) && (leaveLen < _frameTotalSize)) {  // 还有剩余长度
             memcpy(_frameBuf, inData + inLen - leaveLen, leaveLen);
             _frameCurrentSize += leaveLen;
+        } else if (leaveLen >= _frameTotalSize) {
+            LOGE(TAG, "pcm size is too long:%d!\n", inLen);
         }
 
         if (ret == 0 && _avPacket.data && outData && outLen >= _avPacket.size) {

@@ -28,13 +28,13 @@ namespace Dream {
     }
 
     AsioTcpClient::~AsioTcpClient() {
-        shutDown();
         if (_receive != nullptr) {
             delete[] _receive;
         }
     }
 
     bool AsioTcpClient::startUp() {
+        std::lock_guard<std::mutex> lock(_mutex);
         if (_currentStatus.load() != NO_CONNECT && _currentStatus.load() != CLOSED) {
             return false;
         }
@@ -59,10 +59,12 @@ namespace Dream {
     }
 
     void AsioTcpClient::shutDown(bool isIoServiceThread) {
+        std::lock_guard<std::mutex> lock(_mutex);
         close(isIoServiceThread);
     }
 
     bool AsioTcpClient::send(const std::shared_ptr<PacketData> &dataPtr) {
+        std::lock_guard<std::mutex> lock(_mutex);
 //        LOGW("AsioTcpClient", "[%s]开始发送数据...\n", _address.c_str());
         if (_currentStatus.load() != CONNECTED || _ioServicePtr.get() == nullptr) {
 //    printf("当前处于未连接状态，无法发送数据\n");
@@ -76,7 +78,22 @@ namespace Dream {
                 doWrite();
             }
         });
+
         return true;
+    }
+
+    bool AsioTcpClient::sendSync(const std::shared_ptr<PacketData> &dataPtr) {
+        std::lock_guard<std::mutex> lock(_mutex);
+//        LOGW("AsioTcpClient", "[%s]开始发送数据...\n", _address.c_str());
+        if (_currentStatus.load() != CONNECTED || _ioServicePtr.get() == nullptr) {
+//    printf("当前处于未连接状态，无法发送数据\n");
+            return false;
+        }
+
+        std::size_t sendSize = boost::asio::write(*(_socketPtr.get()),
+                                                  boost::asio::buffer(dataPtr->data(),
+                                                                      dataPtr->length()));
+        return sendSize > 0;
     }
 
     bool AsioTcpClient::doInit() {
@@ -130,15 +147,25 @@ namespace Dream {
                                            _currentStatus.store(CONNECTED);
                                            doOnStatus(_currentStatus);
                                            if (_readLengthCallback) {  // 如果上层设置了读取长度
-                                               doReadByLength();
+                                               if (_ioServicePtr.get() != nullptr) {
+                                                   _ioServicePtr->post([this] {
+                                                       doReadByLength();
+                                                   });
+                                               }
                                            } else {
-                                               doRead();
+                                               if (_ioServicePtr.get() != nullptr) {
+                                                   _ioServicePtr->post([this] {
+                                                       doRead();
+                                                   });
+                                               }
                                            }
                                        } else {
                                            LOGE("AsioTcpClient", "[%s]连接失败 [%s]\n",
                                                 _address.c_str(),
                                                 ec.message().c_str());
-                                           doReconnect();
+                                           if (ec.value() != 125) {
+                                               doReconnect();
+                                           }
                                        }
                                    });
 
@@ -176,8 +203,8 @@ namespace Dream {
         }
         unsigned readLen = getReadLength();
         if (readLen == 0 || readLen > _receiveSize) {
-            printf("上层设置的读取长度不合法，长度[%d]，无法读取数据，强制断开客户端\n", readLen);
-            shutDown();
+            LOGE("AsioTcpClient", "上层设置的读取长度不合法，长度[%d]，无法读取数据，强制断开客户端\n", readLen);
+//            shutDown(true);
             return;
         }
         boost::asio::async_read(*(_socketPtr.get()),
@@ -188,15 +215,25 @@ namespace Dream {
                                         // std::shared_ptr<PacketData> dataPtr = std::make_shared<PacketData>(readLen, _receive);
                                         // 原先考虑使用线程池，但是不利于拼包，改成同步
 //                                        LOGW("AsioTcpClient", "接收到数据");
+//                                        std::unique_lock<std::mutex> lock(_mutex);
                                         if (_callback) {
 //                                            LOGW("AsioTcpClient", "回调数据");
                                             _callback(_receive, readLen);
                                         }
-                                        doReadByLength();
+//                                        lock.unlock();
+                                        if (_ioServicePtr.get() != nullptr) {
+                                            _ioServicePtr->post([this] {
+                                                doReadByLength();
+                                            });
+                                        }
+
                                     } else {
                                         // 异常的时候可以分为多种情况，测试出，当本机网络断开时，重连会导致崩溃
-                                        printf("读取数据异常, 连接断开:%s\n", ec.message().c_str());
-                                        doReconnect();
+                                        LOGE("AsioTcpClient", "读取数据异常, 连接断开:%s, error_code[%d]\n",
+                                             ec.message().c_str(), ec);
+                                        if (ec.value() != 125) {
+                                            doReconnect();
+                                        }
                                     }
                                 });
     }
@@ -210,13 +247,23 @@ namespace Dream {
                                         if (!ec && length > 0) {
                                             // std::shared_ptr<PacketData> dataPtr = std::make_shared<PacketData>(length, _receive);
                                             // 原先考虑使用线程池，但是不利于拼包，改成同步，让上层处理拼包
+//                                            std::unique_lock<std::mutex> lock(_mutex);
                                             if (_callback) {
                                                 _callback(_receive, length);
                                             }
-                                            doRead();
+//                                            lock.unlock();
+                                            if (_ioServicePtr.get() != nullptr) {
+                                                _ioServicePtr->post([this] {
+                                                    doRead();
+                                                });
+                                            };
                                         } else if (ec) {
-                                            printf("读取数据异常, 连接断开:%s\n", ec.message().c_str());
-                                            doReconnect();
+                                            LOGE("AsioTcpClient",
+                                                 "读取数据异常, 连接断开:%s, error_code[%d]\n",
+                                                 ec.message().c_str(), ec);
+                                            if (ec.value() != 125) {
+                                                doReconnect();
+                                            }
                                         }
                                     });
     }
@@ -236,8 +283,11 @@ namespace Dream {
                                              doWrite();
                                          }
                                      } else {
-                                         printf("发送数据异常 [%s]\n", ec.message().c_str());
-                                         doReconnect();
+                                         LOGE("AsioTcpClient", "发送数据异常 [%s] error_code[%d]\n",
+                                              ec.message().c_str(), ec);
+                                         if (ec.value() != 125) {
+                                             doReconnect();
+                                         }
                                      }
                                  });
     }
@@ -264,7 +314,9 @@ namespace Dream {
         // 增加一个work对象
         boost::asio::io_service::work work(*(_ioServicePtr));
         try {
+//            LOGE("AsioTcpClient", "_ioServicePtr run start！！\n");
             _ioServicePtr->run();
+//            LOGE("AsioTcpClient", "_ioServicePtr run end！！\n");
         } catch (...) {
             LOGE("AsioTcpClient", "_ioServicePtr 运行异常！！\n");
         }

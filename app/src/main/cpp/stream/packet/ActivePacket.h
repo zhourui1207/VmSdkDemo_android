@@ -7,8 +7,8 @@
  *
  */
 
-#ifndef ACTIVEPACKET_H_
-#define ACTIVEPACKET_H_
+#ifndef DREAM_ACTIVEPACKET_H_
+#define DREAM_ACTIVEPACKET_H_
 
 #include "../../util/StreamPacket.h"
 #include "PacketStreamType.h"

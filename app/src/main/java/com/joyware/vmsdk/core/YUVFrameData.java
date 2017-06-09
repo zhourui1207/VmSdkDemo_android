@@ -15,15 +15,16 @@ public class YUVFrameData implements FrameData {
 
     }
 
-    public YUVFrameData(byte[] yData, byte[] uData, byte[] vData, int width, int height) {
-        this.yData = new byte[yData.length];
-        System.arraycopy(yData, 0, this.yData, 0, yData.length);
+    public YUVFrameData(byte[] yData, int yStart, int yLen, byte[] uData, int uStart, int uLen,
+                        byte[] vData, int vStart, int vLen, int width, int height) {
+        this.yData = new byte[yLen];
+        System.arraycopy(yData, yStart, this.yData, 0, yLen);
 
-        this.uData = new byte[uData.length];
-        System.arraycopy(uData, 0, this.uData, 0, uData.length);
+        this.uData = new byte[uLen];
+        System.arraycopy(uData, uStart, this.uData, 0, uLen);
 
-        this.vData = new byte[vData.length];
-        System.arraycopy(vData, 0, this.vData, 0, vData.length);
+        this.vData = new byte[vLen];
+        System.arraycopy(vData, vStart, this.vData, 0, vLen);
 
         this.width = width;
         this.height = height;

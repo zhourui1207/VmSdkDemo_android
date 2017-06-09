@@ -18,15 +18,16 @@ public class StreamData {
 
     }
 
-    public StreamData(int streamId, int streamType, int payloadType, byte[] buffer, int timeStamp,
+    public StreamData(int streamId, int streamType, int payloadType, byte[] buffer, int
+            bufferStart, int bufferLen, int timeStamp,
                       int seqNumber, boolean isMark) {
         this.streamId = streamId;
         this.streamType = streamType;
         this.payloadType = payloadType;
         // 拷贝数据
         if (buffer != null) {
-            this.buffer = new byte[buffer.length];
-            System.arraycopy(buffer, 0, this.buffer, 0, this.buffer.length);
+            this.buffer = new byte[bufferLen];
+            System.arraycopy(buffer, bufferStart, this.buffer, 0, bufferLen);
         }
         this.timeStamp = timeStamp;
         this.seqNumber = seqNumber;

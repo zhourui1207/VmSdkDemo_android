@@ -40,6 +40,8 @@ namespace Dream {
 
         bool removeTask(Task &task);
 
+        void clearTask();
+
     private:
         std::queue<Task> _tasks;
         int _maxSize;

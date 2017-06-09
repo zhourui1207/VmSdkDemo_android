@@ -29,9 +29,7 @@ namespace Dream {
         }
 
         virtual ~StreamPacket() {
-//    if (_data != nullptr) {
-//      delete[] _data;
-//    }
+
         }
 
         // 设置数据
@@ -41,7 +39,6 @@ namespace Dream {
             }
             if (len > 0) {
                 _dataLen = len;
-//      _data = new char[_dataLen];
                 memcpy(_data, pBuf, _dataLen);
             }
         }

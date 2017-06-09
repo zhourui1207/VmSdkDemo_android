@@ -79,9 +79,13 @@ namespace Dream {
 
         ~EGLRender();
 
-        bool Init(void *nativeWindow);
+        bool Start();
 
-        void Uninit();
+        void Finish();
+
+        bool CreateSurface(void *nativeWindow);
+
+        void DestroySurface();
 
         void SurfaceCreated();
 
@@ -92,13 +96,12 @@ namespace Dream {
          */
         void SurfaceChanged(int width, int height);
 
-        void
-        ScaleTo(bool scaleEnable, int centerX, int centerY, float widthScale, float heightScale);
+        void ScaleTo(bool scaleEnable, int left, int top, int width, int height);
 
         /**
          * 绘图，必须传入不为空的nativeWindow
          */
-        bool DrawYUV(const char *yData, int yLen, const char *uData, int uLen, const char *vData,
+        int DrawYUV(const char *yData, int yLen, const char *uData, int uLen, const char *vData,
                      int vLen, int width, int height);
 
         /**
@@ -110,7 +113,7 @@ namespace Dream {
 
     private:
         // 执行程序
-        bool executeProgram(const char *yData, int yLen, const char *uData, int uLen,
+        int executeProgram(const char *yData, int yLen, const char *uData, int uLen,
                             const char *vData,
                             int vLen, int width, int height);
 
@@ -126,14 +129,12 @@ namespace Dream {
         // 初始化纹理id
         bool initTextureId();
 
-        // 释放资源
-        void releaseResources();
-
     private:
         bool _inited;
 
         int _width;
         int _height;
+        bool _sacaleEnable;
 
         // gpu传入参数
         GLuint _program;
@@ -150,11 +151,12 @@ namespace Dream {
 
         // 初始化相关
         EGLDisplay _display;
+        EGLConfig  _config;
         EGLContext _context;
         EGLSurface _surface;
 
-        // 原生窗口指针
-        EGLNativeWindowType _nativeWindow;
+//        // 原生窗口指针
+//        EGLNativeWindowType _nativeWindow;
 
         std::mutex _mutex;
     };

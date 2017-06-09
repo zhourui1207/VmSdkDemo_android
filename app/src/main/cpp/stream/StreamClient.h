@@ -6,8 +6,8 @@
  *      流客户端，一般用于取流使用
  */
 
-#ifndef STREAMCLIENT_H_
-#define STREAMCLIENT_H_
+#ifndef DREAM_STREAMCLIENT_H_
+#define DREAM_STREAMCLIENT_H_
 
 #include <memory>
 #include <mutex>
@@ -37,7 +37,7 @@ namespace Dream {
         }
 
         virtual ~StreamClient() {
-            shutDown();
+
         };
 
         // 启动

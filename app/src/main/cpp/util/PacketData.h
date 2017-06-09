@@ -12,7 +12,6 @@
 
 #include <cstring>
 // #include <stdio.h>
-#include "MemoryPool.h"
 
 namespace Dream {
 

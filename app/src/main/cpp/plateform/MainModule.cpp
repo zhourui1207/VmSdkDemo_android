@@ -141,6 +141,10 @@ namespace Dream {
         _streamSessionManager.removeStreamClient(streamId);
     }
 
+    void MainModule::clearAllStream() {
+        _streamSessionManager.clearAll();
+    }
+
     void MainModule::sendCmd(const std::string &fdId, int channelId,
                              unsigned controlType, unsigned param1, unsigned param2) {
         if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
@@ -210,6 +214,64 @@ namespace Dream {
                                  unsigned alarmType, unsigned param1, unsigned param2) {
         if (_realAlarmCallback) {
             _realAlarmCallback(fdId.c_str(), channelId, alarmType, param1, param2);
+        }
+    }
+
+    bool MainModule::startTalk(fStreamCallBackV3 streamCallback, void *pUser) {
+        if (_talkServer.get() != nullptr) {
+            return true;
+        }
+        _talkServer.reset(new RtpUdpServer);
+        _talkServer->setUser(pUser);
+        _talkServer->setStreamCallback(streamCallback);
+        if (!_talkServer->start_up()) {
+            _talkServer.reset();
+            return false;
+        }
+        return true;
+    }
+
+    bool MainModule::sendTalk(const std::string &remoteAddress, unsigned short remotePort,
+                              const char *data, size_t dataLen) {
+        if (_talkServer.get() != nullptr) {
+            return _talkServer->send_packet(remoteAddress, remotePort, data, dataLen);
+        }
+        return false;
+    }
+
+    void MainModule::stopTalk() {
+        if (_talkServer.get() != nullptr) {
+            _talkServer->shut_down();
+            _talkServer.reset();
+        }
+    }
+
+    bool MainModule::startStreamHeartbeatServer() {
+        if (_streamHeartbeatServer.get() != nullptr) {
+            return true;
+        }
+        _streamHeartbeatServer.reset(new StreamHeartbeatServer);
+        if (!_streamHeartbeatServer->start_up()) {
+            _streamHeartbeatServer.reset();
+            return false;
+        }
+        return true;
+    }
+
+    bool MainModule::sendHeartbeat(const std::string &remoteAddress, unsigned short remotePort,
+                                   unsigned heartbeatType, const std::string &monitorId,
+                                   const std::string &srcId) {
+        if (_streamHeartbeatServer.get() != nullptr) {
+            return _streamHeartbeatServer->send_packet(remoteAddress, remotePort, heartbeatType,
+                                                       monitorId, srcId);
+        }
+        return false;
+    }
+
+    void MainModule::stopStreamHeartbeatServer() {
+        if (_streamHeartbeatServer.get() != nullptr) {
+            _streamHeartbeatServer->shut_down();
+            _streamHeartbeatServer.reset();
         }
     }
 

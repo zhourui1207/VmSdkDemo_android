@@ -6,10 +6,12 @@
  *      在这一层加入了gbk转utf－8功能，默认开启，若需要禁止转换，#define GBK_2_UTF8_DISABLE
  */
 
+#include "../rtsp/RtspTcpClient.h"
 #include "../util/public/StringUtil.h"
 #include "ErrorCode.h"
 #include "MainModule.h"
 #include "VmNet.h"
+#include "../rtp/RtpPacket.h"
 
 #define GBK2UTF8_TMP_MAX_LEN 1024  // gbk转tmp时使用的临时变量最大长度
 
@@ -48,6 +50,61 @@ VMNET_API void CALL_METHOD VmNet_UnInit() {
     if (g_pMainModule != nullptr) {
         delete g_pMainModule;
         g_pMainModule = nullptr;
+    }
+}
+
+// 开启对讲
+VMNET_API bool CALL_METHOD VmNet_StartTalk(fStreamCallBackV3 streamCallback, void* pUser) {
+    LOGD("VMSDK", "VmNet_StartTalk\n");
+    if (g_pMainModule != nullptr) {
+        return g_pMainModule->startTalk(streamCallback, pUser);
+    }
+    return false;
+}
+
+// 发送对讲数据
+VMNET_API bool CALL_METHOD
+VmNet_SendTalk(const char *sRemoteAddress, unsigned short usRemotePort, const char *oData,
+               unsigned uDataLen) {
+    if (g_pMainModule != nullptr) {
+        return g_pMainModule->sendTalk(sRemoteAddress, usRemotePort, oData, uDataLen);
+    }
+    return false;
+}
+
+// 关闭对讲
+VMNET_API void CALL_METHOD VmNet_StopTalk() {
+    LOGD("VMSDK", "VmNet_StopTalk\n");
+    if (g_pMainModule != nullptr) {
+        g_pMainModule->stopTalk();
+    }
+}
+
+// 开启心跳服务
+VMNET_API bool CALL_METHOD VmNet_StartStreamHeartbeatServer() {
+    LOGD("VMSDK", "VmNet_StartStreamHeartbeatServer\n");
+    if (g_pMainModule != nullptr) {
+        return g_pMainModule->startStreamHeartbeatServer();
+    }
+    return false;
+}
+// 发送心跳
+VMNET_API bool CALL_METHOD
+VmNet_SendHeartbeat(const char *sRemoteAddress, unsigned short usRemotePort,
+                    unsigned uHeartbeatType,
+                    const char *sMonitorId, const char *sSrcId) {
+    if (g_pMainModule != nullptr) {
+        return g_pMainModule->sendHeartbeat(sRemoteAddress, usRemotePort, uHeartbeatType,
+                                            sMonitorId, sSrcId);
+    }
+    return false;
+}
+
+// 关闭心跳服务
+VMNET_API void CALL_METHOD VmNet_StopStreamHeartbeatServer() {
+    LOGD("VMSDK", "VmNet_StopStreamHeartbeatServer\n");
+    if (g_pMainModule != nullptr) {
+        g_pMainModule->stopStreamHeartbeatServer();
     }
 }
 
@@ -90,7 +147,8 @@ VMNET_API void CALL_METHOD VmNet_Logout() {
 }
 
 VMNET_API unsigned CALL_METHOD VmNet_GetDepTrees(unsigned uPageNo,
-                                                 unsigned uPageSize, out TVmDepTree *pDepTrees, out
+                                                 unsigned uPageSize, VMNET_OUT
+                                                 TVmDepTree *pDepTrees, VMNET_OUT
                                                  unsigned &uSize) {
     LOGD("VMSDK", "VmNet_GetDepTrees\n");
     if (g_pMainModule == nullptr) {
@@ -116,9 +174,9 @@ VMNET_API unsigned CALL_METHOD VmNet_GetDepTrees(unsigned uPageNo,
 }
 
 VMNET_API unsigned CALL_METHOD VmNet_GetChannels(unsigned uPageNo,
-                                                 unsigned uPageSize, int nDepId, out
+                                                 unsigned uPageSize, int nDepId, VMNET_OUT
                                                  TVmChannel *pChannels,
-                                                 out unsigned &uSize) {
+                                                 VMNET_OUT unsigned &uSize) {
     LOGD("VMSDK", "VmNet_GetChannels\n");
     if (g_pMainModule == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -149,9 +207,9 @@ VMNET_API unsigned CALL_METHOD VmNet_GetChannels(unsigned uPageNo,
 VMNET_API unsigned CALL_METHOD VmNet_GetRecords(unsigned uPageNo,
                                                 unsigned uPageSize, const char *sFdId,
                                                 int nChannelId, unsigned uBeginTime,
-                                                unsigned uEndTime, bool bIsCenter, out
+                                                unsigned uEndTime, bool bIsCenter, VMNET_OUT
                                                 TVmRecord *pRecords,
-                                                out unsigned &uSize) {
+                                                VMNET_OUT unsigned &uSize) {
     LOGD("VMSDK", "VmNet_GetRecords\n");
     if (g_pMainModule == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -180,7 +238,8 @@ VMNET_API unsigned CALL_METHOD VmNet_GetAlarms(unsigned uPageNo,
                                                int nChannelId,
                                                unsigned uChannelBigType, const char *sBeginTime,
                                                const char *sEndTime,
-                                               out TVmAlarm *pAlarms, out unsigned &uSize) {
+                                               VMNET_OUT TVmAlarm *pAlarms, VMNET_OUT
+                                               unsigned &uSize) {
     LOGD("VMSDK", "VmNet_GetAlarms\n");
     if (g_pMainModule == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -231,10 +290,11 @@ VMNET_API void CALL_METHOD VmNet_StopReceiveRealAlarm() {
 }
 
 VMNET_API unsigned CALL_METHOD VmNet_OpenRealplayStream(const char *sFdId,
-                                                        int nChannelId, bool bIsSub, out
-                                                        unsigned &uMonitorId, out char *sVideoAddr,
-                                                        out unsigned &uVideoPort, out
-                                                        char *sAudioAddr, out
+                                                        int nChannelId, bool bIsSub, VMNET_OUT
+                                                        unsigned &uMonitorId, VMNET_OUT
+                                                        char *sVideoAddr,
+                                                        VMNET_OUT unsigned &uVideoPort, VMNET_OUT
+                                                        char *sAudioAddr, VMNET_OUT
                                                         unsigned &uAudioPort) {
     LOGD("VMSDK", "VmNet_OpenRealplayStream\n");
 
@@ -263,9 +323,10 @@ VMNET_API void CALL_METHOD VmNet_CloseRealplayStream(unsigned uMonitorId) {
 VMNET_API unsigned CALL_METHOD VmNet_OpenPlaybackStream(const char *sFdId,
                                                         int nChannelId, bool bIsCenter,
                                                         unsigned beginTime, unsigned endTime,
-                                                        out unsigned &uMonitorId, out
-                                                        char *sVideoAddr, out unsigned &uVideoPort,
-                                                        out char *sAudioAddr, out
+                                                        VMNET_OUT unsigned &uMonitorId, VMNET_OUT
+                                                        char *sVideoAddr, VMNET_OUT
+                                                        unsigned &uVideoPort,
+                                                        VMNET_OUT char *sAudioAddr, VMNET_OUT
                                                         unsigned &uAudioPort) {
     LOGD("VMSDK", "VmNet_OpenPlaybackStream\n");
     if (g_pMainModule == nullptr) {
@@ -309,7 +370,7 @@ VMNET_API unsigned CALL_METHOD VmNet_StartStream(const char *sAddr,
                                                  unsigned uPort, fStreamCallBack cbRealData,
                                                  fStreamConnectStatusCallBack cbConnectStatus,
                                                  void *pUser,
-                                                 out unsigned &uStreamId) {
+                                                 VMNET_OUT unsigned &uStreamId) {
     LOGD("VMSDK", "VmNet_StartStream\n");
     if (g_pMainModule == nullptr) {
         return ERR_CODE_SDK_UNINIT;
@@ -326,6 +387,33 @@ VMNET_API void CALL_METHOD VmNet_StopStream(unsigned uStreamId) {
     g_pMainModule->stopStream(uStreamId);
 }
 
+VMNET_API bool CALL_METHOD
+VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbStreamData,
+                        fStreamConnectStatusCallBackV2 cbConnectStatus,
+                        void *pUser, VMNET_OUT long &rtspStreamHandle) {
+    LOGD("VMSDK", "VmNet_StartStreamByRtsp\n");
+    Dream::RtspTcpClient *pRtspTcpClient = new Dream::RtspTcpClient(rtspUrl);
+    pRtspTcpClient->setUser(pUser);
+    pRtspTcpClient->setStreamCallback(cbStreamData);
+    pRtspTcpClient->setConnectStatusListener(cbConnectStatus);
+    if (!pRtspTcpClient->startUp()) {
+        delete pRtspTcpClient;
+        return false;
+    }
+    rtspStreamHandle = (long) pRtspTcpClient;
+    return true;
+}
+
+VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle) {
+    LOGD("VMSDK", "VmNet_StopStreamByRtsp\n");
+    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
+    if (pRtspTcpClient == nullptr) {
+        return;
+    }
+    pRtspTcpClient->shutdown();
+    delete pRtspTcpClient;
+}
+
 VMNET_API void CALL_METHOD VmNet_SendControl(const char *sFdId, int nChannelId,
                                              unsigned uControlType, unsigned uParm1,
                                              unsigned uParm2) {
@@ -334,4 +422,30 @@ VMNET_API void CALL_METHOD VmNet_SendControl(const char *sFdId, int nChannelId,
         return;
     }
     g_pMainModule->sendCmd(sFdId, nChannelId, uControlType, uParm1, uParm2);
+}
+
+VMNET_API bool CALL_METHOD VmNet_FilterRtpHeader(const char *inData, int inLen,
+                                                 VMNET_OUT char *payloadData, VMNET_OUT
+                                                 int &payloadLen, VMNET_OUT
+                                                 int &payloadType, VMNET_OUT int &seqNumber,
+                                                 VMNET_OUT int &timestamp, VMNET_OUT bool &isMark) {
+    Dream::RtpPacket *pRtpPacket = new Dream::RtpPacket();
+    pRtpPacket->ForceFu();
+    if (pRtpPacket->Parse((char *) inData, inLen) == 0) {
+        if (payloadLen > pRtpPacket->m_nPayloadDataLen) {
+            memcpy(payloadData, pRtpPacket->m_pPayloadData, (size_t) pRtpPacket->m_nPayloadDataLen);
+            payloadLen = pRtpPacket->m_nPayloadDataLen;
+            payloadType = pRtpPacket->m_nPayloadType;
+            seqNumber = pRtpPacket->m_nSequenceNumber;
+            timestamp = pRtpPacket->m_nTimeStamp;
+            isMark = pRtpPacket->m_bMarker;
+//            if (pRtpPacket->m_nPayloadType == 96) {
+            delete pRtpPacket;
+            return true;
+//            }
+//            LOGE("!!", "payloadtype[%d]\n", pRtpPacket->m_nPayloadType);
+        }
+    }
+    delete pRtpPacket;
+    return false;
 }

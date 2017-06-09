@@ -7,8 +7,8 @@
  *
  */
 
-#ifndef AUDIOPACKET_H_
-#define AUDIOPACKET_H_
+#ifndef DREAM_AUDIOPACKET_H_
+#define DREAM_AUDIOPACKET_H_
 
 #include "../../util/StreamPacket.h"
 #include "PacketStreamType.h"

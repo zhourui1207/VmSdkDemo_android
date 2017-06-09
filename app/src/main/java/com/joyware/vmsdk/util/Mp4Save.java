@@ -7,6 +7,7 @@ package com.joyware.vmsdk.util;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -40,6 +41,8 @@ public class Mp4Save {
     private byte[] mSpsBuffer;
     private byte[] mPpsBuffer;
     private byte[] mSeiBuffer;
+
+    private boolean mStart;
 
     @NonNull
     private List<Integer> mVideoSampleSizes = new LinkedList<>();  // 视频样本大小
@@ -109,6 +112,8 @@ public class Mp4Save {
             Log.e(TAG, StringUtil.getStackTraceAsString(e));
             return false;
         }
+
+        mStart = true;
         return true;
     }
 
@@ -116,7 +121,7 @@ public class Mp4Save {
     public final boolean writeConfiguretion(int width, int height, int framerate, byte[] sps,
                                             int spsstart, int spsSize, byte[] pps,
                                             int ppsstart, int ppsSize) {
-        if (mOut == null) {
+        if (mOut == null && mStart) {
             return false;
         }
 
@@ -139,7 +144,7 @@ public class Mp4Save {
 
     //不包含 0x00 0x00 0x00 0x01
     public final boolean writeNalu(boolean isIFrame, byte[] buffer, int start, int size) {
-        if (mOut == null) {
+        if (mOut == null && mStart) {
             return false;
         }
 
@@ -233,7 +238,7 @@ public class Mp4Save {
     }
 
     public final boolean writeAAC(byte[] buffer, int start, int size) {
-        if (mOut == null) {
+        if (mOut == null && mStart) {
             return false;
         }
 
@@ -274,8 +279,8 @@ public class Mp4Save {
         return true;
     }
 
-    public void save() {
-        if (mOut != null) {
+    public boolean save() {
+        if (mOut != null && mStart && mFrameCount > 0) {
             try {
                 byte[] tmpBuffer = new byte[10240 + mAudioSampleIndexs.size() * 16 +
                         mVideoSampleIndexs.size() * 16];
@@ -286,6 +291,26 @@ public class Mp4Save {
             } catch (Exception e) {
                 Log.e(TAG, StringUtil.getStackTraceAsString(e));
             }
+            return true;
+        } else {
+            if (mFileName != null) {
+                File file = new File(mFileName);
+                file.delete();
+            }
+        }
+        return false;
+    }
+
+    public void cancel() {
+        if (mOut != null) {
+            try {
+                mOut.close();
+            } catch (IOException e) {
+                Log.e(TAG, StringUtil.getStackTraceAsString(e));
+            }
+
+            File file = new File(mFileName);
+            file.delete();
         }
     }
 
@@ -426,7 +451,7 @@ public class Mp4Save {
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x5f, (byte) 0x90,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-        if (!isVideo) {
+        if (!isVideo) {  // 8000 sacle time
             mdhd[20] = 0x00;
             mdhd[21] = 0x00;
             mdhd[22] = 0x1f;

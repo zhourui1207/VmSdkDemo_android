@@ -5,8 +5,8 @@
  *      Author: zhourui
  */
 
-#ifndef PACKETSTREAMTYPE_H_
-#define PACKETSTREAMTYPE_H_
+#ifndef DREAM_PACKETSTREAMTYPE_H_
+#define DREAM_PACKETSTREAMTYPE_H_
 
 // 视频流
 const unsigned MSG_STREAM_VIDEO = 0xd1e2f300;

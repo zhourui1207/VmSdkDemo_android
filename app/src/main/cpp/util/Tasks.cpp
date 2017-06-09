@@ -46,4 +46,12 @@ namespace Dream {
         return true;
     }
 
+    void Tasks::clearTask() {
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (_size > 0) {
+            _tasks.pop();
+            --_size;
+        }
+    }
+
 } /* namespace Dream */

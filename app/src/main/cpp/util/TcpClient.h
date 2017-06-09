@@ -36,11 +36,7 @@ namespace Dream {
         }
 
         virtual ~TcpClient() {
-            _tcpClient.removeCallback();
-            _tcpClient.removeStatusListener();
-            _tcpClient.removeReadLengthCallback();
 
-            shutDown();
         }
 
         // 是否已连接
@@ -56,6 +52,9 @@ namespace Dream {
         // 关闭
         virtual void shutDown() {
             _tcpClient.shutDown();
+            _tcpClient.removeCallback();
+            _tcpClient.removeStatusListener();
+            _tcpClient.removeReadLengthCallback();
         }
 
         // 发送包
@@ -128,13 +127,13 @@ namespace Dream {
                     }
                 } else {
                     LOGE("TcpClient", "包头解析长度出错，长度＝[%d]\n", packetLen);
-                    _tcpClient.shutDown(true);  // 这函数是io线程自身调用，必须加true
+//                    _tcpClient.shutDown(true);  // 这函数是io线程自身调用，必须加true
                     return;
                 }
             } else {  // 读取body
                 if (dataLen != _readLength) {  // 读取到的长度和想要读取的长度不相等的话，就解析错误，直接关闭客户端
                     LOGE("TcpClient", "读取到的长度[%zd]和需要读取长度[%d]不相等，无法解析数据\n", dataLen, _readLength);
-                    _tcpClient.shutDown(true);
+//                    _tcpClient.shutDown(true);
                     return;
                 }
                 memcpy(_packetDataPtr->data() + Packet::HEADER_LENGTH, pBuf, dataLen);  // 写入body
@@ -196,6 +195,7 @@ namespace Dream {
         std::shared_ptr<PacketData> _packetDataPtr;  // 这个是用来拼包的
 
         std::function<void(bool isConnected)> _connectStatusListener;
+        std::mutex _mutex;
     };
 
 } /* namespace Dream */

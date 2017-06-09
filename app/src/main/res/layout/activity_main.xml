@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin">
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/sample_text"
@@ -30,41 +27,105 @@
     <!--android:layout_alignParentLeft="true"-->
     <!--android:id="@+id/glSurfaceView"/>-->
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/surfaceView"
-        android:layout_marginLeft="29dp"
-        android:layout_marginTop="5dp"
-        android:layout_toRightOf="@+id/sample_text"
-        android:text="播放声音" />
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放声音"
+            android:visibility="gone"/>
 
-    <Button
-        android:id="@+id/record"
-        android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开始录像"
+            android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/btn_start_talk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开始对讲"/>
+
+        <Button
+            android:id="@+id/btn_stop_talk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="结束对讲"/>
+
+        <Button
+            android:id="@+id/btn_start_talk_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="打开对讲声音"/>
+
+        <Button
+            android:id="@+id/btn_stop_talk_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="结束对讲声音"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textView_progress"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/button"
-        android:layout_below="@+id/button"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="5dp"
-        android:text="开始录像" />
+        android:text="下载提示"/>
+
+    <ProgressBar
+        android:id="@+id/pb"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:max="100"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btn_start_download_record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开始下载录像"/>
+
+        <Button
+            android:id="@+id/btn_cancel_download_record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="取消下载录像"/>
+
+        <Button
+            android:id="@+id/btn_start_rtsp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开始rtsp"/>
+
+        <Button
+            android:id="@+id/btn_stop_rtsp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="结束rtsp"/>
+
+    </LinearLayout>
+
 
     <com.joyware.widget.time.TimeBar
         android:id="@+id/tb"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_below="@+id/record"
+        android:layout_height="40dp"
         android:layout_marginTop="10dp" />
 
     <TextView
         android:id="@+id/tv"
         android:layout_width="match_parent"
         android:layout_height="30dp"
-        android:layout_below="@+id/tb"
         android:layout_marginTop="10dp"
         android:background="@color/colorGray"
         android:textColor="@color/colorPrimary" />
 
-
-</RelativeLayout>
+</LinearLayout>

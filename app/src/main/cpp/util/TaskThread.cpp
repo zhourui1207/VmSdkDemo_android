@@ -19,19 +19,19 @@ namespace Dream {
 
     TaskThread::TaskThread(Tasks &tasks, int idleTime,
                            std::function<void(const std::shared_ptr<TaskThread> &)> callback) :
-            _running(false), _waiting(false), _tasks(tasks), _idleTime(idleTime), _timeoutCallback(
+            _running(false), _waiting(false), _exited(false), _tasks(tasks), _idleTime(idleTime), _timeoutCallback(
             callback) {
     }
 
     TaskThread::~TaskThread() {
-        stop();
+
     }
 
     void TaskThread::start() {
-        if (!_running.load()) {
-            _running.store(true);
+        std::unique_lock<std::mutex> lock{_mutex};
+        if (!_running) {
+            _running = true;
             _threadPtr.reset(new std::thread(&TaskThread::run, this));
-            // _threadPtr->detach();
         }
     }
 
@@ -41,19 +41,39 @@ namespace Dream {
     }
 
     void TaskThread::stop() {
-        if (_running.load()) {
-            _running.store(false);
-            if (_waiting.load()) {  // 如果正在等待
-                _condition.notify_one();
-                _threadPtr->join();  // 等待线程执行完毕
-            } else {  // 如果正在执行，就不等待了，可能会死锁
-                _threadPtr->detach();
-            }
+        std::unique_lock<std::mutex> lock{_mutex};
+        if (_running) {
+            _running = false;
+            _condition.notify_all();
+//            LOGW("TaskThread", "thread stop wait\n");
+            _condition.wait(lock, [&]()-> bool { return _exited;});
+//            if (_waiting.load()) {  // 如果正在等待
+//                _threadPtr->join();  // 等待线程执行完毕
+//            } else {  // 如果正在执行，就不等待了，可能会死锁
+//                _threadPtr->detach();
+//            }
         }
+        if (_threadPtr.get() != nullptr) {
+            _threadPtr->join();
+            _threadPtr.reset();
+        }
+
+//        LOGW("TaskThread", "thread stop success\n");
+    }
+
+    bool TaskThread::isWaiting() {
+        std::unique_lock<std::mutex> lock{_mutex};
+        return _waiting;
+    }
+
+    void TaskThread::weakUp() {
+        // 这里必须加上锁，不然会出现唤醒操作在线程等待前执行，那么那样线程会一直等待着，而线程池一直以为线程已经醒了，就无法给线程发放任务了
+        std::unique_lock<std::mutex> lock{_mutex};
+        _waiting = false;
+        _condition.notify_all();
     }
 
     void TaskThread::run() {
-        std::unique_lock<std::mutex> lock{_mutex};
 #ifdef _ANDROID
         // 绑定android线程
         JNIEnv *pJniEnv = nullptr;
@@ -69,47 +89,66 @@ namespace Dream {
             __android_log_print(ANDROID_LOG_ERROR, "TaskThread", "pJavaVm 为空！");
         }
 #endif
-        while (_running.load()) {
+        while (_running) {
+//            LOGW("TaskThread", "lock start\n");
+            std::unique_lock<std::mutex> lock{_mutex};
+//            LOGW("TaskThread", "lock end\n");
             Task task;  // 这个必须要写在里面，因为如果写在外面的话，task()执行完后，task所占用的内存不会被释放
             // 如果是没有任务，则进入等待
-            while (!_tasks.removeTask(task)) {
-                _waiting.store(true);
+            while (_running && !_tasks.removeTask(task)) {
+                _waiting = true;
                 if (_idleTime < 0) {  // 空闲时不会销毁
+//                    LOGE("TaskThread", "wait start\n");
                     _condition.wait(lock/*, [&]()->bool { return !_tasks.isEmpty(); }*/);
+//                    LOGE("TaskThread", "wait end\n");
                 } else {
                     if (_condition.wait_for(lock, std::chrono::seconds(_idleTime))
                         == std::cv_status::timeout) {
-                        _waiting.store(false);
+                        _waiting = false;
                         _timeoutCallback(shared_from_this());
 #ifdef _ANDROID
                         dtachAndroidThread(pJniEnv);
 #endif
-                        LOGW("TaskThread", "thread stop\n");
+                        _running = false;
+                        if (_threadPtr.get() != nullptr) {
+                            _threadPtr->detach();
+                            _threadPtr.reset();
+                        }
+//                        LOGW("TaskThread", "thread stop\n");
                         return;
                     }
                 }
 
                 // 如果线程停止，则该线程退出
-                if (!_running.load()) {
+                if (!_running) {
 #ifdef _ANDROID
                     dtachAndroidThread(pJniEnv);
 #endif
-                    LOGW("TaskThread", "thread stop\n");
+                    _exited = true;
+                    _condition.notify_all();
+//                    LOGW("TaskThread", "thread stop, skip task\n");
                     return;
                 }
             }
             // 出来只有一种可能，1.获取到task
 
             // -------------执行任务-------------------
-            if (task) {
+            if (_running && task) {
+//                LOGW("TaskThread", "task start\n");
+                lock.unlock();
                 task();
+//                LOGW("TaskThread", "task end\n");
             }
             // -------------执行结束-------------------
         }
 #ifdef _ANDROID
         dtachAndroidThread(pJniEnv);
 #endif
-        LOGW("TaskThread", "thread stop\n");
+
+        std::unique_lock<std::mutex> lock{_mutex};
+        _exited = true;
+        _condition.notify_all();
+        LOGW("TaskThread", "thread exited\n");
     }
 
     void TaskThread::dtachAndroidThread(void *point) {

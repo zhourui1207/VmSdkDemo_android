@@ -1,6 +1,7 @@
 #include <android/log.h>
 #include <atomic>
 #include <jni.h>
+#include <mutex>
 
 #include "plateform/VmNet.h"
 #include "plateform/ErrorCode.h"
@@ -23,6 +24,15 @@ const char *METHOD_SIG_ON_STREAM_CONNECT_STATUS = "(IZLjava/lang/Object;)V";
 const char *METHOD_NAME_ON_STREAM = "onStream";
 const char *METHOD_SIG_ON_STREAM = "(III[BIIIZLjava/lang/Object;)V";
 
+const char *METHOD_NAME_ON_STREAM_CONNECT_STATUS_V2 = "onStreamConnectStatusV2";
+const char *METHOD_SIG_ON_STREAM_CONNECT_STATUS_V2 = "(ZLjava/lang/Object;)V";
+
+const char *METHOD_NAME_ON_STREAM_V2 = "onStreamV2";
+const char *METHOD_SIG_ON_STREAM_V2 = "([BILjava/lang/Object;)V";
+
+const char *METHOD_NAME_ON_STREAM_V3 = "onStreamV3";
+const char *METHOD_SIG_ON_STREAM_V3 = "(Ljava/lang/String;I[BILjava/lang/Object;)V";
+
 const char *METHOD_NAME_ON_REAL_ALARM = "onRealAlarm";
 const char *METHOD_SIG_ON_REAL_ALARM = "(Ljava/lang/String;IIII)V";
 
@@ -41,16 +51,24 @@ const char *METHOD_SIG_TALKADDRESSHOLDER_INIT = "(ILjava/lang/String;I)V";
 const char *METHOD_NAME_STREAMIDHOLDER_SET = "setStreamId";
 const char *METHOD_SIG_STREAMIDHOLDER_SET = "(I)V";
 
+const char *METHOD_NAME_RTPINFOHOLDER_INIT = "init";
+const char *METHOD_SIG_RTPINFOHOLDER_INIT = "(IIIIZ)V";
+
+
 enum VMNET_INIT_STATUS {
     NO_INIT = 0, INITING = 1, INITED = 2, UNINITING = 3
 };
 
 std::atomic<VMNET_INIT_STATUS> g_init(NO_INIT);  // 使用原子变量，使多线程安全
+std::mutex g_mutex;
 JavaVM *g_pJavaVM = nullptr;
 jclass g_vmNet = nullptr;
 jmethodID g_onServerConnectStatus = nullptr;
 jmethodID g_onStreamConnectStatus = nullptr;
 jmethodID g_onStream = nullptr;
+jmethodID g_onStreamConnectStatusV2 = nullptr;
+jmethodID g_onStreamV2 = nullptr;
+jmethodID g_onStreamV3 = nullptr;
 jmethodID g_onRealAlarm = nullptr;
 
 
@@ -124,6 +142,86 @@ void onStream(unsigned uStreamId, unsigned uStreamType,
     }
 }
 
+void onStreamConnectStatusV2(bool bIsConnected, void *pUser) {
+//  LOGE("开始调用onStreamConnectStatus函数");
+    if (g_pJavaVM && g_onStreamConnectStatusV2) {
+        JNIEnv *jniEnv = nullptr;
+        if (g_pJavaVM->GetEnv(reinterpret_cast<void **>(&jniEnv), JNI_VERSION_1_6) !=
+            JNI_OK) {  // 两种方法都可以
+            LOGE("onStreamConnectStatus 获取jniEnv失败！\n");
+            return;
+        }
+
+//    LOGE("onStream onStreamConnectStatus！\n");
+        if (jniEnv) {
+            try {
+                jniEnv->CallStaticVoidMethod(g_vmNet, g_onStreamConnectStatusV2, bIsConnected,
+                                             static_cast<jobject>(pUser));
+            } catch (...) {
+
+            }
+        }
+    }
+}
+
+// 码流回调
+void onStreamV2(const char *pStreamData, unsigned nStreamLen, void *pUser) {
+//  LOGE("开始调用onStream函数");
+    if (g_pJavaVM && g_onStreamV2) {
+
+        JNIEnv *jniEnv = nullptr;
+        if (g_pJavaVM->GetEnv(reinterpret_cast<void **>(&jniEnv), JNI_VERSION_1_6) != JNI_OK) {
+            LOGE("onStream 获取jniEnv失败！\n");
+            return;
+        }
+        // 由于java中的char使用unicode编码，为16位双字节，所以应该将c++中的char转变成byte给java层使用
+        jbyteArray buffer = jniEnv->NewByteArray(nStreamLen);
+        jniEnv->SetByteArrayRegion(buffer, 0, nStreamLen, (jbyte *) pStreamData);
+
+//    LOGE("onStream onStream start！\n");
+        try {
+            jniEnv->CallStaticVoidMethod(g_vmNet, g_onStreamV2, buffer, nStreamLen,
+                                         static_cast<jobject>(pUser));
+        } catch (...) {
+
+        }
+//    LOGE("onStream onStream end！\n");
+
+        jniEnv->DeleteLocalRef(buffer);
+    }
+}
+
+// 码流回调
+void onStreamV3(const char *sRemoteAddr, unsigned short usRemotePort, const char *pStreamData,
+                unsigned nStreamLen, void *pUser) {
+//  LOGE("开始调用onStream函数");
+    if (g_pJavaVM && g_onStreamV3) {
+
+        JNIEnv *jniEnv = nullptr;
+        if (g_pJavaVM->GetEnv(reinterpret_cast<void **>(&jniEnv), JNI_VERSION_1_6) != JNI_OK) {
+            LOGE("onStream 获取jniEnv失败！\n");
+            return;
+        }
+        // 由于java中的char使用unicode编码，为16位双字节，所以应该将c++中的char转变成byte给java层使用
+        jbyteArray buffer = jniEnv->NewByteArray(nStreamLen);
+        jniEnv->SetByteArrayRegion(buffer, 0, nStreamLen, (jbyte *) pStreamData);
+
+//    LOGE("onStream onStream start！\n");
+        jstring remoteAddr = jniEnv->NewStringUTF(sRemoteAddr);
+        int remotePort = usRemotePort;
+        try {
+            jniEnv->CallStaticVoidMethod(g_vmNet, g_onStreamV3, remoteAddr, remotePort, buffer,
+                                         nStreamLen, static_cast<jobject>(pUser));
+        } catch (...) {
+
+        }
+//    LOGE("onStream onStream end！\n");
+
+        jniEnv->DeleteLocalRef(remoteAddr);
+        jniEnv->DeleteLocalRef(buffer);
+    }
+}
+
 void onRealAlarm(const char *sFdId, int nChannel, unsigned nAlarmType, unsigned nParam1,
                  unsigned nParam2) {
     if (g_pJavaVM && g_onRealAlarm) {
@@ -149,13 +247,46 @@ void onRealAlarm(const char *sFdId, int nChannel, unsigned nAlarmType, unsigned 
 extern "C" {
 
 jboolean Java_com_joyware_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
-                                        jint maxThreadCount) {
+                                           jint maxThreadCount) {
+    LOGI("Java_com_joyware_vmsdk_VmNet_Init(%d)", maxThreadCount);
     // 如果已经被初始化，那么应该先执行unInit释放资源后再重新init
     if (g_init.load() == INITED) {
         return false;
     }
 
-    LOGI("Java_com_joyware_vmsdk_VmNet_Init(%d)", maxThreadCount);
+//    for (int i =0 ;i < 500; i++)
+//    {
+//        Command command;
+//
+//        Heartbeat * hb = command.MutableExtension(Heartbeat::cmd);
+//
+//        std::string taskId = "会话uuid";
+//        hb->set_taskid(taskId);
+//
+//        hb->set_tasktype(Heartbeat_TaskType_REALPLAY);
+//
+//        //Heartbeat hb;
+//        //command.SetExtension(Heartbeat.cmd, hb);
+//
+//
+//        std::string srcId = "用户uuid";
+//        int version = 0;
+//        command.set_srcid(srcId);
+//        command.set_version(version);
+//        command.set_type(Command::HEARTBEAT);
+//
+//        std::string s = command.SerializeAsString();
+//
+//
+//        Command oc;
+//
+//        oc.ParseFromString(s);
+//        Heartbeat hbo = oc.GetExtension(Heartbeat::cmd);
+//
+//        LOGE("i = %d, version=[%d], srcid=[%s], type=[%d], taskid=[%s], tasktype=[%d]\n", i, oc.version(), oc.srcid().c_str(), oc.type(), hbo.taskid().c_str(), hbo.tasktype());
+//
+//    }
+
     g_init.store(INITING);
 
     // 保存java虚拟机对象
@@ -193,11 +324,39 @@ jboolean Java_com_joyware_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
         return false;
     }
 
+    g_onStreamConnectStatusV2 = env->GetStaticMethodID(g_vmNet,
+                                                       METHOD_NAME_ON_STREAM_CONNECT_STATUS_V2,
+                                                       METHOD_SIG_ON_STREAM_CONNECT_STATUS_V2);
+    if (g_onStreamConnectStatusV2 == nullptr) {
+        env->DeleteGlobalRef(g_vmNet);
+        LOGE("找不到[%s]方法!", METHOD_NAME_ON_STREAM_CONNECT_STATUS_V2);
+        g_init.store(NO_INIT);
+        return false;
+    }
+
     // 获取码流回调函数
     g_onStream = env->GetStaticMethodID(g_vmNet, METHOD_NAME_ON_STREAM, METHOD_SIG_ON_STREAM);
     if (g_onStream == nullptr) {
         env->DeleteGlobalRef(g_vmNet);
         LOGE("找不到[%s]方法!", METHOD_NAME_ON_STREAM);
+        g_init.store(NO_INIT);
+        return false;
+    }
+
+    g_onStreamV2 = env->GetStaticMethodID(g_vmNet, METHOD_NAME_ON_STREAM_V2,
+                                          METHOD_SIG_ON_STREAM_V2);
+    if (g_onStreamV2 == nullptr) {
+        env->DeleteGlobalRef(g_vmNet);
+        LOGE("找不到[%s]方法!", METHOD_NAME_ON_STREAM_V2);
+        g_init.store(NO_INIT);
+        return false;
+    }
+
+    g_onStreamV3 = env->GetStaticMethodID(g_vmNet, METHOD_NAME_ON_STREAM_V3,
+                                          METHOD_SIG_ON_STREAM_V3);
+    if (g_onStreamV3 == nullptr) {
+        env->DeleteGlobalRef(g_vmNet);
+        LOGE("找不到[%s]方法!", METHOD_NAME_ON_STREAM_V3);
         g_init.store(NO_INIT);
         return false;
     }
@@ -222,6 +381,7 @@ jboolean Java_com_joyware_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
 }
 
 void Java_com_joyware_vmsdk_VmNet_UnInit(JNIEnv *env, jobject) {
+    LOGI("Java_com_joyware_vmsdk_VmNet_UnInit()\n");
     if (g_init.load() == INITED && g_pJavaVM) {
         LOGI("Java_com_joyware_vmsdk_VmNet_UnInit() start\n");
 
@@ -239,16 +399,18 @@ void Java_com_joyware_vmsdk_VmNet_UnInit(JNIEnv *env, jobject) {
 }
 
 jint Java_com_joyware_vmsdk_VmNet_Connect(JNIEnv *env, jobject, jstring serverAddr,
-                                       jint serverPort) {
+                                          jint serverPort) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
 
-    const char *sServerAddr = nullptr;
-    sServerAddr = env->GetStringUTFChars(serverAddr, 0);
+    const char *sServerAddr = env->GetStringUTFChars(serverAddr, 0);
     LOGI("Java_com_joyware_vmsdk_VmNet_Connect(%s, %d)", sServerAddr, serverPort);
 
-    return VmNet_Connect(sServerAddr, serverPort, onServerConnectStatus);
+    int ret = VmNet_Connect(sServerAddr, serverPort, onServerConnectStatus);
+
+    env->ReleaseStringUTFChars(serverAddr, sServerAddr);
+    return ret;
 }
 
 void Java_com_joyware_vmsdk_VmNet_Disconnect(JNIEnv *env, jobject) {
@@ -261,18 +423,21 @@ void Java_com_joyware_vmsdk_VmNet_Disconnect(JNIEnv *env, jobject) {
 }
 
 jint Java_com_joyware_vmsdk_VmNet_Login(JNIEnv *env, jobject, jstring loginName,
-                                     jstring loginPwd) {
+                                        jstring loginPwd) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
 
-    const char *sLoginName = nullptr;
-    sLoginName = env->GetStringUTFChars(loginName, 0);
-    const char *sLoginPwd = nullptr;
-    sLoginPwd = env->GetStringUTFChars(loginPwd, 0);
+    const char *sLoginName = env->GetStringUTFChars(loginName, 0);
+    const char *sLoginPwd = env->GetStringUTFChars(loginPwd, 0);
     LOGI("Java_com_joyware_vmsdk_VmNet_Login(%s, ******)", sLoginName);
 
-    return VmNet_Login(sLoginName, sLoginPwd);
+    int ret = VmNet_Login(sLoginName, sLoginPwd);
+
+    env->ReleaseStringUTFChars(loginName, sLoginName);
+    env->ReleaseStringUTFChars(loginPwd, sLoginPwd);
+
+    return ret;
 }
 
 void Java_com_joyware_vmsdk_VmNet_Logout(JNIEnv *env, jobject) {
@@ -285,7 +450,7 @@ void Java_com_joyware_vmsdk_VmNet_Logout(JNIEnv *env, jobject) {
 }
 
 jint Java_com_joyware_vmsdk_VmNet_GetDepTrees(JNIEnv *env, jobject, jint pageNo, jint pageSize,
-                                           jobject depTreesHolder) {
+                                              jobject depTreesHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
@@ -329,7 +494,7 @@ jint Java_com_joyware_vmsdk_VmNet_GetDepTrees(JNIEnv *env, jobject, jint pageNo,
 }
 
 jint Java_com_joyware_vmsdk_VmNet_GetChannels(JNIEnv *env, jobject, jint pageNo, jint pageSize,
-                                           jint depId, jobject channelsHolder) {
+                                              jint depId, jobject channelsHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
@@ -375,9 +540,9 @@ jint Java_com_joyware_vmsdk_VmNet_GetChannels(JNIEnv *env, jobject, jint pageNo,
 }
 
 jint Java_com_joyware_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, jint pageSize,
-                                          jstring fdId, jint channelId, jint beginTime,
-                                          jint endTime, jboolean isCenter,
-                                          jobject recordsHolder) {
+                                             jstring fdId, jint channelId, jint beginTime,
+                                             jint endTime, jboolean isCenter,
+                                             jobject recordsHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
@@ -386,8 +551,7 @@ jint Java_com_joyware_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, 
         return ERR_CODE_PARAM_ILLEGAL;
     }
 
-    const char *sFdId = nullptr;
-    sFdId = env->GetStringUTFChars(fdId, 0);
+    const char *sFdId = env->GetStringUTFChars(fdId, 0);
 
     LOGI("Java_com_joyware_vmsdk_VmNet_GetRecords(%d, %d, %s, %d, %d, %d, %d)", pageNo, pageSize,
          sFdId, channelId, beginTime, endTime, isCenter);
@@ -396,6 +560,8 @@ jint Java_com_joyware_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, 
     unsigned uSize = 0;
     int ret = VmNet_GetRecords(pageNo, pageSize, sFdId, channelId, beginTime, endTime, isCenter,
                                records, uSize);
+
+    env->ReleaseStringUTFChars(fdId, sFdId);
 
     if (ret == ERR_CODE_OK && uSize > 0) {
         jclass recordsCls = env->GetObjectClass(recordsHolder);
@@ -427,9 +593,9 @@ jint Java_com_joyware_vmsdk_VmNet_GetRecords(JNIEnv *env, jobject, jint pageNo, 
 }
 
 jint Java_com_joyware_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, jint pageSize,
-                                         jstring fdId, jint channelId, jint channelBigType,
-                                         jstring beginTime, jstring endTime,
-                                         jobject alarmsHolder) {
+                                            jstring fdId, jint channelId, jint channelBigType,
+                                            jstring beginTime, jstring endTime,
+                                            jobject alarmsHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
@@ -438,12 +604,9 @@ jint Java_com_joyware_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, j
         return ERR_CODE_PARAM_ILLEGAL;
     }
 
-    const char *sFdId = nullptr;
-    sFdId = env->GetStringUTFChars(fdId, 0);
-    const char *sBeginTime = nullptr;
-    sBeginTime = env->GetStringUTFChars(beginTime, 0);
-    const char *sEndTime = nullptr;
-    sEndTime = env->GetStringUTFChars(endTime, 0);
+    const char *sFdId = env->GetStringUTFChars(fdId, 0);
+    const char *sBeginTime = env->GetStringUTFChars(beginTime, 0);
+    const char *sEndTime = env->GetStringUTFChars(endTime, 0);
 
     LOGI("Java_com_joyware_vmsdk_VmNet_GetAlarms(%d, %d, %s, %d, %d, %s, %s)", pageNo, pageSize,
          sFdId, channelId, channelBigType, sBeginTime, sEndTime);
@@ -452,6 +615,10 @@ jint Java_com_joyware_vmsdk_VmNet_GetAlarms(JNIEnv *env, jobject, jint pageNo, j
     unsigned uSize = 0;
     int ret = VmNet_GetAlarms(pageNo, pageSize, sFdId, channelId, channelBigType, sBeginTime,
                               sEndTime, alarms, uSize);
+
+    env->ReleaseStringUTFChars(fdId, sFdId);
+    env->ReleaseStringUTFChars(beginTime, sBeginTime);
+    env->ReleaseStringUTFChars(endTime, sEndTime);
 
     if (ret == ERR_CODE_OK && uSize > 0) {
         jclass alarmsCls = env->GetObjectClass(alarmsHolder);
@@ -514,13 +681,13 @@ void Java_com_joyware_vmsdk_VmNet_StopReceiveRealAlarm(JNIEnv *env, jobject) {
 }
 
 jint Java_com_joyware_vmsdk_VmNet_OpenRealplayStream(JNIEnv *env, jobject, jstring fdId,
-                                                  jint channelId, jboolean isSub,
-                                                  jobject playAddressHolder) {
+                                                     jint channelId, jboolean isSub,
+                                                     jobject playAddressHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
-    const char *sFdId = nullptr;
-    sFdId = env->GetStringUTFChars(fdId, 0);
+
+    const char *sFdId = env->GetStringUTFChars(fdId, 0);
     unsigned uMonitorId, uVideoPort, uAudioPort = 0;
     char sVideoAddr[100];
     char sAudioAddr[100];
@@ -528,6 +695,8 @@ jint Java_com_joyware_vmsdk_VmNet_OpenRealplayStream(JNIEnv *env, jobject, jstri
     LOGI("Java_com_joyware_vmsdk_VmNet_OpenRealplayStream(%s, %d, %d)", sFdId, channelId, isSub);
     int ret = VmNet_OpenRealplayStream(sFdId, channelId, isSub, uMonitorId, sVideoAddr, uVideoPort,
                                        sAudioAddr, uAudioPort);
+
+    env->ReleaseStringUTFChars(fdId, sFdId);
 
     if (ret == ERR_CODE_OK && playAddressHolder) {
         jclass playAddressCls = env->GetObjectClass(playAddressHolder);
@@ -562,59 +731,105 @@ void Java_com_joyware_vmsdk_VmNet_CloseRealplayStream(JNIEnv *env, jobject, jint
     VmNet_CloseRealplayStream(monitorId);
 }
 
-jint Java_com_joyware_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jstring fdId,
-                                         jint channelId, jobject talkAddressHolder) {
+jboolean Java_com_joyware_vmsdk_VmNet_StartTalk(JNIEnv *env, jobject, jobject callback) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
-        return ERR_CODE_SDK_UNINIT;
+        return (jboolean) false;
     }
-    const char *sFdId = nullptr;
-    sFdId = env->GetStringUTFChars(fdId, 0);
-    unsigned uTalkId, uTalkPort = 0;
-    char sTalkAddr[100];
 
-    LOGI("Java_com_joyware_vmsdk_VmNet_StartTalk(%s, %d)", sFdId, channelId);
-    int ret = 0;
-//  int ret = VmNet_StartTalk(sFdId, channelId, uTalkId, sTalkAddr, uTalkPort);
-//
-//  if (ret == ERR_CODE_OK && talkAddressHolder) {
-//    jclass talkAddressCls = env->GetObjectClass(talkAddressHolder);
-//
-//    jmethodID init = env->GetMethodID(talkAddressCls, METHOD_NAME_TALKADDRESSHOLDER_INIT,
-//                                      METHOD_SIG_TALKADDRESSHOLDER_INIT);
-//    if (init == nullptr) {
-//      LOGE("找不到[%s]方法!", METHOD_NAME_TALKADDRESSHOLDER_INIT);
-//      env->DeleteLocalRef(talkAddressCls);
-//      return ret;
-//    }
-//
-//    jstring talkAddr = env->NewStringUTF(sTalkAddr);
-//
-//    env->CallVoidMethod(talkAddressHolder, init, uTalkId, talkAddr, uTalkPort);
-//
-//    env->DeleteLocalRef(talkAddressCls);
-//    env->DeleteLocalRef(talkAddr);
-//  }
-    return ret;
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartTalk()");
+
+    // 这里一定要传递GlobalRef给码流线程，如果直接传cb的话，由于是局部变量，后面回调时会失败，记得释放时删除
+    jobject gCb = env->NewGlobalRef(callback);
+
+    bool ret = VmNet_StartTalk(onStreamV3, gCb);
+
+    if (!ret) {
+        env->DeleteGlobalRef(gCb);
+    }
+
+    return (jboolean) ret;
 }
 
-void Java_com_joyware_vmsdk_VmNet_StopTalk(JNIEnv *env, jobject, jint talkId) {
+jboolean Java_com_joyware_vmsdk_VmNet_SendTalk(JNIEnv *env, jobject, jstring remoteAddress,
+                                               jint remotePort, jbyteArray data, jint dataLen) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+
+    const char *sRemoteAddress = nullptr;
+    sRemoteAddress = env->GetStringUTFChars(remoteAddress, 0);
+    jbyte *inData = env->GetByteArrayElements(data, 0);
+
+    bool success = VmNet_SendTalk(sRemoteAddress, (unsigned short) remotePort,
+                                  (const char *) inData,
+                                  (unsigned int) dataLen);
+
+
+    env->ReleaseStringUTFChars(remoteAddress, sRemoteAddress);
+    env->ReleaseByteArrayElements(data, inData, 0);
+
+    return (jboolean) success;
+}
+
+void Java_com_joyware_vmsdk_VmNet_StopTalk(JNIEnv *env, jobject) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_joyware_vmsdk_VmNet_StopTalk(%d)", talkId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopTalk()");
 
-//  VmNet_StopTalk(talkId);
+    VmNet_StopTalk();
+}
+
+jboolean Java_com_joyware_vmsdk_VmNet_StartStreamHeartbeatServer(JNIEnv *env, jobject) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartStreamHeartbeatServer()");
+
+    return (jboolean) VmNet_StartStreamHeartbeatServer();
+}
+
+jboolean Java_com_joyware_vmsdk_VmNet_SendHeartbeat(JNIEnv *env, jobject, jstring remoteAddress,
+                                                    jint remotePort, jint heartbeatType,
+                                                    jstring monitorId, jstring srcId) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+
+    const char *sRemoteAddress = env->GetStringUTFChars(remoteAddress, 0);
+    const char *sMonitorId = env->GetStringUTFChars(monitorId, 0);
+    const char *sSrcId = env->GetStringUTFChars(srcId, 0);
+
+    bool success = VmNet_SendHeartbeat(sRemoteAddress, (unsigned short) remotePort,
+                                       (unsigned int) heartbeatType,
+                                       sMonitorId, sSrcId);
+
+    env->ReleaseStringUTFChars(remoteAddress, sRemoteAddress);
+    env->ReleaseStringUTFChars(monitorId, sMonitorId);
+    env->ReleaseStringUTFChars(srcId, sSrcId);
+
+    return (jboolean) success;
+}
+
+void Java_com_joyware_vmsdk_VmNet_StopStreamHeartbeatServer(JNIEnv *env, jobject) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return;
+    }
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamHeartbeatServer()");
+
+    VmNet_StopStreamHeartbeatServer();
 }
 
 jint Java_com_joyware_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstring fdId,
-                                                  jint channelId, jboolean isCenter,
-                                                  jint beginTime, jint endTime,
-                                                  jobject playAddressHolder) {
+                                                     jint channelId, jboolean isCenter,
+                                                     jint beginTime, jint endTime,
+                                                     jobject playAddressHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
-    const char *sFdId = nullptr;
-    sFdId = env->GetStringUTFChars(fdId, 0);
+
+    const char *sFdId = env->GetStringUTFChars(fdId, 0);
     unsigned uMonitorId, uVideoPort, uAudioPort = 0;
     char sVideoAddr[100];
     char sAudioAddr[100];
@@ -623,6 +838,8 @@ jint Java_com_joyware_vmsdk_VmNet_OpenPlaybackStream(JNIEnv *env, jobject, jstri
          isCenter, beginTime, endTime);
     int ret = VmNet_OpenPlaybackStream(sFdId, channelId, isCenter, beginTime, endTime, uMonitorId,
                                        sVideoAddr, uVideoPort, sAudioAddr, uAudioPort);
+
+    env->ReleaseStringUTFChars(fdId, sFdId);
 
     if (ret == ERR_CODE_OK && playAddressHolder) {
         jclass playAddressCls = env->GetObjectClass(playAddressHolder);
@@ -657,38 +874,45 @@ void Java_com_joyware_vmsdk_VmNet_ClosePlaybackStream(JNIEnv *env, jobject, jint
     VmNet_ClosePlaybackStream(monitorId);
 }
 
-jint Java_com_joyware_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorId, jint controlId,
-                                               jstring action, jstring param) {
+jint
+Java_com_joyware_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorId, jint controlId,
+                                             jstring action, jstring param) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
 
-    const char *sAction = nullptr;
-    sAction = env->GetStringUTFChars(action, 0);
-    const char *sParam = nullptr;
-    sParam = env->GetStringUTFChars(param, 0);
+    const char *sAction = env->GetStringUTFChars(action, 0);
+    const char *sParam = env->GetStringUTFChars(param, 0);
 
-    LOGI("Java_com_joyware_vmsdk_VmNet_ControlPlayback(%d, %d, %s, %s)", monitorId, controlId, sAction,
+    LOGI("Java_com_joyware_vmsdk_VmNet_ControlPlayback(%d, %d, %s, %s)", monitorId, controlId,
+         sAction,
          sParam);
 
-    return VmNet_ControlPlayback(monitorId, controlId, sAction, sParam);
+    int ret = VmNet_ControlPlayback(monitorId, controlId, sAction, sParam);
+
+    env->ReleaseStringUTFChars(action, sAction);
+    env->ReleaseStringUTFChars(param, sParam);
+
+    return ret;
 }
 
 jint Java_com_joyware_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address, jint port,
-                                           jobject cb, jobject streamIdHolder) {
+                                              jobject cb, jobject streamIdHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
-        return ERR_CODE_SDK_UNINIT;
+        return (jboolean) false;
     }
 
-    const char *sAddress = nullptr;
-    sAddress = env->GetStringUTFChars(address, 0);
+    const char *sAddress = env->GetStringUTFChars(address, 0);
 
     // 这里一定要传递GlobalRef给码流线程，如果直接传cb的话，由于是局部变量，后面回调时会失败，记得释放时删除
     jobject gCb = env->NewGlobalRef(cb);
 
-    LOGI("Java_com_joyware_vmsdk_VmNet_StartStream(%s, %d, %zd)", sAddress, port, gCb);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartStream(%s, %d, %zd) begin", sAddress, port, gCb);
     unsigned uStreamId = 0;
-    int ret = VmNet_StartStream(sAddress, port, onStream, onStreamConnectStatus, gCb, uStreamId);
+    int ret = VmNet_StartStream(sAddress, (unsigned int) port, onStream, onStreamConnectStatus, gCb,
+                                uStreamId);
+
+    env->ReleaseStringUTFChars(address, sAddress);
 
     if (ret == ERR_CODE_OK) {
         jclass streamIdCls = env->GetObjectClass(streamIdHolder);
@@ -698,12 +922,15 @@ jint Java_com_joyware_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring addr
         if (set == nullptr) {
             LOGE("找不到[%s]方法!", METHOD_NAME_STREAMIDHOLDER_SET);
             env->DeleteLocalRef(streamIdCls);
-            return ret;
+            return (jboolean) false;
         }
 
         env->CallVoidMethod(streamIdHolder, set, uStreamId);
         env->DeleteLocalRef(streamIdCls);
     }
+
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartStream(%s, %d, %zd) end streamId(%d)", sAddress, port,
+         gCb, uStreamId);
 
     return ret;
 }
@@ -712,24 +939,97 @@ void Java_com_joyware_vmsdk_VmNet_StopStream(JNIEnv *env, jobject, jint streamId
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_joyware_vmsdk_VmNet_StopStream(%d)", streamId);
-
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStream(%d) begin", streamId);
     VmNet_StopStream(streamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStream(%d) end", streamId);
+}
+
+jlong
+Java_com_joyware_vmsdk_VmNet_StartStreamByRtsp(JNIEnv *env, jobject, jstring rtspUrl, jobject cb) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+
+    const char *sUrl = env->GetStringUTFChars(rtspUrl, 0);
+
+    // 这里一定要传递GlobalRef给码流线程，如果直接传cb的话，由于是局部变量，后面回调时会失败，记得释放时删除
+    jobject gCb = env->NewGlobalRef(cb);
+
+    LOGI("Java_com_joyware_vmsdk_VmNet_StartStreamByRtsp(%s)", sUrl);
+    long lRtspStreamId = 0;
+    bool ret = VmNet_StartStreamByRtsp(sUrl, onStreamV2, onStreamConnectStatusV2, gCb,
+                                       lRtspStreamId);
+
+    env->ReleaseStringUTFChars(rtspUrl, sUrl);
+
+    if (!ret) {
+        return 0;
+    }
+
+    return lRtspStreamId;
+}
+
+void Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(JNIEnv *env, jobject, jlong rtspStreamId) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return;
+    }
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%lld) begin", rtspStreamId);
+    VmNet_StopStreamByRtsp(rtspStreamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%lld) end", rtspStreamId);
 }
 
 void Java_com_joyware_vmsdk_VmNet_SendControl(JNIEnv *env, jobject, jstring fdId, jint channelId,
-                                           jint controlType, jint param1, jint param2) {
+                                              jint controlType, jint param1, jint param2) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
 
-    const char *sFdId = nullptr;
-    sFdId = env->GetStringUTFChars(fdId, 0);
+    const char *sFdId = env->GetStringUTFChars(fdId, 0);
 
     LOGI("Java_com_joyware_vmsdk_VmNet_SendControl(%s, %d, %d, %d, %d)", sFdId, channelId,
          controlType, param1, param2);
 
     VmNet_SendControl(sFdId, channelId, controlType, param1, param2);
+
+    env->ReleaseStringUTFChars(fdId, sFdId);
+}
+
+jboolean Java_com_joyware_vmsdk_VmNet_FilterRtpHeader(JNIEnv *env, jobject ob, jbyteArray inData,
+                                                      jint inStart, jint inLen, jbyteArray outData,
+                                                      jint outStart, jint outLen,
+                                                      jobject rtpInfoHolder) {
+    jbyte *inArray = env->GetByteArrayElements(inData, 0);
+    jbyte *outArray = env->GetByteArrayElements(outData, 0);
+
+    int playloadType = 0;
+    int seqNumber = 0;
+    int timestamp = 0;
+    bool isMark = true;
+    bool success = VmNet_FilterRtpHeader((const char *) (inArray + inStart), inLen,
+                                         (char *) (outArray + outStart), outLen, playloadType,
+                                         seqNumber, timestamp, isMark);
+
+    env->ReleaseByteArrayElements(inData, inArray, 0);
+    env->ReleaseByteArrayElements(outData, outArray, 0);
+
+    if (success && rtpInfoHolder) {
+        jclass rtpInfoCls = env->GetObjectClass(rtpInfoHolder);
+
+        jmethodID init = env->GetMethodID(rtpInfoCls, METHOD_NAME_RTPINFOHOLDER_INIT,
+                                          METHOD_SIG_RTPINFOHOLDER_INIT);
+        if (init == nullptr) {
+            LOGE("找不到[%s]方法!", METHOD_NAME_RTPINFOHOLDER_INIT);
+            env->DeleteLocalRef(rtpInfoCls);
+            return (jboolean) false;
+        }
+
+        env->CallVoidMethod(rtpInfoHolder, init, playloadType, outLen, seqNumber, timestamp,
+                            isMark);
+
+        env->DeleteLocalRef(rtpInfoCls);
+    }
+
+    return (jboolean) success;
 }
 
 } // extern "C"

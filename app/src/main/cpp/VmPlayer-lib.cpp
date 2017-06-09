@@ -114,7 +114,7 @@ jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2YUV(JNIEnv *env, jobject ob,
                                        framerate);
     if (ret) {
         if (!FrameConfigHolderInit(env, width, height, framerate, frameConfigHolder)) {
-            return false;
+
         }
         outlen = width * height * 3 / 2;
     } else {
@@ -168,9 +168,8 @@ jint Java_com_joyware_vmsdk_core_Decoder_AACEncodePCM2AAC(JNIEnv *env, jobject o
 
     int outlen = outData != nullptr ? env->GetArrayLength(outData) : 0;
 
-    bool ret = VmPlayer_AACEncodePCM2AAC(encoderHandle, (const char *) inBuf, inLen,
-                                         (char *) outBuf,
-                                         outlen);
+    bool ret = VmPlayer_AACEncodePCM2AAC((long) encoderHandle, (const char *) inBuf, inLen,
+                                         (char *) outBuf, outlen);
 
     if (!ret) {
         outlen = -1;
@@ -185,12 +184,10 @@ jint Java_com_joyware_vmsdk_core_Decoder_AACEncodePCM2AAC(JNIEnv *env, jobject o
     return outlen;
 }
 
-jlong Java_com_joyware_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
-                                                     jobject surface) {
+jlong Java_com_joyware_vmsdk_core_GLHelper_nativeInit(JNIEnv *env, jobject ob) {
     long renderHandle = 0;
-    LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderInit()");
-    ANativeWindow *pNativeWindow = ANativeWindow_fromSurface(env, surface);
-    bool ret = VmPlayer_RenderInit((void *) pNativeWindow, renderHandle);
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeInit()");
+    bool ret = VmPlayer_RenderInit(renderHandle);
 //  ANativeWindow_release(pNativeWindow);
     if (!ret) {
         renderHandle = 0;
@@ -198,71 +195,96 @@ jlong Java_com_joyware_vmsdk_core_Decoder_RenderInit(JNIEnv *env, jobject ob,
     return renderHandle;
 }
 
-void Java_com_joyware_vmsdk_core_Decoder_RenderUninit(JNIEnv *env, jobject ob,
+void Java_com_joyware_vmsdk_core_GLHelper_nativeUninit(JNIEnv *env, jobject ob,
                                                        jlong renderHandle) {
-    LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderUninit(%lld)", renderHandle);
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeUninit(%lld)", renderHandle);
     VmPlayer_RenderUninit((long) renderHandle);
 }
 
-void Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceCreated(JNIEnv *env, jobject ob,
-                                                      jlong renderHandle) {
-    LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceCreated(%lld)", renderHandle);
+jlong
+Java_com_joyware_vmsdk_core_GLHelper_nativeStart(JNIEnv *env, jobject ob, jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeStart(%lld)", renderHandle);
+    return VmPlayer_RenderStart((long) renderHandle);
+}
+
+void Java_com_joyware_vmsdk_core_GLHelper_nativeFinish(JNIEnv *env, jobject ob,
+                                                       jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeFinish(%lld)", renderHandle);
+    VmPlayer_RenderFinish((long) renderHandle);
+}
+
+jlong Java_com_joyware_vmsdk_core_GLHelper_nativeCreateSurface(JNIEnv *env, jobject ob,
+                                                               jlong renderHandle,
+                                                               jobject surface) {
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeCreateSurface(%lld)", renderHandle);
+    ANativeWindow *pNativeWindow = ANativeWindow_fromSurface(env, surface);
+    return VmPlayer_RenderCreateSurface((long) renderHandle, (void *) pNativeWindow);
+}
+
+void Java_com_joyware_vmsdk_core_GLHelper_nativeDestroySurface(JNIEnv *env, jobject ob,
+                                                               jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeDestroySurface(%lld)", renderHandle);
+    VmPlayer_RenderDestroySurface((long) renderHandle);
+}
+
+void Java_com_joyware_vmsdk_core_GLHelper_nativeSurfaceCreated(JNIEnv *env, jobject ob,
+                                                               jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeSurfaceCreated(%lld)", renderHandle);
     VmPlayer_RenderSurfaceCreated((long) renderHandle);
 }
 
-void Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceDestroyed(JNIEnv *env, jobject ob,
-                                                      jlong renderHandle) {
-    LOGW("Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceDestroyed(%lld)", renderHandle);
+void Java_com_joyware_vmsdk_core_GLHelper_nativeSurfaceDestroyed(JNIEnv *env, jobject ob,
+                                                                 jlong renderHandle) {
+    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeSurfaceDestroyed(%lld)", renderHandle);
     VmPlayer_RenderSurfaceDestroyed((long) renderHandle);
 }
 
 void
-Java_com_joyware_vmsdk_core_Decoder_RenderSurfaceChanged(JNIEnv *env, jobject ob, jlong renderHandle,
-                                                     jint width, jint height) {
+Java_com_joyware_vmsdk_core_GLHelper_nativeSurfaceChanged(JNIEnv *env, jobject ob,
+                                                          jlong renderHandle,
+                                                          jint width, jint height) {
+//    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeSurfaceChanged(%lld, %d, %d)", renderHandle,
+//         width, height);
     VmPlayer_RenderSurfaceChanged((long) renderHandle, width, height);
 }
 
-void Java_com_joyware_vmsdk_core_Decoder_RenderScaleTo(JNIEnv *env, jobject ob, jlong renderHandle,
-                                                       jboolean enable, jint centerX, jint centerY,
-                                                       jfloat widthScale, jfloat heightScale) {
-    VmPlayer_RenderScaleTo((long) renderHandle, enable, centerX, centerY, widthScale, heightScale);
+void Java_com_joyware_vmsdk_core_GLHelper_nativeScaleTo(JNIEnv *env, jobject ob, jlong renderHandle,
+                                                        jboolean enable, jint left, jint top,
+                                                        jint width, jint height) {
+//    LOGW("Java_com_joyware_vmsdk_core_GLHelper_nativeScaleTo(%lld)", renderHandle);
+    VmPlayer_RenderScaleTo((long) renderHandle, enable, left, top, width, height);
 }
 
-jint Java_com_joyware_vmsdk_core_Decoder_DrawYUV(JNIEnv *env, jobject ob, jlong renderHandle,
-                                                 jbyteArray yData, jint yStart, jint yLen,
-                                                 jbyteArray uData, jint uStart, jint uLen,
-                                                 jbyteArray vData, jint vStart, jint vLen,
-                                                 jint width, jint height) {
+jint Java_com_joyware_vmsdk_core_GLHelper_nativeDrawYUV(JNIEnv *env, jobject ob, jlong renderHandle,
+                                                        jbyteArray yData, jint yStart, jint yLen,
+                                                        jbyteArray uData, jint uStart, jint uLen,
+                                                        jbyteArray vData, jint vStart, jint vLen,
+                                                        jint width, jint height) {
     //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
 
     jbyte *yBuf = env->GetByteArrayElements(yData, 0);
     jbyte *uBuf = env->GetByteArrayElements(uData, 0);
     jbyte *vBuf = env->GetByteArrayElements(vData, 0);
 
-    int outlen = -1;
-    bool ret = VmPlayer_RenderDrawYUV((long) renderHandle, (const char *) (yBuf + yStart), yLen,
-                                      (const char *) (uBuf + uStart), uLen,
-                                      (const char *) (vBuf + vStart), vLen, width, height);
-    if (ret) {
-        outlen = 0;
-    } else {
-        outlen = -1;
-    }
+    int ret = VmPlayer_RenderDrawYUV((long) renderHandle, (const char *) (yBuf + yStart), yLen,
+                                     (const char *) (uBuf + uStart), uLen,
+                                     (const char *) (vBuf + vStart), vLen, width, height);
 
     env->ReleaseByteArrayElements(yData, yBuf, 0);
     env->ReleaseByteArrayElements(uData, uBuf, 0);
     env->ReleaseByteArrayElements(vData, vBuf, 0);
 
-    return outlen;
+    return ret;
 }
 
-jint Java_com_joyware_vmsdk_core_Decoder_OfflineScreenRendering(JNIEnv *env, jobject ob,
-                                                                jlong renderHandle,
-                                                                jbyteArray yData, jint yLen,
-                                                                jbyteArray uData,
-                                                                jint uLen, jbyteArray vData,
-                                                                jint vLen, jint width, jint height,
-                                                                jbyteArray outData) {
+jint Java_com_joyware_vmsdk_core_GLHelper_nativeOfflineScreenRendering(JNIEnv *env, jobject ob,
+                                                                       jlong renderHandle,
+                                                                       jbyteArray yData, jint yLen,
+                                                                       jbyteArray uData,
+                                                                       jint uLen, jbyteArray vData,
+                                                                       jint vLen, jint width,
+                                                                       jint height,
+                                                                       jbyteArray outData) {
     //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
 
     jbyte *yBuf = env->GetByteArrayElements(yData, 0);
@@ -285,6 +307,51 @@ jint Java_com_joyware_vmsdk_core_Decoder_OfflineScreenRendering(JNIEnv *env, job
     env->ReleaseByteArrayElements(outData, outBuf, 0);
 
     return outlen;
+}
+
+bool Java_com_joyware_vmsdk_core_Decoder_YUVSP2YUVP(JNIEnv *env, jobject ob,
+                                                    jbyteArray inuvData, jint inuvStart,
+                                                    jint inuvTotalLen,
+                                                    jbyteArray outuvData) {
+    //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
+
+    jbyte *inArray = env->GetByteArrayElements(inuvData, 0);
+    jbyte *outArray = env->GetByteArrayElements(outuvData, 0);
+
+    int uLen = inuvTotalLen / 2;
+    for (int i = 0; i < uLen; ++i) {
+        outArray[i] = inArray[inuvStart + 2 * i];
+        outArray[i + uLen] = inArray[inuvStart + 2 * i + 1];
+    }
+
+
+    env->ReleaseByteArrayElements(inuvData, inArray, 0);
+    env->ReleaseByteArrayElements(outuvData, outArray, 0);
+
+    return true;
+}
+
+// NV21 是uv交叉存储，yyyyyyvuvuvu
+bool Java_com_joyware_vmsdk_core_YUVRenderer_YUVP2NV21(JNIEnv *env, jobject ob,
+                                                       jbyteArray inuvData, jint inuvStart,
+                                                       jint inuvTotalLen,
+                                                       jbyteArray outuvData) {
+    //LOGI("Java_com_joyware_vmsdk_VmPlayer_DecodeNalu(%d)", payloadType);
+
+    jbyte *inArray = env->GetByteArrayElements(inuvData, 0);
+    jbyte *outArray = env->GetByteArrayElements(outuvData, 0);
+
+    int uLen = inuvTotalLen / 2;
+    for (int i = 0; i < uLen; ++i) {
+        outArray[2 * i + 1] = inArray[inuvStart + i];
+        outArray[2 * i] = inArray[inuvStart + uLen + i];
+    }
+
+
+    env->ReleaseByteArrayElements(inuvData, inArray, 0);
+    env->ReleaseByteArrayElements(outuvData, outArray, 0);
+
+    return true;
 }
 
 }

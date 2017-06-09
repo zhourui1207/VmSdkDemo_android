@@ -179,23 +179,40 @@ public class VmNet {
 
     /**
      * 开始对讲
-     *
-     * @param fdId              设备序列号
-     * @param channelId         通道号
-     * @param talkAddressHolder 对讲地址对象
-     * @return
      */
-    public static int startTalk(String fdId, int channelId, TalkAddressHolder talkAddressHolder) {
-        return StartTalk(fdId, channelId, talkAddressHolder);
+    public static boolean startTalk(StreamCallbackV3 streamCallback) {
+        return StartTalk(streamCallback);
+    }
+
+    public static boolean sendTalk(String remoteAddress, int remotePort, byte[] data, int
+            dataLen) {
+        return SendTalk(remoteAddress, remotePort, data, dataLen);
     }
 
     /**
      * 停止对讲
-     *
-     * @param talkId 对讲sessionid，开始对讲时可在talkAddressHolder中获得
      */
-    public static void stopTalk(int talkId) {
-        StopTalk(talkId);
+    public static void stopTalk() {
+        StopTalk();
+    }
+
+    /**
+     * 开始对讲
+     */
+    public static boolean startStreamHeartbeatServer() {
+        return StartStreamHeartbeatServer();
+    }
+
+    public static boolean sendHeartbeat(String remoteAddress, int remotePort, int
+            heartbeatType, String monitorId, String srcId) {
+        return SendHeartbeat(remoteAddress, remotePort, heartbeatType, monitorId, srcId);
+    }
+
+    /**
+     * 停止对讲
+     */
+    public static void stopStreamHeartbeatServer() {
+        StopStreamHeartbeatServer();
     }
 
     /**
@@ -259,9 +276,17 @@ public class VmNet {
      *
      * @param streamId 码流id
      */
-    public static void stopStram(int streamId) {
-//    Log.e("VmNet", "stopStram(" + streamId + ")");
+    public static void stopStream(int streamId) {
+//    Log.e("VmNet", "stopStream(" + streamId + ")");
         StopStream(streamId);
+    }
+
+    public static long startStreamByRtsp(String url, StreamCallbackV2 streamCallbackV2) {
+        return StartStreamByRtsp(url, streamCallbackV2);
+    }
+
+    public static void stopStreamByRtsp(long rtspStreamId) {
+        StopStreamByRtsp(rtspStreamId);
     }
 
     /**
@@ -276,6 +301,11 @@ public class VmNet {
     public static void sendControl(String fdId, int channelId, int controlType, int param1,
                                    int param2) {
         SendControl(fdId, channelId, controlType, param1, param2);
+    }
+
+    public static boolean filterRtpHeader(byte[] inBuf, int inStart, int inLen, byte[]
+            outBuf, int outStart, int outLen, RtpInfoHolder rtpInfoHolder) {
+        return FilterRtpHeader(inBuf, inStart, inLen, outBuf, outStart, outLen, rtpInfoHolder);
     }
 
     // jni层函数---------------------------------------------------------------------------------------
@@ -311,13 +341,10 @@ public class VmNet {
 
     private static native void CloseRealplayStream(int monitorId);
 
-    private static native int StartTalk(String fdId, int channelId, TalkAddressHolder
-            talkAddressHolder);
-
-    private static native void StopTalk(int talkId);
-
-    private static native int OpenPlaybackStream(String fdId, int channelId, boolean isCenter, int beginTime, int
-            endTime, PlayAddressHolder playAddressHolder);
+    private static native int OpenPlaybackStream(String fdId, int channelId, boolean isCenter,
+                                                 int beginTime, int
+                                                         endTime, PlayAddressHolder
+                                                         playAddressHolder);
 
     private static native void ClosePlaybackStream(int monitorId);
 
@@ -329,8 +356,29 @@ public class VmNet {
 
     private static native void StopStream(int streamId);
 
+    private static native long StartStreamByRtsp(String rtspUrl, StreamCallbackV2 streamCallback);
+
+    private static native void StopStreamByRtsp(long stspStreamId);
+
     private static native void SendControl(String fdId, int channelId, int controlType, int param1,
                                            int param2);
+
+    private static native boolean StartTalk(StreamCallbackV3 streamCallback);
+
+    private static native boolean SendTalk(String remoteAddress, int remotePort, byte[] data, int
+            dataLen);
+
+    private static native void StopTalk();
+
+    private static native boolean StartStreamHeartbeatServer();
+
+    private static native boolean SendHeartbeat(String remoteAddress, int remotePort, int
+            heartbeatType, String monitorId, String srcId);
+
+    private static native void StopStreamHeartbeatServer();
+
+    private static native boolean FilterRtpHeader(byte[] inBuf, int inStart, int inLen, byte[]
+            outBuf, int outStart, int outLen, RtpInfoHolder rtpInfoHolder);
 
     // 回调函数分界线---------------------------------------------------------------------------------------
     private static void onServerConnectStatus(boolean isConnected) {
@@ -352,6 +400,27 @@ public class VmNet {
             StreamCallback streamCallback = (StreamCallback) object;
             streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,
                     timeStamp, seqNumber, isMark);
+        }
+    }
+
+    private static void onStreamConnectStatusV2(boolean isConnected, Object object) {
+        if (object != null) {
+            StreamCallbackV2 streamCallback = (StreamCallbackV2) object;
+            streamCallback.onStreamConnectStatus(isConnected);
+        }
+    }
+
+    private static void onStreamV2(byte[] buffer, int len, Object object) {
+        if (object != null) {
+            StreamCallbackV2 streamCallback = (StreamCallbackV2) object;
+            streamCallback.onReceiveStream(buffer, len);
+        }
+    }
+
+    private static void onStreamV3(String remoteAddr, int remotePort, byte[] buffer, int len, Object object) {
+        if (object != null) {
+            StreamCallbackV3 streamCallback = (StreamCallbackV3) object;
+            streamCallback.onReceiveStream(remoteAddr, remotePort, buffer, len);
         }
     }
 
@@ -382,9 +451,26 @@ public class VmNet {
     }
 
     /**
+     * 码流回调接口
+     */
+    public interface StreamCallbackV2 {
+        // 连接状态
+        void onStreamConnectStatus(boolean isConnected);
+
+        // 接收到码流
+        void onReceiveStream(byte[] streamData, int streamLen);
+    }
+
+    public interface StreamCallbackV3 {
+        // 接收到码流
+        void onReceiveStream(String remoteAddr, int remotePort, byte[] streamData, int streamLen);
+    }
+
+    /**
      * 实时报警回调接口
      */
     public interface RealAlarmCallback {
         void onRealAlarm(String fdId, int channelId, int alarmType, int param1, int param2);
     }
+
 }
