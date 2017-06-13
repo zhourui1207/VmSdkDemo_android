@@ -1,8 +1,11 @@
 package com.joyware.vmsdk.core;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * Created by zhourui on 16/10/28.
@@ -12,10 +15,18 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class BlockingBuffer {
     private String TAG = "BlockingBuffer";
 
+    public enum BlockingBufferType {
+        LINKED,
+        PRIORITY
+    }
+
     private int maxSize;  // 最大大小
     private int warningSize;  // 警告大小
-    private LinkedBlockingQueue linkedBlockingQueue;  // 这是有序的阻塞队列
-    private Object mutex = new Object();
+    private BlockingQueue linkedBlockingQueue;  // 这是有序的阻塞队列
+    @NonNull
+    private final Object mutex = new Object();
+
+    private BlockingBufferType mBlockingBufferType = BlockingBufferType.LINKED;
 
     public BlockingBuffer() {
         init(1000, 800);
@@ -32,10 +43,32 @@ public class BlockingBuffer {
         init(maxSize, warningSize);
     }
 
+    public BlockingBuffer(BlockingBufferType blockingBufferType) {
+        mBlockingBufferType = blockingBufferType;
+        init(1000, 800);
+    }
+
+    public BlockingBuffer(BlockingBufferType blockingBufferType, int maxSize) {
+        mBlockingBufferType = blockingBufferType;
+        maxSize = maxSize < 1 ? 1 : maxSize;
+        init(maxSize, maxSize);
+    }
+
+    public BlockingBuffer(BlockingBufferType blockingBufferType, int maxSize, int warningSize) {
+        mBlockingBufferType = blockingBufferType;
+        maxSize = maxSize < 1 ? 1 : maxSize;
+        warningSize = warningSize < 1 ? 1 : warningSize;
+        init(maxSize, warningSize);
+    }
+
     private void init(int maxSize, int warningSize) {
         this.maxSize = maxSize;
         this.warningSize = warningSize;
-        linkedBlockingQueue = new LinkedBlockingQueue(maxSize);
+        if (mBlockingBufferType == BlockingBufferType.PRIORITY) {
+            linkedBlockingQueue = new PriorityBlockingQueue(maxSize);
+        } else {
+            linkedBlockingQueue = new LinkedBlockingQueue(maxSize);
+        }
     }
 
     public int size() {

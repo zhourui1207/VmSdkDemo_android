@@ -31,8 +31,10 @@ import com.joyware.vmsdk.RecordDownloader;
 import com.joyware.vmsdk.VmNet;
 import com.joyware.vmsdk.VmPlayer;
 import com.joyware.vmsdk.core.AudioCollector;
+import com.joyware.vmsdk.core.BlockingBuffer;
 import com.joyware.vmsdk.core.CheckAudioPermission;
 import com.joyware.vmsdk.core.JWAsyncTask;
+import com.joyware.vmsdk.core.PriorityData;
 import com.joyware.vmsdk.core.RecordThread;
 import com.joyware.vmsdk.util.OpenGLESUtil;
 import com.joyware.vmsdk.util.opengles.GLFrameRenderer;
@@ -365,6 +367,27 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
         final JWAsyncTask myAsyncTask = new MyAsyncTask().execute(2);
 
+        BlockingBuffer blockingBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType.PRIORITY);
+
+        int i = 0;
+        blockingBuffer.addObject(new PriorityData("1", 5, ++i));
+        blockingBuffer.addObject(new PriorityData("2", 4, ++i));
+        blockingBuffer.addObject(new PriorityData("3", 4, ++i));
+        blockingBuffer.addObject(new PriorityData("4", 4, ++i));
+        blockingBuffer.addObject(new PriorityData("5", 4, ++i));
+        blockingBuffer.addObject(new PriorityData("6", 4, ++i));
+        blockingBuffer.addObject(new PriorityData("7", 4, ++i));
+        blockingBuffer.addObject(new PriorityData("8", 1, ++i));
+
+        for (int j = 0; j < 8; ++j) {
+            try {
+                PriorityData priorityData = (PriorityData) blockingBuffer.removeObjectBlocking();
+                Log.e(TAG, priorityData.toString());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -376,6 +399,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
                 myAsyncTask.cancel(true);
             }
         }).start();
+
+
 //        scaleGestureDetector = new ScaleGestureDetector(this, new ScaleGestureDetector
 //                .OnScaleGestureListener() {
 //
