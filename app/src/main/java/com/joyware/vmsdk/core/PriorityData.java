@@ -13,6 +13,7 @@ public class PriorityData implements Comparable<PriorityData> {
     private int mSeqNumber;
     private int mRecNumber;
 
+
     public PriorityData(String message, int seqNumber, int recNumber) {
         mMessage = message;
         mSeqNumber = seqNumber;
