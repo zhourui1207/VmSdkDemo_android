@@ -13,7 +13,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.View;
@@ -80,6 +79,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     ProgressBar mProgressBar;
 
     long rtspStreamId;
+
+    TextView mTimeTextView;
 
     @NonNull
     private final RecordDownloader mRecordDownloader = new RecordDownloader();
@@ -214,8 +215,25 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
         mScaleText = (TextView) findViewById(R.id.sample_text);
 
+        mTimeTextView = (TextView) findViewById(R.id.textView_time);
+
         mProgressTextView = (TextView) findViewById(R.id.textView_progress);
         mProgressBar = (ProgressBar) findViewById(R.id.pb);
+
+        findViewById(R.id.btn_show_timebar).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                timeBar.setVisibility(View.VISIBLE);
+            }
+        });
+
+        findViewById(R.id.btn_hide_timebar).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                timeBar.setVisibility(View.GONE);
+            }
+        });
+
 
         mRecordDownloader.setOnRecordDownloadStatusListener(new RecordDownloader
                 .OnRecordDownloadStatusListener() {
@@ -354,17 +372,17 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
             }
         });
 
-        mJWDefaultScaleFilter = new JWDefaultScaleFilter(this, new Runnable() {
-            @Override
-            public void run() {
-                player.scaleTo(true, mJWDefaultScaleFilter.getLeftPercent(),
-                        mJWDefaultScaleFilter.getTopPercent(), mJWDefaultScaleFilter
-                                .getScaleFactor(), mJWDefaultScaleFilter.getScaleFactor());
-            }
-        });
-        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
-        mJWDefaultScaleFilter.setView(surfaceView);
-
+//        mJWDefaultScaleFilter = new JWDefaultScaleFilter(this, new Runnable() {
+//            @Override
+//            public void run() {
+//                player.scaleTo(true, mJWDefaultScaleFilter.getLeftPercent(),
+//                        mJWDefaultScaleFilter.getTopPercent(), mJWDefaultScaleFilter
+//                                .getScaleFactor(), mJWDefaultScaleFilter.getScaleFactor());
+//            }
+//        });
+//        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+//        mJWDefaultScaleFilter.setView(surfaceView);
+//
         final JWAsyncTask myAsyncTask = new MyAsyncTask().execute(2);
 
         BlockingBuffer blockingBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType.PRIORITY);
@@ -462,69 +480,86 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 //            }
 //        });
 
-        surfaceView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                mJWDefaultScaleFilter.isChanged(event);
-                return true;
-//                if (event.getPointerCount() > 1) {
-//                    scaleGestureDetector.onTouchEvent(event);
-//                    mDrag = false;
-//                    if (event.getAction() == MotionEvent.ACTION_CANCEL || event.getAction() ==
-//                            MotionEvent.ACTION_UP || event.getAction() == MotionEvent
-//                            .ACTION_POINTER_UP) {
-//                        mZoom = false;
-//                    }
-//                    return true;
-//                }
-//                switch (event.getAction()) {
-//                    case MotionEvent.ACTION_DOWN:
-//                        mDrag = true;
-//                        mSrcLeft = event.getRawX();
-//                        mSrcTop = event.getRawY();
-//                        break;
-//                    case MotionEvent.ACTION_MOVE:
-//                        if (mDrag) {
-//                            float currentX = event.getRawX();
-//                            float currentY = event.getRawY();
-//                            float offsetX = (currentX - mSrcLeft) / v.getWidth();
-//                            float offsetY = (currentY - mSrcTop) / v.getHeight();
-//                            mSrcLeft = currentX;
-//                            mSrcTop = currentY;
-//                            mLeft += offsetX;
-//                            mTop += offsetY;
-//                            defaultPointFilter();
-//                            player.scaleTo(true, mLeft, mTop, mScaleFactor, mScaleFactor);
-//                            Log.e(TAG, "scaleTo");
-//                        }
-//                        break;
-//                    case MotionEvent.ACTION_CANCEL:
-//                    case MotionEvent.ACTION_UP:
-//                        mDrag = false;
-//                        mZoom = false;
-//                        break;
-//                }
+//        surfaceView.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                mJWDefaultScaleFilter.isChanged(event);
 //                return true;
-            }
-        });
+////                if (event.getPointerCount() > 1) {
+////                    scaleGestureDetector.onTouchEvent(event);
+////                    mDrag = false;
+////                    if (event.getAction() == MotionEvent.ACTION_CANCEL || event.getAction() ==
+////                            MotionEvent.ACTION_UP || event.getAction() == MotionEvent
+////                            .ACTION_POINTER_UP) {
+////                        mZoom = false;
+////                    }
+////                    return true;
+////                }
+////                switch (event.getAction()) {
+////                    case MotionEvent.ACTION_DOWN:
+////                        mDrag = true;
+////                        mSrcLeft = event.getRawX();
+////                        mSrcTop = event.getRawY();
+////                        break;
+////                    case MotionEvent.ACTION_MOVE:
+////                        if (mDrag) {
+////                            float currentX = event.getRawX();
+////                            float currentY = event.getRawY();
+////                            float offsetX = (currentX - mSrcLeft) / v.getWidth();
+////                            float offsetY = (currentY - mSrcTop) / v.getHeight();
+////                            mSrcLeft = currentX;
+////                            mSrcTop = currentY;
+////                            mLeft += offsetX;
+////                            mTop += offsetY;
+////                            defaultPointFilter();
+////                            player.scaleTo(true, mLeft, mTop, mScaleFactor, mScaleFactor);
+////                            Log.e(TAG, "scaleTo");
+////                        }
+////                        break;
+////                    case MotionEvent.ACTION_CANCEL:
+////                    case MotionEvent.ACTION_UP:
+////                        mDrag = false;
+////                        mZoom = false;
+////                        break;
+////                }
+////                return true;
+//            }
+//        });
         textView = (TextView) findViewById(R.id.tv);
         timeBar = (TimeBar) findViewById(R.id.tb);
-        timeBar.setCurrentTimeChangListener(new TimeBar.CurrentTimeChangListener() {
+        timeBar.setOnCurrentTimeChangListener(new TimeBar.OnCurrentTimeChangListener() {
             @Override
             public void onCurrentTimeChanging(long currentTime) {
-                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+                mTimeTextView.setText(TimeUtil.timeStamp2Date(currentTime, "HH:mm:ss"));
             }
 
             @Override
             public void onCurrentTimeChanged(long currentTime) {
-                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
-                player.stopPlay();
-                player.startPlayback("201610111654538071", 1, true, (int) (currentTime / 1000L),
-                        (int) (System.currentTimeMillis() / 1000L), 0, false);
-//        player.startRealplay("201610111654538071", 1, true, 0, false, false, surfaceView
-// .getHolder(), MainActivity.this);
+                mTimeTextView.setText(TimeUtil.timeStamp2Date(currentTime, "HH:mm:ss"));
             }
         });
+
+        String currentStr = TimeUtil.timeStamp2Date(System.currentTimeMillis(), null);
+        String[] sub = currentStr.split(" ");
+        String dayBegin = sub[0] + " 00:00:00";
+        long beginTime = TimeUtil.date2TimeStamp(dayBegin, null);
+        timeBar.setBeginTime(beginTime);
+        timeBar.setCurrentTime(System.currentTimeMillis());
+        timeBar.setRecordList(recordTimeCellList);
+//        timeBar.setCurrentTimeChangListener(new TimeBar.CurrentTimeChangListener() {
+//            @Override
+//            public void onCurrentTimeChanging(long currentTime) {
+//                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+//            }
+//
+//            @Override
+//            public void onCurrentTimeChanged(long currentTime) {
+//                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+//                player.stopPlay();
+//                player.startPlayback("201610111654538071", 1, true, (int) (currentTime / 1000L),
+//                        (int) (System.currentTimeMillis() / 1000L), 0, false);
+//            }
+//        });
 
 
 //    surfaceView2 = (SurfaceView) findViewById(R.id.surfaceView2);
@@ -749,15 +784,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            String currentStr = TimeUtil.timeStamp2Date(System.currentTimeMillis(), null);
-            String[] sub = currentStr.split(" ");
-            String dayBegin = sub[0] + " 00:00:00";
-            long beginTime = TimeUtil.date2TimeStamp(dayBegin, null);
-            timeBar.setBeginTime(beginTime);
-            timeBar.setCurrentTime(System.currentTimeMillis());
-            timeBar.setRecordList(recordTimeCellList);
-            timeBar.invalidate();
-            player = new VmPlayer();
+
+//            timeBar.invalidate();
+//            player = new VmPlayer();
 //      player.startRealplay("201612022115042811", 1, true, 1, false, false, surfaceView
 // .getHolder(), MainActivity.this);
             // gb122

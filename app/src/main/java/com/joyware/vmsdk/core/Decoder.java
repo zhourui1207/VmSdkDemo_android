@@ -129,6 +129,8 @@ public class Decoder {
         startPlay();
     }
 
+    private long srcRecNumber = 0;
+
     public static native long DecoderInit(int payloadType);
 
     public static native void DecoderUninit(long decoderHandle);
@@ -157,7 +159,7 @@ public class Decoder {
                              int timeStamp, int seqNumber, boolean isMark) {
         if (handleFrameThread != null) {
             return handleFrameThread.addBuffer(new StreamData(streamId, streamType, payloadType,
-                    buffer, start, len, timeStamp, seqNumber, isMark));
+                    buffer, start, len, timeStamp, seqNumber, isMark, ++srcRecNumber));
         }
         return false;
     }
@@ -236,6 +238,7 @@ public class Decoder {
             playThread.shutDown();
             playThread = null;
         }
+        srcRecNumber = 0;
     }
 
     public synchronized boolean isRecording() {
@@ -321,7 +324,8 @@ public class Decoder {
         PsStreamFilterUtil mPsStreamUtil = new PsStreamFilterUtil();
 
         int timestampOld;
-        private BlockingBuffer streamBuffer = new BlockingBuffer(BUFFER_MAX_SIZE,
+        private BlockingBuffer streamBuffer = new BlockingBuffer(BlockingBuffer
+                .BlockingBufferType.PRIORITY, BUFFER_MAX_SIZE,
                 BUFFER_WARNING_SIZE);  // 码流数据
 
         public boolean addBuffer(Object object) {
@@ -348,6 +352,7 @@ public class Decoder {
             final byte[][] remainingData = new byte[1][1];
             final int[] remainingStart = new int[1];
             final int[] remainingLen = new int[1];
+            mEsDataNumber = 0;
 
             try {
                 while (isRunning && !isInterrupted()) {
@@ -598,6 +603,7 @@ public class Decoder {
             } catch (InterruptedException e) {
 
             }
+            mEsDataNumber = 0;
             Log.w(TAG, "帧数据处理线程结束...");
         }
 
@@ -607,9 +613,10 @@ public class Decoder {
 //        @NonNull
 //        private LinkedList<EsStreamData> mAudioOrderBuffer = new LinkedList<>();
 
+        private long mEsDataNumber = 0;
+
         private void sendData(int dataType, int payloadType, int timestamp, long pts, byte[]
-                data, int begin,
-                              int len) {
+                data, int begin, int len) {
 
             // 需要发送的数据不为空时，需要发送
             if (data != null) {
@@ -631,7 +638,7 @@ public class Decoder {
                 // 解析出es元数据后，看线程是否需要使用该数据，发送数据到相应的线程
                 if (playThread != null) {
                     EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld,
-                            timestampOld, pts, data, begin, len);
+                            timestampOld, pts, data, begin, len, ++mEsDataNumber);
                     playThread.addBuffer(esStreamData);
                 }
                 if (!mNeedDecode && mOnESFrameDataCallback != null) {  //
@@ -683,7 +690,13 @@ public class Decoder {
                 byte Temp;
                 for (; i < SockRemain; ++i) {
                     Temp = SockBuf[i + SockBufUsed];
-                    NalBuf[i + NalBufUsed] = Temp;
+                    int pos = i + NalBufUsed;
+                    if (pos < NalBuf.length) {
+//                        NalBufUsed = 4;
+                        NalBuf[pos] = Temp;
+                    } else {
+                        Log.e(TAG, "buffer full, clear data! unsupport the media format!");
+                    }
 
                     trans <<= 8;
                     trans |= Temp;
@@ -766,9 +779,9 @@ public class Decoder {
         private long timestamp;
 
         // 播放数据
-        private BlockingBuffer playBuffer = new BlockingBuffer(mRealMode ? BUFFER_MAX_SIZE :
-                BUFFER_MAX_SIZE * 1000,
-                mRealMode ? BUFFER_WARNING_SIZE : BUFFER_WARNING_SIZE * 1000);
+        private BlockingBuffer playBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType
+                .PRIORITY, mRealMode ? BUFFER_MAX_SIZE * 10 : BUFFER_MAX_SIZE * 1000,
+                mRealMode ? BUFFER_WARNING_SIZE * 10 : BUFFER_WARNING_SIZE * 1000);
 
         // surface是否被创建
         private boolean surfaceCreated = false;
@@ -1255,6 +1268,7 @@ public class Decoder {
                                 }
                             } else {
                                 Log.e(TAG, "input failed mData=" + dataType);
+                                // 如果I帧或者P帧解码失败了，那么就等到下一个I帧再解码，防止花屏
                             }
 
                         } catch (Exception e) {
@@ -1626,18 +1640,19 @@ public class Decoder {
         int timestamp;
         long pts;
         byte[] data;
+        long recNumber;
 
         private EsStreamData() {
 
         }
 
         public EsStreamData(int dataType, int payloadType, int timestamp, long pts, byte[] data,
-                            int begin,
-                            int len) {
+                            int begin, int len, long recNumber) {
             this.dataType = dataType;
             this.payloadType = payloadType;
             this.timestamp = timestamp;
             this.pts = pts;
+            this.recNumber = recNumber;
             if (data != null) {
                 this.data = new byte[len];
                 System.arraycopy(data, begin, this.data, 0, this.data.length);
@@ -1669,14 +1684,11 @@ public class Decoder {
             if (this == another) {
                 return 0;
             }
-            // 由于修改时间的精度不够，在同一秒内的文件无法比较出其大小，需要用文件名来比较
-            if (pts > another.pts) {
-                return -1;
-            } else if (pts == another.pts) {
-                return 0;
-            } else {
-                return 1;
+            int compare = ((Long) pts).compareTo(another.pts);
+            if (compare == 0) {
+                compare = ((Long) recNumber).compareTo(another.recNumber);
             }
+            return compare;
         }
     }
 }

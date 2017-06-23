@@ -172,6 +172,8 @@ public class AudioTrackPlayer {
         public void run() {
 
             try {
+
+                int seqNumber = 0;
                 while (!isInterrupted()) {
                     AudioTrackPlayer audioTrackPlayer = mAudioTrackPlayerWeakReference.get();
                     if (audioTrackPlayer == null) {
@@ -186,10 +188,15 @@ public class AudioTrackPlayer {
 
                     byte[] tmpBuf = null;
                     int len = playData.getLen();
+                    int tmpSeqNumber = playData.getSeqNumber();
+                    if ((seqNumber != 0) && (tmpSeqNumber != seqNumber + 1)) {
+                        Log.w(TAG, "seqNumber " + seqNumber + "==>" + tmpSeqNumber);
+                    }
+                    seqNumber = tmpSeqNumber;
 
                     switch (mAudioType) {
                         case G711A:
-                            if ((mDecodeBuffer == null) || (mDecodeBuffer.length != 2 * len)) {
+                            if ((mDecodeBuffer == null) || (mDecodeBuffer.length < 2 * len)) {
                                 mDecodeBuffer = new byte[2 * len];
                             }
                             int decodeLen = G711.decode(playData.getBuf(), 0, playData.getLen(),
@@ -241,6 +248,10 @@ public class AudioTrackPlayer {
 
         public int getLen() {
             return mLen;
+        }
+
+        public int getSeqNumber() {
+            return mSeqNumber;
         }
 
         @Override

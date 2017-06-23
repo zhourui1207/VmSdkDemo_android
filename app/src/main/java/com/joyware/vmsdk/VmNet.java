@@ -289,6 +289,14 @@ public class VmNet {
         StopStreamByRtsp(rtspStreamId);
     }
 
+    public static boolean pauseStreamByRtsp(long rtspStreamid) {
+        return PauseStreamByRtsp(rtspStreamid);
+    }
+
+    public static boolean playStreamByRtsp(long rtspStreamId) {
+        return PlayStreamByRtsp(rtspStreamId);
+    }
+
     /**
      * 发送控制指令
      *
@@ -358,7 +366,11 @@ public class VmNet {
 
     private static native long StartStreamByRtsp(String rtspUrl, StreamCallbackV2 streamCallback);
 
-    private static native void StopStreamByRtsp(long stspStreamId);
+    private static native void StopStreamByRtsp(long rtspStreamId);
+
+    private static native boolean PauseStreamByRtsp(long rtspStreamId);
+
+    private static native boolean PlayStreamByRtsp(long rtspStreamId);
 
     private static native void SendControl(String fdId, int channelId, int controlType, int param1,
                                            int param2);

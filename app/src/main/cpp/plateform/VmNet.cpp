@@ -414,6 +414,24 @@ VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle) {
     delete pRtspTcpClient;
 }
 
+VMNET_API bool CALL_METHOD VmNet_PauseStreamByRtsp(long rtspStreamHandle) {
+    LOGD("VMSDK", "VmNet_PauseStreamByRtsp\n");
+    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
+    if (pRtspTcpClient != nullptr) {
+        return pRtspTcpClient->pause();
+    }
+    return false;
+}
+
+VMNET_API bool CALL_METHOD VmNet_PlayStreamByRtsp(long rtspStreamHandle) {
+    LOGD("VMSDK", "VmNet_PlayStreamByRtsp\n");
+    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
+    if (pRtspTcpClient != nullptr) {
+        return pRtspTcpClient->play();
+    }
+    return false;
+}
+
 VMNET_API void CALL_METHOD VmNet_SendControl(const char *sFdId, int nChannelId,
                                              unsigned uControlType, unsigned uParm1,
                                              unsigned uParm2) {

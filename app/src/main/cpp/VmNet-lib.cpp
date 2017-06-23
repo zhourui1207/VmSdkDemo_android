@@ -244,6 +244,7 @@ void onRealAlarm(const char *sFdId, int nChannel, unsigned nAlarmType, unsigned 
 
 
 // 接口函数-------------------------------------------------------------------------
+
 extern "C" {
 
 jboolean Java_com_joyware_vmsdk_VmNet_Init(JNIEnv *env, jobject /* this */,
@@ -976,6 +977,23 @@ void Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(JNIEnv *env, jobject, jlong r
     LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%lld) begin", rtspStreamId);
     VmNet_StopStreamByRtsp(rtspStreamId);
     LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%lld) end", rtspStreamId);
+}
+
+
+jboolean Java_com_joyware_vmsdk_VmNet_PauseStreamByRtsp(JNIEnv *env, jclass type, jlong rtspStreamId) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+    LOGI("Java_com_joyware_vmsdk_VmNet_PauseStreamByRtsp(%lld)", rtspStreamId);
+    return (jboolean) VmNet_PauseStreamByRtsp(rtspStreamId);
+}
+
+jboolean Java_com_joyware_vmsdk_VmNet_PlayStreamByRtsp(JNIEnv *env, jclass type, jlong rtspStreamId) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+    LOGI("Java_com_joyware_vmsdk_VmNet_PlayStreamByRtsp(%lld)", rtspStreamId);
+    return (jboolean) VmNet_PlayStreamByRtsp(rtspStreamId);
 }
 
 void Java_com_joyware_vmsdk_VmNet_SendControl(JNIEnv *env, jobject, jstring fdId, jint channelId,

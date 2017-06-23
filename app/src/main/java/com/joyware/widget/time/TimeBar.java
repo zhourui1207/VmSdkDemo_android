@@ -1,25 +1,29 @@
 package com.joyware.widget.time;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.support.annotation.NonNull;
+import android.support.annotation.Px;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-
-import com.joyware.util.DeviceUtil;
-import com.joyware.util.TimeUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.joyware.util.DeviceUtil.dip2px;
+import static com.joyware.util.TimeUtil.date2TimeStamp;
 
 /**
  * Created by zhourui on 16/12/9.
@@ -51,6 +55,7 @@ public class TimeBar extends View {
     Paint keyScalePaint = new Paint();
     Paint minScalePaint = new Paint();
     TextPaint keyScaleTextPaint = new TextPaint();
+    private boolean isInited;
     /**
      * 总毫秒数
      */
@@ -58,10 +63,12 @@ public class TimeBar extends View {
     /**
      * 起始时间
      */
-    private long beginTime = TimeUtil.date2TimeStamp("2016-12-13 00:00:00", "yyyy-MM-dd HH:mm:ss");
+    private long beginTime = date2TimeStamp("2016-12-13 00:00:00", "yyyy-MM-dd HH:mm:ss");
     /**
      * 时间刻度map
      */
+    @SuppressLint("UseSparseArrays")
+    @NonNull
     private Map<Integer, TimeScale> timeScaleMap = new HashMap<>();
     /**
      * 录像单元列表
@@ -104,7 +111,7 @@ public class TimeBar extends View {
      */
     private ScaleGestureDetector scaleGestureDetector;
     private int mode = NONE;
-    private CurrentTimeChangListener currentTimeChangListener;
+    private OnCurrentTimeChangListener onCurrentTimeChangListener;
     /**
      * 颜色配置
      */
@@ -137,6 +144,12 @@ public class TimeBar extends View {
      * 字体大小
      */
     private int textSpSize = 12;
+    /**
+     * 延时任务
+     */
+    private Runnable visibilityTask;
+
+    private boolean mEnableLayout = true;
 
     public TimeBar(Context context) {
         super(context);
@@ -153,13 +166,19 @@ public class TimeBar extends View {
         init();
     }
 
-    public void setCurrentTimeChangListener(CurrentTimeChangListener currentTimeChangListener) {
-        this.currentTimeChangListener = currentTimeChangListener;
+    public void setOnCurrentTimeChangListener(OnCurrentTimeChangListener
+                                                      onCurrentTimeChangListener) {
+        this.onCurrentTimeChangListener = onCurrentTimeChangListener;
     }
 
     // 初始化
     private void init() {
+        Log.e("init", "width=" + getWidth() + "， height=" + getHeight() + ", left=" + getLeft() +
+                ", getMeasuredWidth=" + getMeasuredWidth() + ", getMinimumHeight=" +
+                getMinimumHeight());
 //    initTimeScaleMap()
+//
+
         ScaleGestureDetector.OnScaleGestureListener scaleGestureListener = new ScaleGestureDetector
                 .OnScaleGestureListener() {
             @Override
@@ -181,6 +200,11 @@ public class TimeBar extends View {
         scaleGestureDetector = new ScaleGestureDetector(getContext(), scaleGestureListener);
     }
 
+    private void initVariable() {
+        srcWidth = getMeasuredWidth();
+        srcLeft = getLeft();
+    }
+
     /**
      * 初始化时间刻度map
      */
@@ -189,13 +213,15 @@ public class TimeBar extends View {
             return;
         }
 
+//        initVariable();
+
         TimeScale t1 = new TimeScale();
         t1.setTotalMillisecondsInOneScreen(30 * oneMinute);
         t1.setKeyScaleInterval(10 * oneMinute);
         t1.setMinScaleInterval(2 * oneMinute);
         t1.setDataFormat("HH:mm");
         t1.setDisplayTextInterval(0);
-        t1.setViewLength((int) (getWidth() * (float) (totalMilliseconds / t1
+        t1.setViewLength((int) (srcWidth * (float) (totalMilliseconds / t1
                 .getTotalMillisecondsInOneScreen()) + 0.5));
         timeScaleMap.put(1, t1);
 
@@ -205,7 +231,7 @@ public class TimeBar extends View {
         t2.setMinScaleInterval(10 * oneMinute);
         t2.setDataFormat("HH:mm");
         t2.setDisplayTextInterval(0);
-        t2.setViewLength((int) (getWidth() * (float) (totalMilliseconds / t2
+        t2.setViewLength((int) (srcWidth * (float) (totalMilliseconds / t2
                 .getTotalMillisecondsInOneScreen()) + 0.5));
         timeScaleMap.put(2, t2);
 
@@ -215,7 +241,7 @@ public class TimeBar extends View {
         t3.setMinScaleInterval(10 * oneMinute);
         t3.setDataFormat("HH:mm");
         t3.setDisplayTextInterval(1);
-        t3.setViewLength((int) (getWidth() * (float) (totalMilliseconds / t3
+        t3.setViewLength((int) (srcWidth * (float) (totalMilliseconds / t3
                 .getTotalMillisecondsInOneScreen()) + 0.5));
         timeScaleMap.put(3, t3);
 
@@ -225,7 +251,7 @@ public class TimeBar extends View {
         t4.setMinScaleInterval(0);
         t4.setDataFormat("HH:mm");
         t4.setDisplayTextInterval(1);
-        t4.setViewLength((int) (getWidth() * (float) (totalMilliseconds / t4
+        t4.setViewLength((int) (srcWidth * (float) (totalMilliseconds / t4
                 .getTotalMillisecondsInOneScreen()) + 0.5));
         timeScaleMap.put(4, t4);
 
@@ -235,7 +261,7 @@ public class TimeBar extends View {
         t5.setMinScaleInterval(0);
         t5.setDataFormat("HH:mm");
         t5.setDisplayTextInterval(3);
-        t5.setViewLength((int) (getWidth() * (float) (totalMilliseconds / t5
+        t5.setViewLength((int) (srcWidth * (float) (totalMilliseconds / t5
                 .getTotalMillisecondsInOneScreen()) + 0.5));
         timeScaleMap.put(5, t5);
 
@@ -266,7 +292,9 @@ public class TimeBar extends View {
     }
 
     public void setBeginTime(long beginTime) {
+        long offsetTime = currentTime - this.beginTime;
         this.beginTime = beginTime;
+        currentTime = beginTime + offsetTime;
     }
 
     public long getCurrentTime() {
@@ -279,8 +307,9 @@ public class TimeBar extends View {
             return;
         }
         currentTime = time;
-        int left = computeLeft(offsetTime, getWidth() - srcWidth);
-        layout(left, getTop(), left + getWidth(), getBottom());
+        if (isInited) {
+            setOffsetTime(offsetTime);
+        }
     }
 
     public void setRecordList(List<RecordTimeCell> recordList) {
@@ -299,6 +328,32 @@ public class TimeBar extends View {
             recordTimeCellList.clear();
             recordTimeCellList = null;
         }
+    }
+
+    /**
+     * 偏移时间
+     */
+    private void setOffsetTime(long offsetTime) {
+        if (offsetTime == 0 || !isInited) {
+            return;
+        }
+
+        int left = computeLeft(offsetTime, getWidth() - srcWidth);
+        myLayout(left, getTop(), left + getWidth(), getBottom());
+        invalidate();  // 调用ondraw
+    }
+
+    @Override
+    public void layout(@Px int l, @Px int t, @Px int r, @Px int b) {
+        if (mEnableLayout) {
+            super.layout(l, t, r, b);
+            mEnableLayout = false;
+        }
+    }
+
+    private void myLayout(@Px int l, @Px int t, @Px int r, @Px int b) {
+        mEnableLayout = true;
+        layout(l, t, r, b);
     }
 
     /**
@@ -331,20 +386,19 @@ public class TimeBar extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-
-//    Log.e("onDraw", "currentTime=" + currentTime);
+//        Log.e("onDraw", "currentTime=" + currentTime + " srcWidth=" + srcWidth + " srcLeft=" +
+//                srcLeft + " getWidth=" + getWidth() + " currentWidth=" + currentWidth);
 
         // 画背景
         canvas.drawColor(backgroundColor);
 
         // 画外边框
-        RectF topBorderRect = new RectF(0, 0, getWidth(), DeviceUtil.dip2px(borderDpWidth));
+        RectF topBorderRect = new RectF(0, 0, getWidth(), dip2px(borderDpWidth));
         Paint topBorderPaint = new Paint();
         topBorderPaint.setColor(borderColor);
         canvas.drawRect(topBorderRect, topBorderPaint);
 
-        RectF bottomBorderRect = new RectF(0, getHeight() - DeviceUtil.dip2px(borderDpWidth),
+        RectF bottomBorderRect = new RectF(0, getHeight() - dip2px(borderDpWidth),
                 getWidth(), getHeight());
         Paint bottomBorderPaint = new Paint();
         bottomBorderPaint.setColor(borderColor);
@@ -353,18 +407,24 @@ public class TimeBar extends View {
         // 计算每毫秒多少长度
         float lenghtOfOneMillsecond = (getWidth() - srcWidth) * 1f / totalMilliseconds;
 
+        // 获取可见范围
+        long[] showRange = timeScaleShowRange(lenghtOfOneMillsecond);
+
         // 画录像区域
         if (recordTimeCellList != null && recordTimeCellList.size() > 0) {
+//      Log.e("onDraw", "recordTimeCellList size=" + recordTimeCellList.size());
             for (RecordTimeCell cell : recordTimeCellList) {
                 long begin = cell.getBeginTime();
                 long end = cell.getEndTime();
+//        Log.e("onDraw", "begin=" + begin + ", end=" + end + ", left=" + showRange[0] + ", right="
+//            + showRange[1]);
                 if (begin >= beginTime + totalMilliseconds || end <= beginTime) {  // 录像时间超出时间轴可显示时间
-                    continue;
-                } else {
+
+                } else if ((end > showRange[0] + beginTime) && (begin < showRange[1] + beginTime)) {
                     float left = lenghtOfOneMillsecond * (begin - beginTime) + srcWidth / 2f;
                     float right = lenghtOfOneMillsecond * (end - beginTime) + srcWidth / 2f;
-                    RectF recordRect = new RectF(left, DeviceUtil.dip2px(borderDpWidth), right,
-                            getHeight() - DeviceUtil.dip2px(borderDpWidth));
+                    RectF recordRect = new RectF(left, dip2px(borderDpWidth), right,
+                            getHeight() - dip2px(borderDpWidth));
                     Paint recordPaint = new Paint();
                     recordPaint.setColor(cell.getColor());
                     canvas.drawRect(recordRect, recordPaint);
@@ -376,15 +436,12 @@ public class TimeBar extends View {
         TimeScale timeScale = timeScaleMap.get(currentScaleLevel);
 
         if (timeScale != null) {
-            // 获取可见范围
-            long[] showRange = timeScaleShowRange(lenghtOfOneMillsecond);
-
             // 关键刻度
             if (timeScale.getKeyScaleInterval() > 0) {
                 keyScalePaint.setColor(keyScaleColor);
                 keyScaleTextPaint.setColor(textColor);
                 keyScaleTextPaint.setAntiAlias(true);  // 消除锯齿
-                keyScaleTextPaint.setTextSize(DeviceUtil.dip2px(textSpSize));
+                keyScaleTextPaint.setTextSize(dip2px(textSpSize));
 
                 int displayTextInterval = timeScale.getDisplayTextInterval() > 0 ? timeScale
                         .getDisplayTextInterval() : 0;
@@ -394,7 +451,8 @@ public class TimeBar extends View {
                 if (begin < 0) {
                     begin = 0;
                 }
-                int currentDisplay = displayTextInterval > 0 ? begin % (displayTextInterval + 1) : 0;
+                int currentDisplay = displayTextInterval > 0 ? begin % (displayTextInterval + 1)
+                        : 0;
 
                 int lastIndex = (int) (totalMilliseconds / timeScale.getKeyScaleInterval());
                 for (int i = begin; i < lastIndex + 1; ++i) {
@@ -412,23 +470,25 @@ public class TimeBar extends View {
                     }
                     if (true) {  // 判断是否在可见区域内
                         // 上方刻度
-                        float left = lenghtOfOneMillsecond * tmpOffset + srcWidth / 2f - DeviceUtil.dip2px(keyScaleDpWidth) / 2f;
+                        float left = lenghtOfOneMillsecond * tmpOffset + srcWidth / 2f - dip2px
+                                (keyScaleDpWidth) / 2f;
 
-                        RectF topKeyScaleRect = new RectF(left, DeviceUtil.dip2px
-                                (borderDpWidth), left + DeviceUtil.dip2px(keyScaleDpWidth),
-                                DeviceUtil.dip2px(borderDpWidth + keyScaleDpHeight));
+                        RectF topKeyScaleRect = new RectF(left, dip2px
+                                (borderDpWidth), left + dip2px(keyScaleDpWidth),
+                                dip2px(borderDpWidth + keyScaleDpHeight));
                         canvas.drawRect(topKeyScaleRect, keyScalePaint);
 
                         // 下方刻度
-                        RectF bottomKeyScaleRect = new RectF(left, getHeight() - DeviceUtil.dip2px
-                                (borderDpWidth + keyScaleDpHeight), left + DeviceUtil.dip2px(keyScaleDpWidth),
-                                getHeight() - DeviceUtil.dip2px(borderDpWidth));
+                        RectF bottomKeyScaleRect = new RectF(left, getHeight() - dip2px
+                                (borderDpWidth + keyScaleDpHeight), left + dip2px(keyScaleDpWidth),
+                                getHeight() - dip2px(borderDpWidth));
                         canvas.drawRect(bottomKeyScaleRect, keyScalePaint);
 
                         if (currentDisplay == 0) {
                             // 文字
-                            String keytext = getTimeStringFromLong(timeScale.getDataFormat(), i * timeScale
-                                    .getKeyScaleInterval() + beginTime);
+                            String keytext = getTimeStringFromLong(timeScale.getDataFormat(), i *
+                                    timeScale
+                                            .getKeyScaleInterval() + beginTime);
                             if (i == lastIndex && keytext.equalsIgnoreCase("00:00")) {
                                 keytext = "24:00";
                             }
@@ -436,8 +496,9 @@ public class TimeBar extends View {
                             float keyTextWidth = keyScaleTextPaint.measureText(keytext);
                             float keytextX = left - keyTextWidth / 2;
 
-                            canvas.drawText(keytext, keytextX, DeviceUtil.dip2px
-                                            (borderDpWidth + keyScaleDpHeight + textToTopkeyScaleDpDistance),
+                            canvas.drawText(keytext, keytextX, dip2px
+                                            (borderDpWidth + keyScaleDpHeight +
+                                                    textToTopkeyScaleDpDistance),
                                     keyScaleTextPaint);
 
                         }
@@ -470,17 +531,18 @@ public class TimeBar extends View {
                     }
 
                     if (true && (tmpOffset % timeScale.getKeyScaleInterval() != 0)) {
-                        float left = lenghtOfOneMillsecond * tmpOffset + srcWidth / 2f - DeviceUtil.dip2px(minScaleDpWidth) / 2f;
+                        float left = lenghtOfOneMillsecond * tmpOffset + srcWidth / 2f - dip2px
+                                (minScaleDpWidth) / 2f;
                         // 上方刻度
-                        RectF topMinScaleRect = new RectF(left, DeviceUtil.dip2px
-                                (borderDpWidth), left + DeviceUtil.dip2px(minScaleDpWidth),
-                                DeviceUtil.dip2px(borderDpWidth + minScaleDpHeight));
+                        RectF topMinScaleRect = new RectF(left, dip2px
+                                (borderDpWidth), left + dip2px(minScaleDpWidth),
+                                dip2px(borderDpWidth + minScaleDpHeight));
                         canvas.drawRect(topMinScaleRect, minScalePaint);
 
                         // 下方刻度
-                        RectF bottomMinScaleRect = new RectF(left, getHeight() - DeviceUtil.dip2px
-                                (borderDpWidth + minScaleDpHeight), left + DeviceUtil.dip2px(minScaleDpWidth),
-                                getHeight() - DeviceUtil.dip2px(borderDpWidth));
+                        RectF bottomMinScaleRect = new RectF(left, getHeight() - dip2px
+                                (borderDpWidth + minScaleDpHeight), left + dip2px(minScaleDpWidth),
+                                getHeight() - dip2px(borderDpWidth));
                         canvas.drawRect(bottomMinScaleRect, minScalePaint);
                     }
                 }
@@ -490,8 +552,9 @@ public class TimeBar extends View {
 
         //---------------------- 画中心刻度开始 ----------------------
         float center = lenghtOfOneMillsecond * (currentTime - beginTime) + srcWidth * 0.5f;
-        float centerScaleleft = center - DeviceUtil.dip2px(centerScaleWidth) * 0.5f;
-//    RectF centerScaleRect = new RectF(centerScaleleft, DeviceUtil.dip2px(borderDpWidth + triangleHeight),
+        float centerScaleleft = center - dip2px(centerScaleWidth) * 0.5f;
+//    RectF centerScaleRect = new RectF(centerScaleleft, DeviceUtil.dip2px(borderDpWidth +
+// triangleHeight),
 //        centerScaleleft + DeviceUtil.dip2px(centerScaleWidth),
 //        getHeight() - DeviceUtil.dip2px(borderDpWidth));
         centerScalePaint.setColor(centerScaleColor);
@@ -499,14 +562,20 @@ public class TimeBar extends View {
 //    canvas.drawRect(centerScaleRect, centerScalePaint);
         // 上方的三角形， 现在将三角形和下放矩形一起画出来，分开话的话，在连接处会出现类似错开的感觉，强迫症表示难受
         centerScalePath.reset();
-        centerScalePath.moveTo(centerScaleleft, DeviceUtil.dip2px(borderDpWidth + triangleHeight));
-        centerScalePath.lineTo(centerScaleleft, getHeight() - DeviceUtil.dip2px(borderDpWidth));
-        centerScalePath.lineTo(centerScaleleft + DeviceUtil.dip2px(centerScaleWidth), getHeight() - DeviceUtil.dip2px(borderDpWidth));
-        centerScalePath.lineTo(centerScaleleft + DeviceUtil.dip2px(centerScaleWidth), DeviceUtil.dip2px(borderDpWidth + triangleHeight));
-        centerScalePath.lineTo(center + DeviceUtil.dip2px(triangleWidth) * 0.5f, DeviceUtil.dip2px(borderDpWidth));
-        centerScalePath.lineTo(center - DeviceUtil.dip2px(triangleWidth) * 0.5f, DeviceUtil.dip2px(borderDpWidth));
+        centerScalePath.moveTo(centerScaleleft, dip2px(borderDpWidth + triangleHeight));
+        centerScalePath.lineTo(centerScaleleft, getHeight() - dip2px(borderDpWidth));
+        centerScalePath.lineTo(centerScaleleft + dip2px(centerScaleWidth), getHeight() -
+                dip2px(borderDpWidth));
+        centerScalePath.lineTo(centerScaleleft + dip2px(centerScaleWidth), dip2px(borderDpWidth +
+                triangleHeight));
+        centerScalePath.lineTo(center + dip2px(triangleWidth) * 0.5f, dip2px
+                (borderDpWidth));
+        centerScalePath.lineTo(center - dip2px(triangleWidth) * 0.5f, dip2px
+                (borderDpWidth));
         centerScalePath.close();
         canvas.drawPath(centerScalePath, centerScalePaint);
+
+//    Log.e("centerScaleleft", "centerScaleleft=" + centerScaleleft);
         //---------------------- 画中心刻度结束 ----------------------
 
 //    Log.e("onDraw", "onDraw end!");
@@ -537,9 +606,12 @@ public class TimeBar extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+//    Log.e("onMeasure", "widthMeasureSpec=" + MeasureSpec.getSize(widthMeasureSpec) + ", mode=" +
+//        MeasureSpec.getMode(widthMeasureSpec));
 //    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        setMeasuredDimension(measureWidth(widthMeasureSpec), getDefaultSize(getSuggestedMinimumHeight
-                (), heightMeasureSpec));
+        setMeasuredDimension(measureWidth(widthMeasureSpec), getDefaultSize
+                (getSuggestedMinimumHeight
+                        (), heightMeasureSpec));
     }
 
     private int measureWidth(int widthMeasureSpec) {
@@ -569,6 +641,7 @@ public class TimeBar extends View {
     }
 
     private void changeWidth(int width) {
+//    Log.e("changeWidth", "changeWidth=" + width);
         if (width < getMinWidth()) {
             width = getMinWidth();
             currentScaleLevel = 5;
@@ -593,7 +666,7 @@ public class TimeBar extends View {
         int r = l + width + srcWidth;
         int t = getTop();
         int b = getBottom();
-        layout(l, t, r, b);
+        myLayout(l, t, r, b);
 //
 //    ViewGroup.LayoutParams params = getLayoutParams();
 //    params.width = width + srcWidth;
@@ -602,7 +675,8 @@ public class TimeBar extends View {
 
     private int betweenTwoScaleWidth(int scale1, int scale2) {
         if ((scale1 == 1 && scale2 == 2) || (scale2 == 1 && scale1 == 2)) {
-            return (timeScaleMap.get(scale1).getViewLength() + timeScaleMap.get(scale2).getViewLength()
+            return (timeScaleMap.get(scale1).getViewLength() + timeScaleMap.get(scale2)
+                    .getViewLength()
             ) / 4;
         }
         return (timeScaleMap.get(scale1).getViewLength() + timeScaleMap.get(scale2).getViewLength())
@@ -610,14 +684,14 @@ public class TimeBar extends View {
     }
 
     private int getMinWidth() {
-        if (minWidth <= 0) {
+        if (minWidth <= 0 && timeScaleMap.get(5) != null) {
             minWidth = timeScaleMap.get(5).getViewLength();
         }
         return minWidth;
     }
 
     private int getMaxWidth() {
-        if (maxWidth <= 0) {
+        if (maxWidth <= 0 && timeScaleMap.get(1) != null) {
             maxWidth = timeScaleMap.get(1).getViewLength();
         }
         return maxWidth;
@@ -625,25 +699,51 @@ public class TimeBar extends View {
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
+//        super.onSizeChanged(w, h, oldw, oldh);
 
-        if (w != 0 && h != 0) {
-            initVariable();
-            initTimeScaleMap();
+//    Log.e("onSizeChanged", "width=" + getWidth() + "， height=" + getHeight());
+
+        if (!isInited && w > 0 && h > 0) {
+            srcWidth = getMeasuredWidth();
+            srcLeft = getLeft();
+//            new InitTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    initTimeScaleMap();
+                }
+            });
+            isInited = true;
         }
     }
 
-    private void initVariable() {
-        if (srcWidth <= 0) {
-            srcWidth = getWidth();
-        }
-        if (srcLeft <= 0) {
-            srcLeft = getLeft();
+//    @Override
+//    protected void onVisibilityChanged(View changedView, int visibility) {
+////    Log.e("onVisibilityChanged", "visibility=" + visibility);
+////        if (visibility == VISIBLE && isInited) {
+////            if (visibilityTask != null) {
+////                removeCallbacks(visibilityTask);
+////            }
+////            visibilityTask = new VisibilityTask();
+////            postDelayed(visibilityTask, 300);
+////        }
+//    }
+
+    private class VisibilityTask implements Runnable {
+
+        @Override
+        public void run() {
+            if (isInited) {
+                changeWidth(getWidth() - srcWidth);
+            }
+            visibilityTask = null;
         }
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        // 禁止外层父控件如viewpage截取事件
+        getParent().requestDisallowInterceptTouchEvent(true);
         scaleGestureDetector.onTouchEvent(event);
 
         if (scaleGestureDetector.isInProgress()) {
@@ -675,10 +775,11 @@ public class TimeBar extends View {
 
                     int t = getTop();
                     int b = getBottom();
-                    layout(l, t, r, b);
+//          Log.e("!!", "l=" + l + ", t=" + t + ", r=" + r + ", b=" + b);
+                    myLayout(l, t, r, b);
                     currentTime = computeOffestTime(l - srcLeft, r - l - srcWidth) + beginTime;
-                    if (currentTimeChangListener != null) {
-                        currentTimeChangListener.onCurrentTimeChanging(currentTime);
+                    if (onCurrentTimeChangListener != null) {
+                        onCurrentTimeChangListener.onCurrentTimeChanging(currentTime);
                     }
                     invalidate();
 
@@ -686,13 +787,21 @@ public class TimeBar extends View {
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                if (mode == DRAG && currentTimeChangListener != null) {
-                    currentTimeChangListener.onCurrentTimeChanged(currentTime);
+                if (mode == DRAG && onCurrentTimeChangListener != null) {
+                    onCurrentTimeChangListener.onCurrentTimeChanged(currentTime);
                 }
                 mode = NONE;
                 break;
         }
         return true;
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+//        Log.e("onLayout", "changed=" + changed + ", onLayout left=" + left + ", top=" + top + ", " +
+//                "right=" + right + ", bottom="
+//                + bottom);
+        super.onLayout(changed, left, top, right, bottom);
     }
 
     private String getTimeStringFromLong(String format, long value) {
@@ -703,7 +812,7 @@ public class TimeBar extends View {
     /**
      * 当前时间变化侦听器
      */
-    public interface CurrentTimeChangListener {
+    public interface OnCurrentTimeChangListener {
         void onCurrentTimeChanging(long currentTime);
 
         void onCurrentTimeChanged(long currentTime);

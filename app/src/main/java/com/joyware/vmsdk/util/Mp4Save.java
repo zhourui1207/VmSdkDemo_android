@@ -35,6 +35,7 @@ public class Mp4Save {
     private int mHeight = 0;
 
     private int mFrameCount = 0;  // 帧数量
+    private int mIFrameCount = 0;  // I帧数量
     private int mAudioFrameCount = 0;  // 音频帧数量
     private int mAudioPreVideoFrameCount = 0;
 
@@ -157,6 +158,17 @@ public class Mp4Save {
         }
 
         ++mFrameCount;
+//        if (isIFrame) {
+//            ++mIFrameCount;
+//            if (mIFrameCount %2 == 0) {
+//                size = size / 2;
+//                Log.e(TAG, "模拟丢包");
+//            }
+//        }
+//        if (mFrameCount % 10 == 0) {
+//            size = size / 2;
+//            Log.e(TAG, "模拟丢包");
+//        }
         // 视频样本大小，样本相对文件起始字节，关键帧序列
 //        byte[] mdat = {0x00, 0x00, 0x00, 0x12, 0x6d, 0x64, 0x61, 0x74,
 //                0x00, 0x00, 0x00, 0x02, 0x09, 0x30};

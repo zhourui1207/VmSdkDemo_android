@@ -174,6 +174,10 @@ VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbRealData,
 
 VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle);
 
+VMNET_API bool CALL_METHOD VmNet_PauseStreamByRtsp(long rtspStreamHandle);
+
+VMNET_API bool CALL_METHOD VmNet_PlayStreamByRtsp(long rtspStreamHandle);
+
 // 发送控制指令
 // 入参    sFdId：设备序列号； nChannelId：通道号； uControlType：控制类型（详见VmType.h）； uParm1：参数1； uParm2：参数2
 VMNET_API void CALL_METHOD VmNet_SendControl(const char *sFdId, int nChannelId,

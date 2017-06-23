@@ -798,6 +798,8 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 
     private class VideoStreamCallbackI implements VmNet.StreamCallback {
         private boolean isFirst = true;
+        private long receiveCount = 0;
+        private int seqNumber = 0;
 
         @Override
         public void onStreamConnectStatus(int streamId, boolean isConnected) {
@@ -811,8 +813,24 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
                                     int timeStamp, int seqNumber, boolean isMark) {
             lastReceiveStreamTime = System.currentTimeMillis();
             currentTryReconnectCount = 0;
+
+            if (this.seqNumber == 0) {
+                this.seqNumber = seqNumber;
+            } else {
+                if (this.seqNumber + 1 != seqNumber) {
+                    Log.e(TAG, "miss packet " + this.seqNumber + " ==> " + seqNumber);
+                }
+                this.seqNumber = seqNumber;
+            }
+
+//            ++receiveCount;
+//            if (receiveCount % 50 == 0) { // 2%丢包率
+//                Log.e(TAG, "模拟丢包环境");
+//                return;
+//            }
+
 //      Log.e(TAG, "!!");
-//            Log.e(TAG, "len=" + buffer.length + ", seqNumber=" + seqNumber +", data=" + StringUtil.byte2hex(buffer, 0, buffer.length));
+//            Log.e(TAG, "len=" + buffer.length + ", seqNumber=" + seqNumber +", isMark=" + isMark + ", playloadType=" + payloadType);
             if (mDecoder != null) {
                 mDecoder.addBuffer(streamId, streamType, payloadType, buffer, 0, buffer.length, timeStamp,
                         seqNumber, isMark);

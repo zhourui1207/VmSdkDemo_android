@@ -107,6 +107,10 @@ namespace Dream {
                 _baseUrl = _url;
                 _paramUrl = "";
             }
+            char baseUrlEndChar = _baseUrl.c_str()[_baseUrl.length() - 1];
+            if (baseUrlEndChar != '/') {
+                _baseUrl += "/";
+            }
             return true;
         }
 
@@ -157,6 +161,8 @@ namespace Dream {
                 _cbConnectStatusListener(true, _pUser);
             }
             std::lock_guard<std::mutex> lock(_mutex);
+
+            _tryAuthorized = false;
             updateStatus();  // 更新状态
         } else if (_currentStatus == AsioTcpClient::CONNECTED
                    && status != AsioTcpClient::CONNECTED) {
@@ -225,6 +231,8 @@ namespace Dream {
                         int status = atoi(statusStr.c_str());
 
                         if (status == OK) {
+                            bool needUpdte = true;
+
                             if (_currentMethodStatus == TEARDOWN) {  // 断开时，发送options返回成功
                                 _currentMethodStatus = OPTIONS;
                             } else if (_currentMethodStatus == OPTIONS) {
@@ -275,9 +283,17 @@ namespace Dream {
 
                             } else if (_currentMethodStatus == SETUP_AUDIO) {
                                 _currentMethodStatus = PLAY;
+                            } else if (_currentMethodStatus == WAITE_PLAY) {
+                                _currentMethodStatus = PLAY;
+                                needUpdte = false;
+                            } else if (_currentMethodStatus == WAITE_PAUSE) {
+                                _currentMethodStatus = PAUSE;
+                                needUpdte = false;
                             }
 
-                            updateStatus();
+                            if (needUpdte) {
+                                updateStatus();
+                            }
                         } else if (status == Unauthorized && _currentMethodStatus == OPTIONS) {
                             if (_tryAuthorized) {  // 如果已经尝试过鉴权，那么就是用户名密码错误
                                 _currentMethodStatus = TEARDOWN;
@@ -560,7 +576,46 @@ namespace Dream {
 
         std::string sBuffer = "PLAY ";
         sBuffer += createCommonBuffer("PLAY", _url, true);
-        sBuffer += "Range: npt=0.000-\r\n";
+        // 查找starttime和endtime
+
+        int startTimePos = _paramUrl.find("starttime=");
+        int endTimePos = _paramUrl.find("endtime=");
+        // 都有的话就是录像回放
+        if (startTimePos != std::string::npos && endTimePos != std::string::npos) {
+            if (_currentMethodStatus != PAUSE && _currentMethodStatus != WAITE_PLAY) {  // 如果不是暂停状态, 需要解析starttime和endtime
+                std::string startTime = readValue(_paramUrl, (size_t) (startTimePos + 10));
+                std::string endTime = readValue(_paramUrl, (size_t) (endTimePos + 8));
+                sBuffer += "Range:clock=";
+                sBuffer += startTime;
+                sBuffer += "-";
+                sBuffer += endTime;
+                sBuffer += "\r\n";
+            }
+
+            int scalePos = _paramUrl.find("scale=");
+            std::string scale = "1.00";
+            if (scalePos != std::string::npos) {
+                scale = readValue(_paramUrl, (size_t) (scalePos + 6));
+            }
+            sBuffer += "Rate-Control:yes\r\n";
+            sBuffer += "Scale:";
+            sBuffer += scale;
+            sBuffer += "\r\n";
+        } else {
+            sBuffer += "Range: npt=0.000-\r\n";
+        }
+
+        sBuffer += "\r\n";
+        return sendRtspRequest(sBuffer.c_str(), sBuffer.length());
+    }
+
+    bool RtspTcpClient::sendPausePacket() {
+        if (_asioTcpClientPtr.get() == nullptr) {
+            return false;
+        }
+
+        std::string sBuffer = "PAUSE ";
+        sBuffer += createCommonBuffer("PAUSE", _url, false);
         sBuffer += "\r\n";
         return sendRtspRequest(sBuffer.c_str(), sBuffer.length());
     }
@@ -608,5 +663,21 @@ namespace Dream {
             }
         }
         return tmpStr;
+    }
+
+    std::string RtspTcpClient::readValue(const std::string &str, std::size_t pos) {
+        std::size_t strLen = str.length();
+        std::string value = "";
+        const char *tmpStr = str.c_str();
+        for (std::size_t i = pos; i < strLen; ++i) {
+            char tmpChar = tmpStr[i];
+            if (tmpChar == ' ' || tmpChar == '&' || tmpChar == '\n' || tmpChar == '\r' ||
+                tmpChar == ',' || tmpChar == ';') {
+                break;
+            } else {
+                value += tmpChar;
+            }
+        }
+        return value;
     }
 }

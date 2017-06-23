@@ -21,7 +21,10 @@ namespace Dream {
             DESCRIBE,
             SETUP_VIDEO,
             SETUP_AUDIO,
+            WAITE_PLAY,
             PLAY,
+            WAITE_PAUSE,
+            PAUSE,
             TEARDOWN
         };
 
@@ -66,6 +69,24 @@ namespace Dream {
             _cbConnectStatusListener = cbConnectStatusListener;
         }
 
+        bool pause() {
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (_currentMethodStatus == PLAY) {
+                _currentMethodStatus = WAITE_PAUSE;
+                return sendPausePacket();
+            }
+            return false;
+        }
+
+        bool play() {
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (_currentMethodStatus == PAUSE || _currentMethodStatus == PLAY) {
+                _currentMethodStatus = WAITE_PLAY;
+                return sendPlayPacket();
+            }
+            return false;
+        }
+
     private:
         bool parseUrl(const std::string& url);
 
@@ -97,11 +118,15 @@ namespace Dream {
 
         bool sendPlayPacket();
 
+        bool sendPausePacket();
+
         bool sendTeardownPacket();
 
         bool sendTeardownPacketSync();
 
         std::string trim(const std::string& srcStr);
+
+        std::string readValue(const std::string& str, std::size_t pos);
 
     private:
         std::mutex _mutex;

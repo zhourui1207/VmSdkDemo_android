@@ -58,7 +58,7 @@ public class HandlerTestActivity extends AppCompatActivity {
 //            @Override
 //            public void run() {
 //               mMyHandlder.sendMessage(Message.obtain());
-////                mTextView.setText((++count) + "");
+////                mTimeTextView.setText((++count) + "");
 //            }
 //        }, 1000, 1000);
     }
