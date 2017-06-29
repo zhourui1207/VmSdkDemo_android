@@ -67,6 +67,13 @@ namespace Dream {
         return true;
     }
 
+    bool
+    AsioUdpServer::send(const std::string &remoteAddr, unsigned short remotePort, const char *buf,
+                        std::size_t len) {
+        auto dataPtr = std::make_shared<UdpData>(remoteAddr, remotePort, len, buf);
+        return send(dataPtr);
+    }
+
     bool AsioUdpServer::do_init() {
         LOGW("AsioUdpServer", "[%s]正在初始化...\n", _local_address.c_str());
 

@@ -89,8 +89,26 @@ namespace Dream {
         // 返回true表示成功加发送数据添加到发送缓存队列中，并不表示发送出去；返回false一般是未连接的情况
         bool send(const std::shared_ptr<PacketData> &dataPtr);
 
+        bool send(const char* buf, std::size_t len);
+
         // 同步发送
         bool sendSync(const std::shared_ptr<PacketData> &dataPtr);
+
+        bool sendSync(const char* buf, std::size_t len);
+
+        const std::string localAddress() const {
+            if (_socketPtr.get() == nullptr) {
+                return "";
+            }
+            return _socketPtr->local_endpoint().address().to_string();
+        }
+
+        unsigned short localPort() {
+            if (_socketPtr.get() == nullptr) {
+                return 0;
+            }
+            return _socketPtr->local_endpoint().port();
+        }
 
     private:
         bool doInit();

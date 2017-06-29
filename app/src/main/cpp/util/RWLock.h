@@ -38,7 +38,8 @@ namespace Dream {
             }
             // 可以进行写了，如果之前等待过，那么现在脱离等待
             if (waiting) {
-                --_writer;  // 等待写的数量-1
+				// 等待写的数量-1
+				--_writer;
             }
             // 开始写
             _writing = true;

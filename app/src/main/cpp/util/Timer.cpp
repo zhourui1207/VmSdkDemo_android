@@ -18,7 +18,7 @@ namespace Dream {
     }
 
     Timer::~Timer() {
-        cancel();  // 不加这个会出错
+        cancel();
     }
 
     void Timer::start() {
@@ -35,7 +35,8 @@ namespace Dream {
             _running.store(false);
             _condition.notify_one();
 
-            lock.unlock();  // 在join前不能忘记解锁
+			// 在join前不能忘记解锁
+            lock.unlock();
         }
         if (_threadPtr->joinable()) {
             _threadPtr->join();

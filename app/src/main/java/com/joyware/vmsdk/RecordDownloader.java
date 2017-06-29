@@ -391,17 +391,45 @@ public class RecordDownloader {
                     // 超时
                     if (mLastReceiveStreamDataTime != 0 && (System.currentTimeMillis() -
                             mLastReceiveStreamDataTime > STREAM_TIMEOUT_MILLIS_SEC)) {
-                        if (mCurrentPercent >= 0.95f || mCurrentPercent == 0f) {  //
-                            // 当前进度大于95%，认为任务完成，或者压根就没进度
-                            quit(true);
-                            recordDownloader.onRecordDownloadSuccess();
-                            recordDownloader.threadQuitSelfLock();
-                        } else {  // 任务网络超时
-                            quit(false);
-                            recordDownloader.onRecordDownloadFailed
-                                    (RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT,
-                                            ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
-                            recordDownloader.threadQuitSelfLock();
+                        if (mTotalMillisSec < 10) {
+                            if (mCurrentPercent >= 0.2f || mCurrentPercent == 0f) {  //
+                                // 当前进度大于10%，认为任务完成，或者压根就没进度
+                                quit(true);
+                                recordDownloader.onRecordDownloadSuccess();
+                                recordDownloader.threadQuitSelfLock();
+                            } else {  // 任务网络超时
+                                quit(false);
+                                recordDownloader.onRecordDownloadFailed
+                                        (RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT,
+                                                ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
+                                recordDownloader.threadQuitSelfLock();
+                            }
+                        } else if (mTotalMillisSec < 30) {
+                            if (mCurrentPercent >= 0.5f || mCurrentPercent == 0f) {  //
+                                // 当前进度大于10%，认为任务完成，或者压根就没进度
+                                quit(true);
+                                recordDownloader.onRecordDownloadSuccess();
+                                recordDownloader.threadQuitSelfLock();
+                            } else {  // 任务网络超时
+                                quit(false);
+                                recordDownloader.onRecordDownloadFailed
+                                        (RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT,
+                                                ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
+                                recordDownloader.threadQuitSelfLock();
+                            }
+                        } else {
+                            if (mCurrentPercent >= 0.95f || mCurrentPercent == 0f) {  //
+                                // 当前进度大于95%，认为任务完成，或者压根就没进度
+                                quit(true);
+                                recordDownloader.onRecordDownloadSuccess();
+                                recordDownloader.threadQuitSelfLock();
+                            } else {  // 任务网络超时
+                                quit(false);
+                                recordDownloader.onRecordDownloadFailed
+                                        (RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT,
+                                                ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
+                                recordDownloader.threadQuitSelfLock();
+                            }
                         }
                     } else if (mCheckTimeout) {
                         startCheckStreamTimeout();

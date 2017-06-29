@@ -320,9 +320,9 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
             @Override
             public void onClick(View v) {
                 Log.e(TAG, "startRecordTask");
-                int startTime = 1496199600;
+                int startTime = 1498452620;
                 mRecordDownloader.startRecordTask(RecordThread.RECORD_FILE_TYPE_MP4,
-                        "/sdcard/MVSS/test.mp4", true, "201701161314340662", 1, startTime, startTime + 60 * 2);
+                        "/sdcard/MVSS/test.mp4", true, "201706151925230392", 1, startTime, startTime + 60 * 2);
             }
         });
 
@@ -685,7 +685,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 //            Log.e(TAG, "disconnect end");
 
 
-            VmNet.connect("10.151.0.23", 5516, MainActivity.this);
+            VmNet.connect("10.100.23.142", 5516, MainActivity.this);
 //            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
 //            VmNet.connect("10.151.0.252", 5516, MainActivity.this);
 
@@ -697,7 +697,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            int ret = VmNet.login("root", "123456");
+            int ret = VmNet.login("admin", "123456");
             if (ret == 0) {
                 Log.e(TAG, "登录成功!");
                 DepTreesHolder depTreesHolder = new DepTreesHolder();

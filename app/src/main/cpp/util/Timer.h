@@ -6,8 +6,8 @@
  *      定时器类
  */
 
-#ifndef TIMER_H_
-#define TIMER_H_
+#ifndef DREAM_TIMER_H_
+#define DREAM_TIMER_H_
 
 #include <atomic>
 #include <condition_variable>

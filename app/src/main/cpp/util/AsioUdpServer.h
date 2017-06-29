@@ -47,6 +47,22 @@ namespace Dream {
 
         bool send(const std::shared_ptr<UdpData> &dataPtr);
 
+        bool send(const std::string& remoteAddr, unsigned short remotePort, const char* buf, std::size_t len);
+
+        const std::string localAddress() const {
+            if (_socketPtr.get() == nullptr) {
+                return "";
+            }
+            return _socketPtr->local_endpoint().address().to_string();
+        }
+
+        unsigned short localPort() {
+            if (_socketPtr.get() == nullptr) {
+                return 0;
+            }
+            return _socketPtr->local_endpoint().port();
+        }
+
     private:
         bool do_init();
 

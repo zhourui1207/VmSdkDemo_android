@@ -31,6 +31,11 @@ import java.nio.ByteBuffer;
 
 public class Decoder {
 
+    static {
+        System.loadLibrary("JWEncdec");  // 某些设备型号必须要加上依赖的动态库
+        System.loadLibrary("VmPlayer");
+    }
+
     private final int PAYLOAD_TYPE_PS = 96;
 
     private final String TAG = "Decoder";

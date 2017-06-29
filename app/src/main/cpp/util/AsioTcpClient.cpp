@@ -5,8 +5,8 @@
  *      Author: zhourui
  */
 
-#include "public/platform.h"
 #include "AsioTcpClient.h"
+#include "public/platform.h"
 
 #ifdef _ANDROID
 extern JavaVM *g_pJavaVM;  // 定义外部变量，该变量在VmNet-lib.cpp中被定义和赋值
@@ -82,6 +82,11 @@ namespace Dream {
         return true;
     }
 
+    bool AsioTcpClient::send(const char* buf, std::size_t len) {
+        auto dataPtr = std::make_shared<PacketData>(len, buf);
+        return send(dataPtr);
+    }
+
     bool AsioTcpClient::sendSync(const std::shared_ptr<PacketData> &dataPtr) {
         std::lock_guard<std::mutex> lock(_mutex);
 //        LOGW("AsioTcpClient", "[%s]开始发送数据...\n", _address.c_str());
@@ -94,6 +99,11 @@ namespace Dream {
                                                   boost::asio::buffer(dataPtr->data(),
                                                                       dataPtr->length()));
         return sendSize > 0;
+    }
+
+    bool AsioTcpClient::sendSync(const char* buf, std::size_t len) {
+        auto dataPtr = std::make_shared<PacketData>(len, buf);
+        return sendSync(dataPtr);
     }
 
     bool AsioTcpClient::doInit() {
@@ -230,7 +240,7 @@ namespace Dream {
                                     } else {
                                         // 异常的时候可以分为多种情况，测试出，当本机网络断开时，重连会导致崩溃
                                         LOGE("AsioTcpClient", "读取数据异常, 连接断开:%s, error_code[%d]\n",
-                                             ec.message().c_str(), ec);
+                                             ec.message().c_str(), ec.value());
                                         if (ec.value() != 125) {
                                             doReconnect();
                                         }
@@ -260,7 +270,7 @@ namespace Dream {
                                         } else if (ec) {
                                             LOGE("AsioTcpClient",
                                                  "读取数据异常, 连接断开:%s, error_code[%d]\n",
-                                                 ec.message().c_str(), ec);
+                                                 ec.message().c_str(), ec.value());
                                             if (ec.value() != 125) {
                                                 doReconnect();
                                             }
@@ -284,7 +294,7 @@ namespace Dream {
                                          }
                                      } else {
                                          LOGE("AsioTcpClient", "发送数据异常 [%s] error_code[%d]\n",
-                                              ec.message().c_str(), ec);
+                                              ec.message().c_str(), ec.value());
                                          if (ec.value() != 125) {
                                              doReconnect();
                                          }

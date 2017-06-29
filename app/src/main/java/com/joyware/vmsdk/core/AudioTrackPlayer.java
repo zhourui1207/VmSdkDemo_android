@@ -31,6 +31,11 @@ public class AudioTrackPlayer {
     private PlayThread mPlayThread;
     private long mRecNumber;
 
+    private static final int SORT_BUFFER_SIZE = 5;
+    @NonNull
+    private final BlockingBuffer mSortBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType
+            .PRIORITY, SORT_BUFFER_SIZE, SORT_BUFFER_SIZE + 1);
+
     public boolean isPlaying() {
         synchronized (this) {
             return mPlaying;
@@ -64,8 +69,20 @@ public class AudioTrackPlayer {
                 return false;
             }
 
-            return mPlayThread != null && mPlayThread.mBlockingBuffer.addObject(new PlayData(buf,
-                    start, len, seqNumber, ++mRecNumber));
+            boolean writeToBuf = true;
+
+            if (mSortBuffer.size() == SORT_BUFFER_SIZE) {  // 到达最大值的话，取出第一个
+                Object object = mSortBuffer.removeObject();
+                if (mPlayThread != null) {
+                    mPlayThread.mBlockingBuffer.addObject(object);
+                } else {
+                    writeToBuf = false;
+                }
+            }
+
+            // 加入排序队列
+            mSortBuffer.addObject(new PlayData(buf, start, len, seqNumber, ++mRecNumber));
+            return writeToBuf;
         }
     }
 
@@ -80,6 +97,7 @@ public class AudioTrackPlayer {
             if (mPlayThread != null) {
                 mPlayThread.mBlockingBuffer.clear();
             }
+            mSortBuffer.clear();
         }
     }
 
@@ -103,6 +121,7 @@ public class AudioTrackPlayer {
 
             mRecNumber = 0;
             mPlaying = false;
+            mSortBuffer.clear();
             return true;
         }
     }
@@ -256,7 +275,7 @@ public class AudioTrackPlayer {
 
         @Override
         public int compareTo(@NonNull PlayData o) {
-            int compare =  ((Integer) mSeqNumber).compareTo(o.mSeqNumber);
+            int compare = ((Integer) mSeqNumber).compareTo(o.mSeqNumber);
             if (compare == 0) {
                 compare = ((Long) mRecNumber).compareTo(o.mRecNumber);
             }
