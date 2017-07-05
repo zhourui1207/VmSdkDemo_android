@@ -225,7 +225,7 @@ public class PsStreamFilterUtil {
                     if (isDebug) {
                         Log.e(TAG, "发现264头");
                     }
-                    trans = 0xFFFFFFFF;
+//                    trans = 0xFFFFFFFF;
                     if (!haveData && (currentPosition - 3 > 0)) {
                         dataBegin = currentPosition - 3;
                         haveData = true;

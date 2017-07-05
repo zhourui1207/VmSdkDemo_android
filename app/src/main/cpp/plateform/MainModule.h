@@ -126,7 +126,7 @@ namespace Dream {
         unsigned startStream(const std::string &addr, unsigned port,
                              fStreamCallBack streamCallback,
                              fStreamConnectStatusCallBack streamConnectStatusCallback, void *pUser,
-                             unsigned &streamId);
+                             unsigned &streamId, bool rtp = true);
 
         // 停止获取码流
         void stopStream(unsigned streamId);

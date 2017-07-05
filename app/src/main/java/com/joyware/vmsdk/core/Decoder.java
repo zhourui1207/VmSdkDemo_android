@@ -89,6 +89,8 @@ public class Decoder {
 
     private boolean mNeedDecode = true;
 
+//    private bool
+
     public void setSeepScale(float speedScale) {
         mSpeedScale = speedScale;
         firstTimestamp = 0;
@@ -330,8 +332,7 @@ public class Decoder {
 
         int timestampOld;
         private BlockingBuffer streamBuffer = new BlockingBuffer(BlockingBuffer
-                .BlockingBufferType.PRIORITY, BUFFER_MAX_SIZE,
-                BUFFER_WARNING_SIZE);  // 码流数据
+                .BlockingBufferType.PRIORITY, BUFFER_MAX_SIZE, BUFFER_WARNING_SIZE);  // 码流数据
 
         public boolean addBuffer(Object object) {
             return streamBuffer.addObjectForce(object);
@@ -460,10 +461,7 @@ public class Decoder {
                                         public void onESData(boolean video, long pts, byte[]
                                                 outData, int outStart, int outLen) {
 //                                            Log.e(TAG, "mVideo=" + mVideo + ", pts=" + pts);
-//                                            Log.e(TAG, "onESData video=" + video + ", start=" +
-//                                                    outStart + ", len=" + outLen + ", mData=" +
-//                                                    StringUtil.byte2hex(outData, outStart,
-// outLen));
+//                                            Log.e(TAG, "onESData video=" + video + ", pts=" + pts + ", len=" + outLen);
                                             if (video) {
                                                 streamBufUsed = 0;
 
@@ -1106,7 +1104,8 @@ public class Decoder {
                             firstTimestamp = 0;
                             firstPts = 0;
                         }
-                        if (useAudioTimestamp && !mRealMode && esStreamData.getPts() != 0) {  //
+//                         && !mRealMode
+                        if (useAudioTimestamp && esStreamData.getPts() != 0) {  //
                             // 不为实时模式并且pts不为0
                             if (firstTimestamp > 0) {
                                 // 计算显示时间 纳秒
@@ -1117,7 +1116,7 @@ public class Decoder {
                                 }
                             } else {
                                 firstPts = esStreamData.getPts();
-                                firstTimestamp = System.nanoTime();
+                                firstTimestamp = System.nanoTime() + 500000000L;
                             }
                         }
                         if (openAudio) {
@@ -1231,9 +1230,9 @@ public class Decoder {
 
                         try {
 
-                            long timeout_us = 80000;
+                            long timeout_us = 160000;
                             if (dataType == DATA_TYPE_VIDEO_IFRAME) {
-                                timeout_us = 80000;
+                                timeout_us = 160000;
                             }
                             inputBufferIndex = mediaCodecDecoder.dequeueInputBuffer(timeout_us);
 
@@ -1282,7 +1281,8 @@ public class Decoder {
                         }
                     }
 
-                    if (!useAudioTimestamp && !mRealMode && esStreamData.getPts() != 0) {  //
+//                     && !mRealMode
+                    if (!useAudioTimestamp && esStreamData.getPts() != 0) {  //
                         // 不为实时模式并且pts不为0
                         if (firstTimestamp > 0) {
                             // 计算显示时间 纳秒
@@ -1293,7 +1293,7 @@ public class Decoder {
                             }
                         } else {
                             firstPts = esStreamData.getPts();
-                            firstTimestamp = System.nanoTime();
+                            firstTimestamp = System.nanoTime() + 500000000L;  // 防抖动
                         }
                     }
                 }

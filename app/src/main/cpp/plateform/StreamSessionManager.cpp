@@ -5,8 +5,8 @@
  *      Author: zhourui
  */
 
-#include "../rtp/RtpPacket.h"
 #include "StreamSessionManager.h"
+#include "../rtp/RtpPacket.h"
 
 #ifdef _ANDROID
 
@@ -18,12 +18,17 @@ namespace Dream {
     StreamSession::StreamSession(unsigned streamId, const std::string &addr,
                                  unsigned port, fStreamCallBack streamCallback,
                                  fStreamConnectStatusCallBack streamConnectStatusCallback,
-                                 void *user) :
-            _streamId(streamId), _streamClient(addr, port,
-                                               std::bind(&StreamSession::onStream, this,
-                                                         std::placeholders::_1)), _streamCallback(
-            streamCallback), _streamConnectStatusCallback(
-            streamConnectStatusCallback), _user(user) {
+                                 void *user, bool rtp) : _streamId(streamId),
+                                                         _streamClient(addr, port,
+                                                                       std::bind(
+                                                                               &StreamSession::onStream,
+                                                                               this,
+                                                                               std::placeholders::_1)),
+                                                         _streamCallback(
+                                                                 streamCallback),
+                                                         _streamConnectStatusCallback(
+                                                                 streamConnectStatusCallback),
+                                                         _user(user), _rtp(rtp) {
         _streamClient.setConnectStatusListener(
                 std::bind(&StreamSession::onConnectStatus, this, std::placeholders::_1));
     }
@@ -63,36 +68,22 @@ namespace Dream {
 
     void StreamSession::onStream(const std::shared_ptr<StreamData> &streamDataPtr) {
         if (_streamCallback) {
-
             // 去掉rtp头后再回调
-            auto rtpPacketPtr = std::unique_ptr<RtpPacket>(new RtpPacket);
-            if (rtpPacketPtr->Parse(streamDataPtr->data(), streamDataPtr->length()) == 0) {
-                // PS流交给上层应用处理
-//
-//                    int j = 0;
-//                    std::string data;
-//                    for (int i = 0; i < rtpPacketPtr->GetPayloadLength(); ++i) {
-//                        char tmp[10];
-//                        memset(tmp, 0, 10);
-//                        sprintf(tmp, "%02x", rtpPacketPtr->GetPayloadData()[i]);
-//                        data += tmp;
-//                        data += " ";
-//                        if (++j > 19) {
-//                            j = 0;
-//                            data += "\n";
-//                        }
-//                    }
-//                    LOGE("StreamSession 解析后data", "数据长度:%d,数据:%s\n", rtpPacketPtr->GetPayloadLength(), data.data());
-
-//                LOGE("StreamSessionManager", "_streamCallback start\n");
-                _streamCallback(_streamId, streamDataPtr->streamType(),
-                                rtpPacketPtr->GetPayloadType(), rtpPacketPtr->GetPayloadData(),
-                                rtpPacketPtr->GetPayloadLength(), rtpPacketPtr->GetTimestamp(),
-                                rtpPacketPtr->GetSequenceNumber(), rtpPacketPtr->HasMarker(),
-                                _user);
-//                LOGE("StreamSessionManager", "_streamCallback end\n");
+            if (_rtp) {
+                auto rtpPacketPtr = std::unique_ptr<RtpPacket>(new RtpPacket);
+                if (rtpPacketPtr->Parse(streamDataPtr->data(), streamDataPtr->length()) == 0) {
+                    // PS流交给上层应用处理
+                    _streamCallback(_streamId, streamDataPtr->streamType(),
+                                    rtpPacketPtr->GetPayloadType(), rtpPacketPtr->GetPayloadData(),
+                                    rtpPacketPtr->GetPayloadLength(), rtpPacketPtr->GetTimestamp(),
+                                    rtpPacketPtr->GetSequenceNumber(), rtpPacketPtr->HasMarker(),
+                                    _user);
+                } else {
+                    LOGE("StreamSessionManager", "rtp 解析失败\n");
+                }
             } else {
-                LOGE("StreamSessionManager", "rtp 解析失败\n");
+                _streamCallback(_streamId, 0, 0, streamDataPtr->data(), streamDataPtr->length(), 0, 0,
+                                0, _user);
             }
         }
     }
@@ -117,8 +108,7 @@ namespace Dream {
     bool StreamSessionManager::addStreamClient(const std::string &addr,
                                                unsigned port, fStreamCallBack streamCallback,
                                                fStreamConnectStatusCallBack streamConnectStatusCallback,
-                                               void *pUser,
-                                               unsigned &streamId) {
+                                               void *pUser, unsigned &streamId, bool rtp) {
         std::lock_guard<std::mutex> lock(_mutex);
         if (!getStreamId(streamId)) {  // 连接数到上限
             return false;
@@ -126,7 +116,8 @@ namespace Dream {
 
         auto streamSessionPtr = std::make_shared<StreamSession>(streamId, addr, port,
                                                                 streamCallback,
-                                                                streamConnectStatusCallback, pUser);
+                                                                streamConnectStatusCallback, pUser,
+                                                                rtp);
         if (!streamSessionPtr->startUp()) {
             recoveryStreamId(streamId);
             return false;

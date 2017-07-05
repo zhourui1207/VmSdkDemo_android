@@ -32,6 +32,7 @@ public abstract class JWAsyncTask<Params, Progress, Result>  {
 
         mMainHandler = new MyMainHandler(Looper.getMainLooper());
 
+        // doInBackground前执行
         onPreExecute();
 
         mBackgroundThread = new Thread(new Runnable() {

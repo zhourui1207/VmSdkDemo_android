@@ -24,7 +24,8 @@ namespace Dream {
 
         StreamSession(unsigned streamId, const std::string &addr, unsigned port,
                       fStreamCallBack streamCallback,
-                      fStreamConnectStatusCallBack streamConnectStatusCallback, void *user);
+                      fStreamConnectStatusCallBack streamConnectStatusCallback, void *user,
+                      bool rtp = true);
 
         virtual ~StreamSession();
 
@@ -45,6 +46,7 @@ namespace Dream {
         fStreamCallBack _streamCallback;  // 码流回调
         fStreamConnectStatusCallBack _streamConnectStatusCallback;  // 码流连接状态回调
         void *_user;  // 用户传进来的指针，无需释放内存
+        bool _rtp;
         std::mutex _mutex;
     };
 
@@ -60,7 +62,7 @@ namespace Dream {
         bool addStreamClient(const std::string &addr, unsigned port,
                              fStreamCallBack streamCallback,
                              fStreamConnectStatusCallBack streamConnectStatusCallback, void *pUser,
-                             unsigned &streamId);
+                             unsigned &streamId, bool rtp = true);
 
         // 移除码流客户端
         void removeStreamClient(unsigned streamId);

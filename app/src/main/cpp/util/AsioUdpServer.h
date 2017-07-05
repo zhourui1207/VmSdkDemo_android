@@ -49,14 +49,14 @@ namespace Dream {
 
         bool send(const std::string& remoteAddr, unsigned short remotePort, const char* buf, std::size_t len);
 
-        const std::string localAddress() const {
+        const std::string local_address() const {
             if (_socketPtr.get() == nullptr) {
                 return "";
             }
             return _socketPtr->local_endpoint().address().to_string();
         }
 
-        unsigned short localPort() {
+        unsigned short local_port() {
             if (_socketPtr.get() == nullptr) {
                 return 0;
             }

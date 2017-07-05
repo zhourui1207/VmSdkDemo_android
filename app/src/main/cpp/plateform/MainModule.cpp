@@ -122,13 +122,12 @@ namespace Dream {
     unsigned MainModule::startStream(const std::string &addr, unsigned port,
                                      fStreamCallBack streamCallback,
                                      fStreamConnectStatusCallBack streamConnectStatusCallback,
-                                     void *pUser,
-                                     unsigned &streamId) {
+                                     void *pUser, unsigned &streamId, bool rtp) {
 //  if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
 //    return ERR_CODE_NO_CONNECT;
 //  }
         if (!_streamSessionManager.addStreamClient(addr, port, streamCallback,
-                                                   streamConnectStatusCallback, pUser, streamId)) {
+                                                   streamConnectStatusCallback, pUser, streamId, rtp)) {
             return ERR_CODE_CREATE_STREAM_THREAD_FAILED;
         }
         return ERR_CODE_OK;
