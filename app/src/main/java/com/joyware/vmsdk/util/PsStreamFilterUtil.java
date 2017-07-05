@@ -209,7 +209,7 @@ public class PsStreamFilterUtil {
                         tmpPts += (data[currentPosition + 5] & 0xFF);
                         this.pts += ((tmpPts & 0xfffe) >> 1);
                     } else {
-                        this.pts = 0;
+//                        this.pts = 0; 没有pts的话就默认用上前一个
                     }
 
                     if (length > 0) {  // 如果还有额外数据

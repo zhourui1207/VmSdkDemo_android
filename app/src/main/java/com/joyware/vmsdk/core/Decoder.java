@@ -462,7 +462,7 @@ public class Decoder {
                                                 outData, int outStart, int outLen) {
 //                                            Log.e(TAG, "mVideo=" + mVideo + ", pts=" + pts);
 //                                            Log.e(TAG, "onESData video=" + video + ", pts=" +
-// pts + ", len=" + outLen);
+// pts + ", len=" + outLen + ", nalu type=" + (outData[outStart + 4] & 0x1f));
                                             if (video) {
                                                 streamBufUsed = 0;
 
@@ -732,7 +732,7 @@ public class Decoder {
     // 播放线程
     private class PlayThread extends Thread {
         private int decodeType;
-
+        private int inputFailedCount = 0;
 
         private long mVideoBeginTime;
         private long mAudioBeginTime;
@@ -1168,7 +1168,8 @@ public class Decoder {
                             }
                             // 假如实时模式下，由于为了平滑，队列大小肯定是长时间处于很大的状态，所以不能使用队列大小来判断是否需要丢包处理
                             // 这种情况下应该用时间来判断，如果当前时间跟应该显示的showtime相差大于2秒的话，那就赶紧追上来
-                            if (dataType == DATA_TYPE_VIDEO_PFRAME && (System.nanoTime() - showTime >= 2000000000L)) {
+                            if (dataType == DATA_TYPE_VIDEO_PFRAME && (System.nanoTime() -
+                                    showTime >= 2000000000L)) {
                                 Log.e(TAG, "frame show time over 2 sec, miss mData");
                                 continue;
                             }
@@ -1299,9 +1300,19 @@ public class Decoder {
                                     mediaCodecDecoder.queueInputBuffer(inputBufferIndex, 0,
                                             data.length, timestamp, flags);
                                 }
+
+                                inputFailedCount = 0;
                             } else {
                                 Log.e(TAG, "input failed mData=" + dataType);
                                 // 如果I帧或者P帧解码失败了，那么就等到下一个I帧再解码，防止花屏
+                                if ((this.decodeType == VmType.DECODE_TYPE_INTELL) && (++this
+                                        .inputFailedCount == 5)) { // 累计失败次数，如果连续5次失败，就开始使用软解码模式
+                                    this.inputFailedCount = 0;
+                                    this.decodeType = VmType.DECODE_TYPE_SOFTWARE;
+                                    // 硬解码不支持的类型
+                                    Log.e(TAG, "hard decode type can't support the video, change " +
+                                            "to soft decode type!");
+                                }
                             }
 
                         } catch (Exception e) {
@@ -1316,6 +1327,7 @@ public class Decoder {
                 Log.w(TAG, StringUtil.getStackTraceAsString(e));
             }
             Log.w(TAG, "释放解码器");
+            this.inputFailedCount = 0;
             releaseDecoder();
             Log.w(TAG, "解码线程结束...");
         }
