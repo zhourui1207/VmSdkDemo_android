@@ -461,7 +461,8 @@ public class Decoder {
                                         public void onESData(boolean video, long pts, byte[]
                                                 outData, int outStart, int outLen) {
 //                                            Log.e(TAG, "mVideo=" + mVideo + ", pts=" + pts);
-//                                            Log.e(TAG, "onESData video=" + video + ", pts=" + pts + ", len=" + outLen);
+//                                            Log.e(TAG, "onESData video=" + video + ", pts=" +
+// pts + ", len=" + outLen);
                                             if (video) {
                                                 streamBufUsed = 0;
 
@@ -1086,10 +1087,10 @@ public class Decoder {
                                         .getData(), 0, esStreamData.getData().length);
                     }
 
+                    // 如果没有pts的话，就限制队列大小
                     // 如果队列中大于100帧没有处理，则做丢帧处理，只对p帧丢包，别的包不可以丢
-                    if (mRealMode && playBuffer.size() > 100 && (dataType ==
-                            DATA_TYPE_VIDEO_PFRAME ||
-                            dataType == DATA_TYPE_AUDIO)) {
+                    if (mRealMode && (esStreamData.getPts() == 0) && (playBuffer.size() > 100) &&
+                            (dataType == DATA_TYPE_VIDEO_PFRAME || dataType == DATA_TYPE_AUDIO)) {
                         // todo: 发现问题，如果夹带着有音频包并且需要播放音频，这一个线程吃不消，
                         // 一旦队列超过100后，丢失掉视频帧也无法将队列数量降下来，将这个放音频处理上面看看
                         Log.e(TAG, "buffer over 100, miss mData");
@@ -1113,6 +1114,12 @@ public class Decoder {
                                         firstPts) / 90000 / mSpeedScale) + firstTimestamp;
                                 while (System.nanoTime() < showTime) {  // 如果当前时间小于显示时间，则等待
                                     sleep(0);
+                                }
+                                // 假如实时模式下，由于为了平滑，队列大小肯定是长时间处于很大的状态，所以不能使用队列大小来判断是否需要丢包处理
+                                // 这种情况下应该用时间来判断，如果当前时间跟应该显示的showtime相差大于2秒的话，那就赶紧追上来
+                                if ((System.nanoTime() - showTime >= 2000000000L)) {
+                                    Log.e(TAG, "frame show time over 2 sec, miss mData");
+                                    continue;
                                 }
                             } else {
                                 firstPts = esStreamData.getPts();
@@ -1147,6 +1154,28 @@ public class Decoder {
 
                     if ((decodeType == VmType.DECODE_TYPE_SOFTWARE) && decoderHandle == 0) {
                         continue;
+                    }
+
+                    //                     && !mRealMode
+                    if (!useAudioTimestamp && esStreamData.getPts() != 0) {  //
+                        // 不为实时模式并且pts不为0
+                        if (firstTimestamp > 0) {
+                            // 计算显示时间 纳秒
+                            long showTime = (long) (1000000000f * (esStreamData.getPts() -
+                                    firstPts) / 90000 / mSpeedScale) + firstTimestamp;
+                            while (System.nanoTime() < showTime) {  // 如果当前时间小于显示时间，则等待
+                                sleep(0);
+                            }
+                            // 假如实时模式下，由于为了平滑，队列大小肯定是长时间处于很大的状态，所以不能使用队列大小来判断是否需要丢包处理
+                            // 这种情况下应该用时间来判断，如果当前时间跟应该显示的showtime相差大于2秒的话，那就赶紧追上来
+                            if (dataType == DATA_TYPE_VIDEO_PFRAME && (System.nanoTime() - showTime >= 2000000000L)) {
+                                Log.e(TAG, "frame show time over 2 sec, miss mData");
+                                continue;
+                            }
+                        } else {
+                            firstPts = esStreamData.getPts();
+                            firstTimestamp = System.nanoTime() + 500000000L;  // 防抖动
+                        }
                     }
 
                     byte[] data = esStreamData.getData();
@@ -1281,21 +1310,6 @@ public class Decoder {
                         }
                     }
 
-//                     && !mRealMode
-                    if (!useAudioTimestamp && esStreamData.getPts() != 0) {  //
-                        // 不为实时模式并且pts不为0
-                        if (firstTimestamp > 0) {
-                            // 计算显示时间 纳秒
-                            long showTime = (long) (1000000000f * (esStreamData.getPts() -
-                                    firstPts) / 90000 / mSpeedScale) + firstTimestamp;
-                            while (System.nanoTime() < showTime) {  // 如果当前时间小于显示时间，则等待
-                                sleep(0);
-                            }
-                        } else {
-                            firstPts = esStreamData.getPts();
-                            firstTimestamp = System.nanoTime() + 500000000L;  // 防抖动
-                        }
-                    }
                 }
             } catch (InterruptedException e) {
                 Log.w(TAG, "解码线程中断!");
