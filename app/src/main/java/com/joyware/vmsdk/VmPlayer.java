@@ -109,6 +109,8 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
     public void onFrameData(boolean video, int timestamp, long pts, byte[] data, int start, int
             len) {
         if (recordFile != null) {
+//            Log.w(TAG, "video=" + video + ", timestamp=" + timestamp + ", pts=" + pts + ", len="
+//                    + len);
             mRecordThread.write(video, timestamp, pts, data, start, len);
         }
     }
@@ -830,9 +832,11 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 //            }
 
 //      Log.e(TAG, "!!");
-//            Log.e(TAG, "len=" + buffer.length + ", seqNumber=" + seqNumber +", isMark=" + isMark + ", playloadType=" + payloadType);
+//            Log.e(TAG, "len=" + buffer.length + ", seqNumber=" + seqNumber +", isMark=" +
+// isMark + ", playloadType=" + payloadType);
             if (mDecoder != null) {
-                mDecoder.addBuffer(streamId, streamType, payloadType, buffer, 0, buffer.length, timeStamp,
+                mDecoder.addBuffer(streamId, streamType, payloadType, buffer, 0, buffer.length,
+                        timeStamp,
                         seqNumber, isMark);
             }
 
@@ -862,7 +866,8 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 //                        payloadType, buffer, 0, buffer.length, timeStamp, seqNumber, isMark));
 //            }
             if (mDecoder != null) {
-                mDecoder.addBuffer(streamId, VmType.STREAM_TYPE_AUDIO, payloadType, buffer, 0, buffer.length, timeStamp,
+                mDecoder.addBuffer(streamId, VmType.STREAM_TYPE_AUDIO, payloadType, buffer, 0,
+                        buffer.length, timeStamp,
                         seqNumber, isMark);
             }
         }
@@ -894,7 +899,8 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
             }
         }
         if (mDecoder != null) {
-            mDecoder.addBuffer(0, streamType, playloadType, buffer, bufferStart, bufferLen, timeStamp, seqNumber, mark);
+            mDecoder.addBuffer(0, streamType, playloadType, buffer, bufferStart, bufferLen,
+                    timeStamp, seqNumber, mark);
             if (currentStatus != VmType.PLAY_STATUS_PLAYING) {
                 setCurrentStatus(VmType.PLAY_STATUS_PLAYING);
             }

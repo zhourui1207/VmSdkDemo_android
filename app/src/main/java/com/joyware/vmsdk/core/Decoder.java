@@ -14,7 +14,9 @@ import android.util.Log;
 
 import com.joyware.vmsdk.ScreenshotCallback;
 import com.joyware.vmsdk.VmType;
+import com.joyware.vmsdk.util.DeviceUtil;
 import com.joyware.vmsdk.util.G711;
+import com.joyware.vmsdk.util.MediaCodecUtil;
 import com.joyware.vmsdk.util.Mp4Save;
 import com.joyware.vmsdk.util.PsStreamFilterUtil;
 import com.joyware.vmsdk.util.StringUtil;
@@ -23,6 +25,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
+import static android.media.MediaFormat.KEY_COLOR_FORMAT;
 
 /**
  * Created by zhourui on 16/10/28.
@@ -39,8 +44,8 @@ public class Decoder {
     private final int PAYLOAD_TYPE_PS = 96;
 
     private final String TAG = "Decoder";
-    private final int BUFFER_MAX_SIZE = 500;
-    private final int BUFFER_WARNING_SIZE = 400;
+    private final int BUFFER_MAX_SIZE = 1000;
+    private final int BUFFER_WARNING_SIZE = 1001;
 
     // es数据类型
     private final int DATA_TYPE_UNKNOW = 0;  // 未知类型
@@ -76,6 +81,10 @@ public class Decoder {
     // 才是正确地做法
     private int w = 325;
     private int h = 288;
+
+//    private int w = 1920;
+//    private int h = 1080;
+
     private String mime = "video/avc";
     private MediaCodec mediaCodecDecoder;  //硬解码器
     private ByteBuffer[] inputBuffers;
@@ -88,6 +97,9 @@ public class Decoder {
     private long firstTimestamp;
 
     private boolean mNeedDecode = true;
+
+    @NonNull
+    private final String mModel = DeviceUtil.getModel();
 
 //    private bool
 
@@ -335,6 +347,7 @@ public class Decoder {
                 .BlockingBufferType.PRIORITY, BUFFER_MAX_SIZE, BUFFER_WARNING_SIZE);  // 码流数据
 
         public boolean addBuffer(Object object) {
+//            Log.w(TAG, "streamBuffer size=" + streamBuffer.size());
             return streamBuffer.addObjectForce(object);
         }
 
@@ -351,6 +364,8 @@ public class Decoder {
         public void run() {
             Log.i(TAG, "帧数据处理线程开始...");
 
+            setPriority(Thread.MAX_PRIORITY);
+
             // 是否是第一帧
             final boolean[] isFirst = {true};
             boolean reset = true;
@@ -358,6 +373,7 @@ public class Decoder {
             final byte[][] remainingData = new byte[1][1];
             final int[] remainingStart = new int[1];
             final int[] remainingLen = new int[1];
+            final int[] remainingReadedStart = new int[1];
             mEsDataNumber = 0;
 
             try {
@@ -408,36 +424,10 @@ public class Decoder {
                         // 这里需要判断是否是PS流，如果是复合的PS流，还需要再分出视频和音频流
                         boolean isVideo = true;
                         if (payloadTypeOld == PAYLOAD_TYPE_PS) {
-//                            begin = psStreamUtil.filterPsHeader(streamData.getBuffer(), 0,
-//                                    streamData.getBuffer().length);
-//                            if (begin < streamData.getBuffer().length) {  // 表示有数据可以使用
-//                                if (!psStreamUtil.isFindDataStart()) {
-//                                    continue;
-//                                }
-//
-//                                if (psStreamUtil.isVideo()) {
-//                                    isVideo = true;
-//                                } else {  // 是音频
-//                                    isVideo = false;
-//
-//                                    if (!isFirst) {  // 发现第一帧之后再发送音频
-//                                        int lenNow = streamData.getBuffer().length - begin;
-//                                        byte[] dataForDecode = new byte[lenNow * 2];
-//                                        int audioLen = G711.decode(streamData.getBuffer(), begin,
-//                                                lenNow, dataForDecode);
-//
-//                                        dataType = DATA_TYPE_AUDIO;
-//                                        sendData(dataType, payloadType, timestamp,
-// dataForDecode, 0,
-//                                                audioLen);
-//                                    }
-//                                }
-//                            } else {
-//                            }
-
                             data = streamData.getBuffer();
                             len = data.length;
                             begin[0] = 0;
+                            int readBegin = begin[0];
 
                             if (remainingData[0] != null && remainingLen[0] > 0) {
                                 int totalLen = remainingLen[0] + len;
@@ -446,23 +436,28 @@ public class Decoder {
                                         0, remainingLen[0]);
                                 System.arraycopy(data, 0, totalData, remainingLen[0], len);
                                 data = totalData;
-                                len = totalLen;
+                                readBegin = remainingReadedStart[0] - remainingStart[0];
+//                                len = totalLen;
 
-                                remainingData[0] = null;
-                                remainingLen[0] = 0;
+//                                remainingData[0] = null;
+//                                remainingLen[0] = 0;
                             }
 
 //                            Log.e(TAG, "filterPsHeader len=" + len + ", start=" + begin[0] + " " +
 //                                    "mData=" + StringUtil.byte2hex(mData, 0, len));
-                            mPsStreamUtil.filterPsHeader(data, begin[0], len, new
+
+//                            Log.w(TAG, "filterPsHeader begin=" + begin[0] + ", len=" + len + ", " +
+//                                    "readBegin=" + readBegin);
+                            mPsStreamUtil.filterPsHeader(data, begin[0], len, readBegin, new
                                     PsStreamFilterUtil.OnDataCallback() {
 
                                         @Override
                                         public void onESData(boolean video, long pts, byte[]
                                                 outData, int outStart, int outLen) {
-//                                            Log.e(TAG, "mVideo=" + mVideo + ", pts=" + pts);
+//                                            Log.e(TAG, "mVideo=" + video + ", pts=" + pts);
 //                                            Log.e(TAG, "onESData video=" + video + ", pts=" +
-// pts + ", len=" + outLen + ", nalu type=" + (outData[outStart + 4] & 0x1f));
+//                                                    pts + ", len=" + outLen + ", nalu type=" +
+//                                                    (outData[outStart + 4] & 0x1f));
                                             if (video) {
                                                 streamBufUsed = 0;
 
@@ -513,6 +508,7 @@ public class Decoder {
 
 //                                        Log.e(TAG, "一帧数据");
                                                             if (send) {
+//                                                                Log.w(TAG, "snedData");
                                                                 sendData(dataType[0], payloadType,
                                                                         timestamp, pts, videoBuf,
                                                                         0, videoBufUsed - 4);
@@ -536,16 +532,18 @@ public class Decoder {
 
                                         @Override
                                         public void onRemainingData(byte[] outData, int outStart,
-                                                                    int outLen) {
+                                                                    int outLen, int readedStart) {
 //                                            Log.e(TAG, "onRemainingData start=" +
-//                                                    outStart + ", len=" + outLen + ", mData=" +
-//                                                    StringUtil.byte2hex(outData, outStart,
-// outLen));
+//                                                    outStart + ", len=" + outLen + " ," +
+//                                                    "readedStart=" + readedStart);
                                             remainingData[0] = outData;
                                             remainingStart[0] = outStart;
                                             remainingLen[0] = outLen;
+                                            remainingReadedStart[0] = readedStart;
                                         }
                                     });
+
+//                            Log.w(TAG, "filterPsHeader end");
 
                             continue;
                         }
@@ -740,6 +738,7 @@ public class Decoder {
         private int framerate = 25;
         // 是否获取到配置
         private boolean getConf = false;
+        private boolean inputConf = false;
 
         // 帧间隔 默认40毫秒
         private long interval = 40;
@@ -760,6 +759,8 @@ public class Decoder {
         private byte[] lastPpsBuffer;
         private byte[] lastIFrameBuffer;  // 最后一帧I帧数据
         private byte[] lastPFrameBuffer;  // I帧后紧跟着的P帧  测试发现有些设备在解码I帧后无法输出图像，必须输入后面的P帧才能显示
+//        @NonNull
+//        private final H264SPSPaser mH264SPSPaser = new H264SPSPaser();
 
         private byte[] tmpIFrameBuffer;  // 临时的I帧，用来存储还没更新lastPFrameBuffer时的数据
         private boolean isFistPFrame = true;
@@ -954,20 +955,33 @@ public class Decoder {
                         Log.i(TAG, "decoderHandle=" + decoderHandle);
                     }
                 } else {
-                    if (mediaCodecDecoder == null && isRunning) {
-                        Log.w(TAG, "创建硬件解码");
+                    if (decodeType == VmType.DECODE_TYPE_INTELL && !MediaCodecUtil
+                            .supportAvcCodec(mime)) {
+                        decodeType = VmType.DECODE_TYPE_SOFTWARE;
+                        Log.e(TAG, "Unsupport avc:" + mime);
+                        createDecoder(payloadType);
+                    }
+
+                    if (decodeType != VmType.DECODE_TYPE_SOFTWARE && mediaCodecDecoder == null &&
+                            isRunning && getConf) {
+//                    if (decodeType != VmType.DECODE_TYPE_SOFTWARE && mediaCodecDecoder == null &&
+//                            isRunning) {
+                        Log.w(TAG, "创建硬件解码 w=" + w + " h=" + h);
                         try {
                             mediaCodecDecoder = MediaCodec.createDecoderByType(mime);
-                            // 其实这个只有编码的时候才有用
-//                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-//                                mediaFormat.setInteger(KEY_COLOR_FORMAT,
-//                                        MediaCodecInfo.CodecCapabilities
-//                                                .COLOR_FormatYUV420Flexible);
-//                            } else {
-//                                mediaFormat.setInteger(KEY_COLOR_FORMAT,
-//                                        COLOR_FormatYUV420Planar);
-//                            }
                             MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, w, h);
+                            // 虽说这个只有编码的时候才有用，但是小米2s上是有用的
+                            if (mModel.contains("MI 2S")) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                    mediaFormat.setInteger(KEY_COLOR_FORMAT,
+                                            MediaCodecInfo.CodecCapabilities
+                                                    .COLOR_FormatYUV420Flexible);
+                                } else {
+                                    mediaFormat.setInteger(KEY_COLOR_FORMAT,
+                                            COLOR_FormatYUV420Planar);
+                                }
+                            }
+
                             mediaCodecDecoder.configure(mediaFormat, null, null, 0);  //
 // todo:不传入surface，只用来解码，自己来显示
 
@@ -1058,9 +1072,14 @@ public class Decoder {
         public void run() {
             Log.w(TAG, "解码线程开始...");
 
+            setPriority(Thread.MAX_PRIORITY);
+
+            boolean miss = false;
+
             try {
                 while (isRunning && !this.isInterrupted()) {
 
+//                    Log.w(TAG, "while begin");
                     if (isPause) {
                         firstPts = 0;
                         firstTimestamp = 0;
@@ -1068,34 +1087,46 @@ public class Decoder {
                         continue;
                     }
 
+//                    Log.w(TAG, "playBuffer size=" + playBuffer.size());
                     EsStreamData esStreamData = (EsStreamData) playBuffer.removeObjectBlocking();
                     if (!isRunning || esStreamData == null) {
                         break;
                     }
 
-                    if (recordThread != null) {
-//                        EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld,
-//                                timestampOld, mData, begin, len);
-                        recordThread.addBuffer(esStreamData);
-                    }
+//                    if (recordThread != null) {
+//                        recordThread.addBuffer(esStreamData);
+//                    }
 
                     int dataType = esStreamData.getDataType();
 
+//                    Log.w(TAG, "onFrameData begin");
                     if (mOnESFrameDataCallback != null) {
                         mOnESFrameDataCallback.onFrameData(dataType != DATA_TYPE_AUDIO,
                                 esStreamData.getTimestamp(), esStreamData.getPts(), esStreamData
                                         .getData(), 0, esStreamData.getData().length);
                     }
+//                    Log.w(TAG, "onFrameData end");
+
+                    // 如果p帧丢包的话，需要等待下一个i帧
+                    if (esStreamData.getPts() != 0 && miss && dataType != DATA_TYPE_VIDEO_IFRAME
+                            && dataType != DATA_TYPE_VIDEO_SPS && dataType != DATA_TYPE_VIDEO_PPS) {
+                        continue;
+                    }
+
+                    miss = false;
 
                     // 如果没有pts的话，就限制队列大小
                     // 如果队列中大于100帧没有处理，则做丢帧处理，只对p帧丢包，别的包不可以丢
-                    if (mRealMode && (esStreamData.getPts() == 0) && (playBuffer.size() > 100) &&
-                            (dataType == DATA_TYPE_VIDEO_PFRAME || dataType == DATA_TYPE_AUDIO)) {
+                    if (mRealMode && (esStreamData.getPts() == 0) && (playBuffer.size() > 200) &&
+                            (dataType == DATA_TYPE_VIDEO_PFRAME)) {
                         // todo: 发现问题，如果夹带着有音频包并且需要播放音频，这一个线程吃不消，
                         // 一旦队列超过100后，丢失掉视频帧也无法将队列数量降下来，将这个放音频处理上面看看
-                        Log.e(TAG, "buffer over 100, miss mData");
+                        Log.e(TAG, "buffer over 200, miss mData");
+                        miss = true;
                         continue;
                     }
+
+//                    Log.w(TAG, "audio decode begin");
 
                     // 如果是音频的话，则只需要执行这段代码即可
                     if (dataType == DATA_TYPE_AUDIO) {
@@ -1105,7 +1136,6 @@ public class Decoder {
                             firstTimestamp = 0;
                             firstPts = 0;
                         }
-//                         && !mRealMode
                         if (useAudioTimestamp && esStreamData.getPts() != 0) {  //
                             // 不为实时模式并且pts不为0
                             if (firstTimestamp > 0) {
@@ -1117,13 +1147,9 @@ public class Decoder {
                                 }
                                 // 假如实时模式下，由于为了平滑，队列大小肯定是长时间处于很大的状态，所以不能使用队列大小来判断是否需要丢包处理
                                 // 这种情况下应该用时间来判断，如果当前时间跟应该显示的showtime相差大于2秒的话，那就赶紧追上来
-                                if ((System.nanoTime() - showTime >= 2000000000L)) {
-                                    Log.e(TAG, "frame show time over 2 sec, miss mData");
-                                    continue;
-                                }
                             } else {
                                 firstPts = esStreamData.getPts();
-                                firstTimestamp = System.nanoTime() + 500000000L;
+                                firstTimestamp = System.nanoTime() + 300000000L;
                             }
                         }
                         if (openAudio) {
@@ -1137,6 +1163,8 @@ public class Decoder {
                         continue;
                     }
 
+//                    Log.w(TAG, "video decode begin");
+
 //                    Log.e(TAG, "播放视频");
                     createDecoder(esStreamData.getPayloadType());
 
@@ -1147,17 +1175,17 @@ public class Decoder {
 
                     showed = true;
 
-                    if ((decodeType == VmType.DECODE_TYPE_INTELL || decodeType == VmType
-                            .DECODE_TYPE_HARDWARE) && mediaCodecDecoder == null) {
-                        continue;
-                    }
+//                    if ((decodeType == VmType.DECODE_TYPE_INTELL || decodeType == VmType
+//                            .DECODE_TYPE_HARDWARE) && mediaCodecDecoder == null) {
+//                        continue;
+//                    }
 
                     if ((decodeType == VmType.DECODE_TYPE_SOFTWARE) && decoderHandle == 0) {
                         continue;
                     }
 
                     //                     && !mRealMode
-                    if (!useAudioTimestamp && esStreamData.getPts() != 0) {  //
+                    if (esStreamData.getPts() != 0) {  //
                         // 不为实时模式并且pts不为0
                         if (firstTimestamp > 0) {
                             // 计算显示时间 纳秒
@@ -1169,13 +1197,15 @@ public class Decoder {
                             // 假如实时模式下，由于为了平滑，队列大小肯定是长时间处于很大的状态，所以不能使用队列大小来判断是否需要丢包处理
                             // 这种情况下应该用时间来判断，如果当前时间跟应该显示的showtime相差大于2秒的话，那就赶紧追上来
                             if (dataType == DATA_TYPE_VIDEO_PFRAME && (System.nanoTime() -
-                                    showTime >= 2000000000L)) {
-                                Log.e(TAG, "frame show time over 2 sec, miss mData");
+                                    showTime >= 3000000000L)) {
+                                // 丢包处理，假如丢掉了一个p帧，那么直到下一个p帧之前，
+                                Log.e(TAG, "frame show time over 3 sec, miss mData");
+                                miss = true;
                                 continue;
                             }
                         } else {
                             firstPts = esStreamData.getPts();
-                            firstTimestamp = System.nanoTime() + 500000000L;  // 防抖动
+                            firstTimestamp = System.nanoTime() + 300000000L;  // 防抖动
                         }
                     }
 
@@ -1186,6 +1216,38 @@ public class Decoder {
                     if (dataType == DATA_TYPE_VIDEO_SPS) {
                         lastSpsBuffer = new byte[data.length];
                         System.arraycopy(data, 0, lastSpsBuffer, 0, data.length);
+
+//                        if (!inputConf) {
+//                            Log.w(TAG, "begin get width and height");
+//
+//                            short seqParameterSetId = (mH264SPSPaser.ue(lastSpsBuffer, 24 + 5 *
+// 8));
+//                            short log2MaxFrameNumMinus4 = (mH264SPSPaser.ue(lastSpsBuffer, -1));
+//                            short picOrderCntType = (mH264SPSPaser.ue(lastSpsBuffer, -1));
+//                            short log2MaxPicOrderCntLsbMinus4 = (mH264SPSPaser.ue(lastSpsBuffer,
+//                                    -1));
+//                            short numRefFrames = (mH264SPSPaser.ue(lastSpsBuffer, -1));
+//                            if (numRefFrames > 1) {
+//                                short gapsInFrameNumValueAllowedFlag = mH264SPSPaser.u
+//                                        (lastSpsBuffer, 1, mH264SPSPaser.getStartBit());
+//                                Log.w(TAG, "gapsInFrameNumValueAllowedFlag=" +
+//                                        gapsInFrameNumValueAllowedFlag);
+//                                mH264SPSPaser.addStartBit(1);
+//                            }
+////                            H264SPSPaser.addStartBit(1);
+//                            w = (mH264SPSPaser.ue(lastSpsBuffer, -1) + 1) * 16;
+//                            h = (mH264SPSPaser.ue(lastSpsBuffer, -1) + 1) * 16;
+//                            if (numRefFrames == 2) {
+//                                h *= 2;
+//                            } else if (numRefFrames > 2) {
+//                                w *= numRefFrames;
+//                                h *= numRefFrames;
+//                            }
+//
+//                            Log.w(TAG, "end get width and height numRefFrames=" + numRefFrames +
+//                                    ", w=" + w + ", h=" + h);
+//                            inputConf = true;
+//                        }
 //                        Log.e(TAG, "sps");
                     } else if (dataType == DATA_TYPE_VIDEO_PPS) {
                         lastPpsBuffer = new byte[data.length];
@@ -1200,8 +1262,7 @@ public class Decoder {
                         isFistPFrame = true;
 //                        Log.e(TAG, "IFrame");
                     } else if (dataType == DATA_TYPE_VIDEO_PFRAME && isFistPFrame &&
-                            tmpIFrameBuffer !=
-                                    null) {
+                            tmpIFrameBuffer != null) {
 //                        Log.e(TAG, "PFrame");
                         lastIFrameBuffer = tmpIFrameBuffer;
                         lastPFrameBuffer = new byte[data.length];
@@ -1211,13 +1272,13 @@ public class Decoder {
 
                     // 硬件解码的话需要使用软解码获取图像信息
                     decodeConf(esStreamData.getPayloadType());
+                    createDecoder(esStreamData.getPayloadType());
 
                     if (decodeType == VmType.DECODE_TYPE_SOFTWARE) {  // 软件解码
 
                         int canShow;
                         canShow = DecodeNalu2YUV(decoderHandle, data, data.length, yBuffer,
-                                uBuffer,
-                                vBuffer, frameConfHolder);
+                                uBuffer, vBuffer, frameConfHolder);
 
 //                            Log.e(TAG, "解码canShow=" + canShow);
                         if (canShow >= 0) {
@@ -1255,64 +1316,27 @@ public class Decoder {
                                         uBuffer, 0, uBuffer.length, vBuffer, 0, vBuffer.length);
                             }
                         }
-                    } else {  // 智能解码或者硬件解码
-                        int inputBufferIndex;
-
+                    } else if (mediaCodecDecoder != null) {  // 智能解码或者硬件解码
                         try {
-
-                            long timeout_us = 160000;
-                            if (dataType == DATA_TYPE_VIDEO_IFRAME) {
-                                timeout_us = 160000;
+                            // 先将前面的sps、pps、iframe、p帧输入
+                            if (!inputConf) {
+                                if (lastSpsBuffer != null) {
+                                    inputData(DATA_TYPE_VIDEO_SPS, lastSpsBuffer);
+                                }
+                                if (lastPpsBuffer != null) {
+                                    inputData(DATA_TYPE_VIDEO_PPS, lastPpsBuffer);
+                                }
+                                if (lastIFrameBuffer != null) {
+                                    inputData(DATA_TYPE_VIDEO_IFRAME, lastIFrameBuffer);
+                                }
+                                if (lastPFrameBuffer != null) {
+                                    inputData(DATA_TYPE_VIDEO_PFRAME, lastPFrameBuffer);
+                                }
+                                inputConf = true;
                             }
-                            inputBufferIndex = mediaCodecDecoder.dequeueInputBuffer(timeout_us);
 
-                            if (inputBufferIndex >= 0) {
-                                ByteBuffer inputBuffer;
-//                                inputBuffer = inputBuffers[inputBufferIndex];
-//                                inputBuffer.clear();
-                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                                    inputBuffer = inputBuffers[inputBufferIndex];
-                                    inputBuffer.clear();
-                                } else {
-                                    inputBuffer = mediaCodecDecoder.getInputBuffer
-                                            (inputBufferIndex);
-                                }
-
-                                if (inputBuffer != null) {
-                                    inputBuffer.put(data, 0, data.length);
-                                    int flags;
-                                    switch (dataType) {
-                                        case DATA_TYPE_VIDEO_SPS:
-                                        case DATA_TYPE_VIDEO_PPS:
-                                            flags = MediaCodec.BUFFER_FLAG_CODEC_CONFIG;
-                                            break;
-                                        default:
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES
-                                                    .LOLLIPOP) {
-                                                flags = MediaCodec.BUFFER_FLAG_KEY_FRAME;
-                                            } else {
-                                                flags = MediaCodec.BUFFER_FLAG_SYNC_FRAME;
-                                            }
-//                                            timestamp = (timestamp + 40000) % Long.MAX_VALUE;
-                                            timestamp += 100;
-                                            break;
-                                    }
-                                    mediaCodecDecoder.queueInputBuffer(inputBufferIndex, 0,
-                                            data.length, timestamp, flags);
-                                }
-
-                                inputFailedCount = 0;
-                            } else {
-                                Log.e(TAG, "input failed mData=" + dataType);
-                                // 如果I帧或者P帧解码失败了，那么就等到下一个I帧再解码，防止花屏
-                                if ((this.decodeType == VmType.DECODE_TYPE_INTELL) && (++this
-                                        .inputFailedCount == 5)) { // 累计失败次数，如果连续5次失败，就开始使用软解码模式
-                                    this.inputFailedCount = 0;
-                                    this.decodeType = VmType.DECODE_TYPE_SOFTWARE;
-                                    // 硬解码不支持的类型
-                                    Log.e(TAG, "hard decode type can't support the video, change " +
-                                            "to soft decode type!");
-                                }
+                            if (!inputData(dataType, data)) {
+                                miss = true;
                             }
 
                         } catch (Exception e) {
@@ -1330,6 +1354,69 @@ public class Decoder {
             this.inputFailedCount = 0;
             releaseDecoder();
             Log.w(TAG, "解码线程结束...");
+        }
+
+        private boolean inputData(int dataType, byte[] data) throws Exception {
+            long timeout_us = 160000;
+            if (dataType == DATA_TYPE_VIDEO_IFRAME) {
+                timeout_us = 1000000;
+            }
+//            Log.w(TAG, "dequeueInputBuffer begin");
+            int inputBufferIndex = mediaCodecDecoder.dequeueInputBuffer(timeout_us);
+//            Log.w(TAG, "dequeueInputBuffer end");
+
+            if (inputBufferIndex >= 0) {
+                ByteBuffer inputBuffer;
+//                                inputBuffer = inputBuffers[inputBufferIndex];
+//                                inputBuffer.clear();
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                    inputBuffer = inputBuffers[inputBufferIndex];
+                    inputBuffer.clear();
+                } else {
+                    inputBuffer = mediaCodecDecoder.getInputBuffer
+                            (inputBufferIndex);
+                }
+
+                if (inputBuffer != null) {
+                    inputBuffer.put(data, 0, data.length);
+                    int flags;
+                    switch (dataType) {
+                        case DATA_TYPE_VIDEO_SPS:
+                        case DATA_TYPE_VIDEO_PPS:
+                            flags = MediaCodec.BUFFER_FLAG_CODEC_CONFIG;
+                            break;
+                        default:
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES
+                                    .LOLLIPOP) {
+                                flags = MediaCodec.BUFFER_FLAG_KEY_FRAME;
+                            } else {
+                                flags = MediaCodec.BUFFER_FLAG_SYNC_FRAME;
+                            }
+//                                            timestamp = (timestamp + 40000) % Long.MAX_VALUE;
+                            timestamp += 1;
+                            break;
+                    }
+                    mediaCodecDecoder.queueInputBuffer(inputBufferIndex, 0,
+                            data.length, timestamp, flags);
+                }
+
+                inputFailedCount = 0;
+
+//                Log.w(TAG, "inputData end");
+                return true;
+            } else {
+                Log.e(TAG, "input failed mData=" + dataType);
+                // 如果I帧或者P帧解码失败了，那么就等到下一个I帧再解码，防止花屏
+                if ((this.decodeType == VmType.DECODE_TYPE_INTELL) && (++this
+                        .inputFailedCount == 5)) { // 累计失败次数，如果连续5次失败，就开始使用软解码模式
+                    this.inputFailedCount = 0;
+                    this.decodeType = VmType.DECODE_TYPE_SOFTWARE;
+                    // 硬解码不支持的类型
+                    Log.e(TAG, "hard decode type can't support the video, change " +
+                            "to soft decode type!");
+                }
+                return false;
+            }
         }
 
         // 获取视频信息
@@ -1427,6 +1514,7 @@ public class Decoder {
             @Override
             public void run() {
                 Log.w(TAG, "音频播放线程开始");
+                setPriority(Thread.MAX_PRIORITY);
                 try {
                     while (isRunning && !this.isInterrupted()) {
                         if (isPause) {
@@ -1459,13 +1547,14 @@ public class Decoder {
         private class OutputThread extends Thread {
             @Override
             public void run() {
+//                setPriority(Thread.MAX_PRIORITY);
                 while (isRunning && !isInterrupted()) {
                     try {
-                        if (!getConf) {
+                        if (!getConf || mediaCodecDecoder == null || !inputConf) {
                             continue;
                         }
 
-                        int outIndex = mediaCodecDecoder.dequeueOutputBuffer(info, 80000);
+                        int outIndex = mediaCodecDecoder.dequeueOutputBuffer(info, 100000);
                         if (outData == null || outData.length < info.size) {
                             outData = new byte[info.size];
                         }
@@ -1487,16 +1576,17 @@ public class Decoder {
 
                                 if (mColorFormatType == 0) {
                                     mColorFormatType = mediaCodecDecoder.getOutputFormat
-                                            ().getInteger(MediaFormat.KEY_COLOR_FORMAT);
+                                            ().getInteger(KEY_COLOR_FORMAT);
 
-                                    Log.w(TAG, "colorFormatType = " + mColorFormatType);
+                                    Log.w(TAG, "colorFormatType = " + mColorFormatType + ", " +
+                                            "outlen=" + info.size);
                                 }
 
                                 int yL = w * h;
                                 int uL = yL / 4;
 
-                                if (mColorFormatType == MediaCodecInfo.CodecCapabilities
-                                        .COLOR_FormatYUV420Planar) {  // 分片
+                                if (mColorFormatType == COLOR_FormatYUV420Planar) {  // 分片
+//                                if (true) {
                                     if (mOnYUVFrameDataCallback != null) {
                                         mOnYUVFrameDataCallback.onFrameData(w, h, outData, 0,
                                                 yL, outData, yL, uL, outData, yL + uL, uL);
@@ -1509,11 +1599,18 @@ public class Decoder {
                                     if (mTmpVUBuffer == null || mTmpVUBuffer.length < uL * 2) {
                                         mTmpVUBuffer = new byte[uL * 2];
                                     }
-                                    int offset = info.size * 2 / 3 - yL;
-                                    if (offset < 0) {
-                                        return;
+
+                                    if (mModel.contains("MI 2S")) {
+                                        YUVSP2YUVP(outData, yL, uL * 2, mTmpVUBuffer);  // 小米2s
+                                    } else {
+                                        int offset = info.size * 2 / 3 - yL;
+                                        if (offset < 0) {
+                                            return;
+                                        }
+                                        YUVSP2YUVP(outData, yL + offset, uL * 2, mTmpVUBuffer);
+                                        // 其他
                                     }
-                                    YUVSP2YUVP(outData, yL + offset, uL * 2, mTmpVUBuffer);
+
                                     if (mOnYUVFrameDataCallback != null) {
                                         mOnYUVFrameDataCallback.onFrameData(w, h, outData, 0,
                                                 yL, mTmpVUBuffer, 0, uL, mTmpVUBuffer, uL, uL);
@@ -1528,7 +1625,11 @@ public class Decoder {
 
                                 mediaCodecDecoder.releaseOutputBuffer(outIndex, false);
 
-                                outIndex = mediaCodecDecoder.dequeueOutputBuffer(info, 80000);
+
+                                if (!getConf || mediaCodecDecoder == null || !inputConf) {
+                                    break;
+                                }
+                                outIndex = mediaCodecDecoder.dequeueOutputBuffer(info, 100000);
                             }
                         }
                     } catch (Exception e) {
