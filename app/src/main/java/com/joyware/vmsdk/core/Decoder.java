@@ -341,7 +341,7 @@ public class Decoder {
         PsStreamFilterUtil mPsStreamUtil = new PsStreamFilterUtil();
 
         private RTPSortFilter mRTPSortFilter;
-//        private boolean oldPacketIsAudio = false;
+        private boolean haveAudio = false;
         int missPacket = -1;
 
         int timestampOld;
@@ -550,6 +550,7 @@ public class Decoder {
                                                                         }
                                                                     }
                                                                 } else {
+                                                                    haveAudio = true;
                                                                     if (!isFirst[0]) {  //
                                                                         // 发现第一帧之后再发送音频
                                                                         byte[] dataForDecode = new
@@ -598,7 +599,9 @@ public class Decoder {
                                     public void onMissed(int missedStartSeqNumber, int
                                             missedNumber) {
                                         Log.e(TAG , "onMissed");
-                                        if (missedNumber > 1) {
+                                        if (haveAudio && missedNumber == 1) {
+                                            // 这种情况下可能是只丢失了音频，那么就不用管了
+                                        } else {
                                             missPacket = 1;
                                         }
                                     }
@@ -708,7 +711,7 @@ public class Decoder {
                     missPacket = -1;
                 }
 
-                if (missPacket != 0) {
+                if (missPacket != 0 || dataType == DATA_TYPE_AUDIO) {  // 音频不用跳过
                     if (playThread != null) {
                         EsStreamData esStreamData = new EsStreamData(dataType, payloadTypeOld,
                                 timestampOld, pts, data, begin, len, ++mEsDataNumber);
