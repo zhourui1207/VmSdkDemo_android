@@ -434,8 +434,10 @@ public class Decoder {
 
 
                                     @Override
-                                    public void onSorted(final int payloadType, byte[] outRTPdata, int
-                                            rtpStart, int rtpLen, int timeStamp, int seqNumber, boolean
+                                    public void onSorted(final int payloadType, byte[]
+                                            outRTPdata, int
+                                            rtpStart, int rtpLen, int timeStamp, int seqNumber,
+                                                         boolean
                                                                  mark) {
                                         begin[0] = rtpStart;
                                         int readBegin = begin[0];
@@ -445,7 +447,8 @@ public class Decoder {
                                             byte[] totalData = new byte[totalLen];
                                             System.arraycopy(remainingData[0], remainingStart[0],
                                                     totalData, 0, remainingLen[0]);
-                                            System.arraycopy(outRTPdata, 0, totalData, remainingLen[0],
+                                            System.arraycopy(outRTPdata, 0, totalData,
+                                                    remainingLen[0],
                                                     rtpLen);
                                             outRTPdata = totalData;
                                             readBegin = remainingReadedStart[0] - remainingStart[0];
@@ -510,22 +513,22 @@ public class Decoder {
                                                                                             DATA_TYPE_VIDEO_SPS;
                                                                                 } else if (
                                                                                         (videoBuf[4] &
-                                                                                        0x1F) ==
-                                                                                        0x08) {
+                                                                                                0x1F) ==
+                                                                                                0x08) {
                                                                                     // pps
                                                                                     dataType[0] =
                                                                                             DATA_TYPE_VIDEO_PPS;
                                                                                 } else if (
                                                                                         (videoBuf[4] &
-                                                                                        0x1F) ==
-                                                                                        0x05) {
+                                                                                                0x1F) ==
+                                                                                                0x05) {
                                                                                     // I帧
                                                                                     dataType[0] =
                                                                                             DATA_TYPE_VIDEO_IFRAME;
                                                                                 } else if (
                                                                                         (videoBuf[4] &
-                                                                                        0x1F) ==
-                                                                                        0x06) {
+                                                                                                0x1F) ==
+                                                                                                0x06) {
                                                                                     dataType[0] =
                                                                                             DATA_TYPE_VIDEO_OTHER;
                                                                                 } else {  // 否则都当做P帧
@@ -598,7 +601,7 @@ public class Decoder {
                                     @Override
                                     public void onMissed(int missedStartSeqNumber, int
                                             missedNumber) {
-                                        Log.e(TAG , "onMissed");
+                                        Log.e(TAG, "onMissed");
                                         if (haveAudio && missedNumber == 1) {
                                             // 这种情况下可能是只丢失了音频，那么就不用管了
                                         } else {
@@ -717,7 +720,8 @@ public class Decoder {
                                 timestampOld, pts, data, begin, len, ++mEsDataNumber);
                         playThread.addBuffer(esStreamData);
                     }
-                    if (!mNeedDecode && mOnESFrameDataCallback != null) {  //
+                    if (!mNeedDecode && mOnESFrameDataCallback != null && missPacket != 0) {  //
+                        // 这里音频不回调出去了，因为这样会不同步
                         // 如果不解码的话，就是说不需要控制播放速度，那么在这里回调
                         mOnESFrameDataCallback.onFrameData(dataType != DATA_TYPE_AUDIO, timestamp,
                                 pts, data, begin, len);
