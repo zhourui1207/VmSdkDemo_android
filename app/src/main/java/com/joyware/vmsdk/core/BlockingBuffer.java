@@ -71,6 +71,10 @@ public class BlockingBuffer {
         }
     }
 
+    public int getMaxSize() {
+        return maxSize;
+    }
+
     public int size() {
         synchronized (mutex) {
             return linkedBlockingQueue.size();

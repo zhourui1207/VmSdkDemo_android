@@ -73,8 +73,9 @@ jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2RGB(JNIEnv *env, jobject ob,
                                        outlen, width, height, framerate);
     if (ret) {
         if (!FrameConfigHolderInit(env, width, height, framerate, frameConfigHolder)) {
-            outlen = -1;
+
         }
+        outlen = width * height * 2;
     } else {
         outlen = -1;
     }

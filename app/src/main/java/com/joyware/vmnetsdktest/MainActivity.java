@@ -34,6 +34,7 @@ import com.joyware.vmsdk.core.BlockingBuffer;
 import com.joyware.vmsdk.core.CheckAudioPermission;
 import com.joyware.vmsdk.core.JWAsyncTask;
 import com.joyware.vmsdk.core.PriorityData;
+import com.joyware.vmsdk.core.RTPSortFilter;
 import com.joyware.vmsdk.core.RecordThread;
 import com.joyware.vmsdk.util.OpenGLESUtil;
 import com.joyware.vmsdk.util.opengles.GLFrameRenderer;
@@ -290,7 +291,10 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         findViewById(R.id.btn_start_rtsp).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                rtspStreamId = VmNet.startStreamByRtsp("rtsp://admin:admin12345@192.168.3.38:554/Streaming/Channels/101?transportmode=unicast&profile=Profile_1", new VmNet.StreamCallbackV2() {
+                rtspStreamId = VmNet.startStreamByRtsp
+                        ("rtsp://admin:admin12345@192.168.3.38:554/Streaming/Channels/101" +
+                                "?transportmode=unicast&profile=Profile_1", new VmNet
+                                .StreamCallbackV2() {
                     @Override
                     public void onStreamConnectStatus(boolean isConnected) {
                         Log.e(TAG, "onStreamConnectStatus isConnected = " + isConnected);
@@ -322,11 +326,13 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
                 Log.e(TAG, "startRecordTask");
                 int startTime = 1498452620;
                 mRecordDownloader.startRecordTask(RecordThread.RECORD_FILE_TYPE_MP4,
-                        "/sdcard/MVSS/test.mp4", true, "201706151925230392", 1, startTime, startTime + 60 * 2);
+                        "/sdcard/MVSS/test.mp4", true, "201706151925230392", 1, startTime,
+                        startTime + 60 * 2);
             }
         });
 
-        findViewById(R.id.btn_cancel_download_record).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.btn_cancel_download_record).setOnClickListener(new View.OnClickListener
+                () {
             @Override
             public void onClick(View v) {
                 Log.e(TAG, "cancelRecordTask");
@@ -385,7 +391,8 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 //
         final JWAsyncTask myAsyncTask = new MyAsyncTask().execute(2);
 
-        BlockingBuffer blockingBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType.PRIORITY);
+        BlockingBuffer blockingBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType
+                .PRIORITY);
 
         int i = 0;
         blockingBuffer.addObject(new PriorityData("1", 5, ++i));
@@ -648,6 +655,33 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
 
         new RealplayTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+        RTPSortFilter rtpSortFilter = new RTPSortFilter(5);
+        rtpSortFilter.setOnSortedCallback(new RTPSortFilter.OnSortedCallback() {
+            @Override
+            public void onSorted(int payloadType, byte[] buffer, int start, int len, int
+                    timeStamp, int seqNumber, boolean mark) {
+                Log.e(TAG, "onSorted seqNumber=" + seqNumber);
+            }
+        });
+
+        rtpSortFilter.setOnMissedCallback(new RTPSortFilter.OnMissedCallback() {
+            @Override
+            public void onMissed(int missedStartSeqNumber, int missedNumber) {
+                Log.e(TAG, "onMissed missedStartSeqNumber=" + missedStartSeqNumber + " , " +
+                        "missedNumbe=" + missedNumber);
+            }
+        });
+
+        rtpSortFilter.receive(1,null, 0, 0, 0, 1, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 2, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 3, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 5, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 6, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 4, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 8, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 7, false);
+        rtpSortFilter.receive(1,null, 0, 0, 0, 9, false);
 //    final Thread sdlThread = new Thread(new SDLMain(), "SDLThread");
 //    sdlThread.start();
     }

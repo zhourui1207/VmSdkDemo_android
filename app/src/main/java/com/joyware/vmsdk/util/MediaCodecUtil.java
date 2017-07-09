@@ -19,8 +19,8 @@ public class MediaCodecUtil {
                 MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
 
                 String[] types = codecInfo.getSupportedTypes();
-                for (int i = 0; i < types.length; i++) {
-                    if (types[i].equalsIgnoreCase(mediaType)) {
+                for (String type : types) {
+                    if (type.equalsIgnoreCase(mediaType)) {
                         return true;
                     }
                 }

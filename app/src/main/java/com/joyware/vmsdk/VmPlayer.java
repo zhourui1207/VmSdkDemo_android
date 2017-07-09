@@ -836,8 +836,7 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 // isMark + ", playloadType=" + payloadType);
             if (mDecoder != null) {
                 mDecoder.addBuffer(streamId, streamType, payloadType, buffer, 0, buffer.length,
-                        timeStamp,
-                        seqNumber, isMark);
+                        timeStamp, seqNumber, isMark);
             }
 
             if (isFirst && currentStatus == VmType.PLAY_STATUS_WAITSTREAMING) {  // I帧,sps,或pps
