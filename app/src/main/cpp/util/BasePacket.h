@@ -15,33 +15,6 @@
 
 namespace Dream {
 
-#define ENCODE_INT(pBuf, nValue, nPos) do \
-    {\
-      unsigned uTmp = htonl(nValue);\
-      memcpy(pBuf, &uTmp, sizeof(int));\
-      nPos += sizeof(int);\
-    } while (0);
-
-#define DECODE_INT(pBuf, nValue, nPos) do \
-    {\
-      memcpy(&nValue, pBuf, sizeof(int));\
-      nValue = ntohl(nValue);\
-      nPos += sizeof(int);\
-    } while (0);
-
-#define ENCODE_STRING(pBuf, sValue, nPos) do \
-    {\
-      memcpy(pBuf, sValue.c_str(), std::size_t(sValue.length() + 1)); \
-      nPos += (sValue.length() + 1);\
-    } while(0);
-
-#define DECODE_STRING(pBuf, sValue, nPos) do \
-    {\
-      sValue = pBuf; \
-      nPos += (sValue.length() + 1);\
-    } while(0);
-
-
     class BasePacket {
 
     public:

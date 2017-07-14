@@ -56,7 +56,7 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
     @NonNull
     private YUVRenderer mYUVRenderer = new YUVRenderer();  // yuv渲染器
 
-    private CheckStreamTimeoutTask checkStreamTimeoutTask;
+    private JWAsyncTask checkStreamTimeoutTask;
 
     /**
      * 最后接受到码流的时间
@@ -913,8 +913,8 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
     }
 
     private void checkStream() {
-        checkStreamTimeoutTask = new CheckStreamTimeoutTask();
-        checkStreamTimeoutTask.execute();
+        checkStreamTimeoutTask = new CheckStreamTimeoutTask().execute();
+//        checkStreamTimeoutTask.
 //        checkStreamTimeoutTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 

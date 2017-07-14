@@ -71,6 +71,8 @@ jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2RGB(JNIEnv *env, jobject ob,
     int framerate = 0;
     bool ret = VmPlayer_DecodeNalu2RGB(decoderHandle, (const char *) inBuf, inLen, (char *) outBuf,
                                        outlen, width, height, framerate);
+
+//    LOGE("VmPlayer_DecodeNalu2RGB(%d)", ret);
     if (ret) {
         if (!FrameConfigHolderInit(env, width, height, framerate, frameConfigHolder)) {
 
@@ -110,9 +112,8 @@ jint Java_com_joyware_vmsdk_core_Decoder_DecodeNalu2YUV(JNIEnv *env, jobject ob,
     int height = 0;
     int framerate = 0;
     bool ret = VmPlayer_DecodeNalu2YUV(decoderHandle, (const char *) inBuf, inLen, (char *) yBuf,
-                                       ylen,
-                                       (char *) uBuf, ulen, (char *) vBuf, vlen, width, height,
-                                       framerate);
+                                       ylen, (char *) uBuf, ulen, (char *) vBuf, vlen, width,
+                                       height, framerate);
     if (ret) {
         if (!FrameConfigHolderInit(env, width, height, framerate, frameConfigHolder)) {
 

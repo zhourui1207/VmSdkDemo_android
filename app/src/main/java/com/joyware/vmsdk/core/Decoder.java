@@ -816,7 +816,7 @@ public class Decoder {
     // 播放线程
     private class PlayThread extends Thread {
         private int decodeType;
-        private int inputFailedCount = 0;
+//        private int inputFailedCount = 0;
 
         private long mVideoBeginTime;
         private long mAudioBeginTime;
@@ -843,6 +843,7 @@ public class Decoder {
         // 截图相关
         private byte[] lastSpsBuffer;
         private byte[] lastPpsBuffer;
+        private byte[] lastSeiBuffer;
         private byte[] lastIFrameBuffer;  // 最后一帧I帧数据
         private byte[] lastPFrameBuffer;  // I帧后紧跟着的P帧  测试发现有些设备在解码I帧后无法输出图像，必须输入后面的P帧才能显示
 //        @NonNull
@@ -1313,7 +1314,7 @@ public class Decoder {
 
                     byte[] data = esStreamData.getData();
 
-//                    Log.e(TAG, "type=" + (mData[4] & 0x1f));
+//                    Log.e(TAG, "type=" + (data[4] & 0x1f));
 
                     if (!getConf && decodeType != VmType.DECODE_TYPE_SOFTWARE) {
                         if (dataType == DATA_TYPE_VIDEO_SPS) {
@@ -1324,6 +1325,10 @@ public class Decoder {
                             lastPpsBuffer = new byte[data.length];
                             System.arraycopy(data, 0, lastPpsBuffer, 0, data.length);
                             Log.w(TAG, "receive pps, len=" + data.length);
+                        } else if (dataType == DATA_TYPE_VIDEO_OTHER) {
+                            lastSeiBuffer = new byte[data.length];
+                            System.arraycopy(data, 0, lastSeiBuffer, 0, data.length);
+                            Log.w(TAG, "receive sei, len=" + data.length);
                         } else if (dataType == DATA_TYPE_VIDEO_IFRAME) {
                             tmpIFrameBuffer = new byte[data.length];
                             System.arraycopy(data, 0, tmpIFrameBuffer, 0, data.length);
@@ -1420,7 +1425,11 @@ public class Decoder {
                 Log.w(TAG, "解码线程中断!" + StringUtil.getStackTraceAsString(e));
             }
             Log.w(TAG, "释放解码器");
-            this.inputFailedCount = 0;
+//            this.inputFailedCount = 0;
+            if (decodeConfDecoderHandle != 0) {
+                DecoderUninit(decodeConfDecoderHandle);
+                decodeConfDecoderHandle = 0;
+            }
             releaseDecoder();
             Log.w(TAG, "解码线程结束...");
         }
@@ -1471,25 +1480,28 @@ public class Decoder {
                             data.length, timestamp, flags);
                 }
 
-                inputFailedCount = 0;
+//                inputFailedCount = 0;
 
 //                Log.w(TAG, "inputData end");
                 return true;
             } else {
                 Log.e(TAG, "input failed dataType=" + dataType);
-                // 如果I帧或者P帧解码失败了，那么就等到下一个I帧再解码，防止花屏
-                if ((this.decodeType == VmType.DECODE_TYPE_INTELL) && (++this
-                        .inputFailedCount == 10)) { // 累计失败次数，如果连续10次失败，就开始使用软解码模式
-                    this.inputFailedCount = 0;
-                    releaseDecoder();
-                    this.decodeType = VmType.DECODE_TYPE_SOFTWARE;
-                    // 硬解码不支持的类型
-                    Log.e(TAG, "hard decode type can't support the video, change " +
-                            "to soft decode type!");
-                }
+                // 发现硬件解码也是可以解出无视频图像的，所以去掉这里的逻辑
+//                if ((this.decodeType == VmType.DECODE_TYPE_INTELL) && (++this
+//                        .inputFailedCount == 10)) { // 累计失败次数，如果连续10次失败，就开始使用软解码模式
+//                    this.inputFailedCount = 0;
+//                    releaseDecoder();
+//                    this.decodeType = VmType.DECODE_TYPE_SOFTWARE;
+//                    // 硬解码不支持的类型
+//                    Log.e(TAG, "hard decode type can't support the video, change " +
+//                            "to soft decode type!");
+//                }
+
                 return false;
             }
         }
+
+        long decodeConfDecoderHandle = 0;
 
         // 获取视频信息
         private void decodeConf(int payloadType) {
@@ -1497,15 +1509,25 @@ public class Decoder {
             if (decodeType != VmType.DECODE_TYPE_SOFTWARE && !getConf && lastSpsBuffer != null &&
                     lastPpsBuffer != null) {
                 FrameConfHolder frameConfHolder = new FrameConfHolder();
-                long decodeConfDecoderHandle = DecoderInit(payloadType);
-                DecodeNalu2RGB(decodeConfDecoderHandle, lastSpsBuffer, lastSpsBuffer.length, null,
+                if (decodeConfDecoderHandle == 0) {
+                    decodeConfDecoderHandle = DecoderInit(payloadType);
+                }
+//                long decodeConfDecoderHandle = DecoderInit(payloadType);
+                int ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastSpsBuffer, lastSpsBuffer.length, null,
                         frameConfHolder);
 
 //                byte[] outBuf = new byte[w * h];
-                int ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastPpsBuffer, lastPpsBuffer
-                        .length, null, frameConfHolder);
+                if (ret < 0) {
+                    ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastPpsBuffer, lastPpsBuffer
+                            .length, null, frameConfHolder);
+                }
 
-                if (lastIFrameBuffer != null) {
+                if (ret < 0 && lastSeiBuffer != null) {
+                    ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastSeiBuffer, lastSeiBuffer
+                            .length, null, frameConfHolder);
+                }
+
+                if (ret < 0 && lastIFrameBuffer != null) {
                     ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastIFrameBuffer, lastIFrameBuffer
                             .length, null, frameConfHolder);
                 }
@@ -1515,14 +1537,16 @@ public class Decoder {
                             .length, null, frameConfHolder);
                 }
 
-                DecoderUninit(decodeConfDecoderHandle);
-
                 if (ret > 0) {
                     w = frameConfHolder.getWidth();
                     h = frameConfHolder.getHeight();
                     framerate = frameConfHolder.getFramerate();
                     Log.w(TAG, "获取视频信息成功! w=" + w + ", h=" + h + ", framerate=" + framerate);
                     getConf = true;
+                    if (decodeConfDecoderHandle != 0) {
+                        DecoderUninit(decodeConfDecoderHandle);
+                        decodeConfDecoderHandle = 0;
+                    }
                 }
                 Log.w(TAG, "DecodeNalu2RGB ret=" + ret);
             }
