@@ -51,9 +51,9 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _subChannelId, pos);
-            ENCODE_INT(pBody + pos, _monitorSessionId, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _subChannelId, pos);
+            ENCODE_INT32(pBody + pos, _monitorSessionId, pos);
             return dataLength;
         }
 
@@ -67,9 +67,9 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _subChannelId, pos);
-            DECODE_INT(pBody + pos, _monitorSessionId, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _subChannelId, pos);
+            DECODE_INT32(pBody + pos, _monitorSessionId, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {
@@ -122,9 +122,9 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _subChannelId, pos);
-            ENCODE_INT(pBody + pos, _monitorSessionId, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _subChannelId, pos);
+            ENCODE_INT32(pBody + pos, _monitorSessionId, pos);
             return dataLength;
         }
 
@@ -138,9 +138,9 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _subChannelId, pos);
-            DECODE_INT(pBody + pos, _monitorSessionId, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _subChannelId, pos);
+            DECODE_INT32(pBody + pos, _monitorSessionId, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {

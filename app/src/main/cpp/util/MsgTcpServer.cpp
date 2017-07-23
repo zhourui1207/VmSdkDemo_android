@@ -40,7 +40,7 @@ namespace Dream {
         unsigned msgType = 0;
         while (dataLen > 0 && usedLen < dataLen) {
             int tmp = 0;
-            DECODE_INT(dataPtr->data() + sizeof(int), msgType, tmp);
+            DECODE_INT32(dataPtr->data() + sizeof(int), msgType, tmp);
             auto packetPtr = newPacketPtr(msgType);
 
             if (packetPtr.get() == nullptr) {

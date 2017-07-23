@@ -16,7 +16,7 @@ namespace Dream {
     class UDTDataPacket : public UDTBasePacket {
 
     public:
-        static unsigned MSG_NUMBER_MAX = 536870911;  // 2的29次方-1
+        static const uint32_t MSG_NUMBER_MAX = 536870911;  // 2的29次方-1
 
         enum DataPacketType {
             MIDDLE = 0,  // 中间
@@ -29,10 +29,12 @@ namespace Dream {
         const char *TAG = "UDTDataPacket";
 
     public:
-        UDTDataPacket(const char *pBuf, std::size_t len, unsigned seqNumber,
-                      DataPacketType dataPacketType, bool order, unsigned msgNumber = 0)
+        UDTDataPacket(const char *pBuf, std::size_t len, int32_t seqNumber,
+                      DataPacketType dataPacketType = MIDDLE, bool order = true,
+                      uint32_t msgNumber = 0)
                 : UDTBasePacket(false), _dataBuf(nullptr), _dataLen(0), _seqNumber(seqNumber),
-                  _dataPacketType(dataPacketType), _order(order), _msgNumber(msgNumber) {
+                  _dataPacketType(dataPacketType), _order(order), _msgNumber(msgNumber),
+                  _usSendTimestamp(0) {
             if (pBuf != nullptr && len > 0) {
                 _dataBuf = new char[len];
                 _dataLen = len;
@@ -53,11 +55,11 @@ namespace Dream {
 
             int encodePos = 0;
 
-            unsigned tmp = _seqNumber;  // sequence number
+            int32_t tmp = _seqNumber;  // sequence number
             if (isControl()) {  // control
                 tmp |= (1 << 31);
             }
-            ENCODE_INT(pBuf, tmp, encodePos);
+            ENCODE_INT32(pBuf, tmp, encodePos);
 
             tmp = _msgNumber;
             switch (_dataPacketType) {  // FF
@@ -81,7 +83,7 @@ namespace Dream {
                 tmp |= (1 << 29);
             }
 
-            ENCODE_INT(pBuf + encodePos, tmp, encodePos);
+            ENCODE_INT32(pBuf + encodePos, tmp, encodePos);
 
             encodeTimestamp(pBuf + encodePos, encodePos);  // timestamp
             encodeDstSocketId(pBuf + encodePos, encodePos);  // dst socket id
@@ -103,8 +105,8 @@ namespace Dream {
             decodeControl((const unsigned char) *pBuf);
 
             int decodePos = 0;
-            unsigned tmp;
-            DECODE_INT(pBuf, tmp, decodePos);
+            uint32_t tmp;
+            DECODE_INT32(pBuf, tmp, decodePos);
             _seqNumber = (tmp & 0x7fffffff);  // sequence number
 
             int ff = ((*(pBuf + decodePos) & 0xc0) >> 6);
@@ -112,7 +114,7 @@ namespace Dream {
 
             _order = (*(pBuf + decodePos) & 0x20) != 0;  // order
 
-            DECODE_INT(pBuf + decodePos, tmp, decodePos);
+            DECODE_INT32(pBuf + decodePos, tmp, decodePos);
             _msgNumber = (tmp & 0x1fffffff);  // msg number
 
             decodeTimestamp(pBuf + decodePos, decodePos);
@@ -121,22 +123,40 @@ namespace Dream {
             return decodePos;
         }
 
-        virtual std::size_t headerLength() override {
-            return UDTBasePacket::headerLength() + sizeof(_seqNumber) + sizeof(_msgNumber);
+        static std::size_t headerLength() {
+            return UDTBasePacket::headerLength() + sizeof(int32_t) + sizeof(uint32_t);
         }
 
         virtual std::size_t totalLength() override {
             return headerLength() + _dataLen;
         }
 
+        int32_t seqNumber() const {
+            return _seqNumber;
+        }
+
+        uint32_t msgNumber() const {
+            return _msgNumber;
+        }
+
+        uint64_t sendTimestamp() {
+            _usSendTimestamp;
+        }
+
+        void setSendTimestamp(uint64_t timestamp) {
+            _usSendTimestamp = timestamp;
+        }
 
     private:
         char *_dataBuf;  // 数据
         std::size_t _dataLen;  // 数据长度
-        unsigned _seqNumber;  // 序列号
+        int32_t _seqNumber;  // 序列号
         DataPacketType _dataPacketType;  // 数据包类型
         bool _order;  // 是否按顺序
-        unsigned _msgNumber;  // 消息序列号
+        uint32_t _msgNumber;  // 消息序列号
+
+        // 加上一个高精度的时间戳记录发送时间, base包里默认的时间戳是32位，无法表示微秒
+        uint64_t _usSendTimestamp;
     };
 
 }

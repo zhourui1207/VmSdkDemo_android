@@ -75,8 +75,8 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            ENCODE_INT(pBody + pos, _depId, pos);
-            ENCODE_INT(pBody + pos, _treeType, pos);
+            ENCODE_INT32(pBody + pos, _depId, pos);
+            ENCODE_INT32(pBody + pos, _treeType, pos);
 
             return dataLength;
         }
@@ -90,8 +90,8 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            DECODE_INT(pBody + pos, _depId, pos);
-            DECODE_INT(pBody + pos, _treeType, pos);
+            DECODE_INT32(pBody + pos, _depId, pos);
+            DECODE_INT32(pBody + pos, _treeType, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {
@@ -139,17 +139,17 @@ namespace Dream {
 
             int pos = 0;
             _channelCounts = _channels.size();
-            ENCODE_INT(pBody + pos, _channelCounts, pos);
+            ENCODE_INT32(pBody + pos, _channelCounts, pos);
             for (unsigned i = 0; i < _channelCounts; ++i) {
-                ENCODE_INT(pBody + pos, _channels[i]._depId, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._depId, pos);
                 ENCODE_STRING(pBody + pos, _channels[i]._fdId, pos);
-                ENCODE_INT(pBody + pos, _channels[i]._channelId, pos);
-                ENCODE_INT(pBody + pos, _channels[i]._channelType, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._channelId, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._channelType, pos);
                 ENCODE_STRING(pBody + pos, _channels[i]._channelName, pos);
-                ENCODE_INT(pBody + pos, _channels[i]._isOnLine, pos);
-                ENCODE_INT(pBody + pos, _channels[i]._videoState, pos);
-                ENCODE_INT(pBody + pos, _channels[i]._channelState, pos);
-                ENCODE_INT(pBody + pos, _channels[i]._recordState, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._isOnLine, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._videoState, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._channelState, pos);
+                ENCODE_INT32(pBody + pos, _channels[i]._recordState, pos);
             }
 
             return dataLength;
@@ -164,18 +164,18 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            DECODE_INT(pBody + pos, _channelCounts, pos);
+            DECODE_INT32(pBody + pos, _channelCounts, pos);
             for (unsigned i = 0; i < _channelCounts; ++i) {
                 ChannelItem item;
-                DECODE_INT(pBody + pos, item._depId, pos);
+                DECODE_INT32(pBody + pos, item._depId, pos);
                 DECODE_STRING(pBody + pos, item._fdId, pos);
-                DECODE_INT(pBody + pos, item._channelId, pos);
-                DECODE_INT(pBody + pos, item._channelType, pos);
+                DECODE_INT32(pBody + pos, item._channelId, pos);
+                DECODE_INT32(pBody + pos, item._channelType, pos);
                 DECODE_STRING(pBody + pos, item._channelName, pos);
-                DECODE_INT(pBody + pos, item._isOnLine, pos);
-                DECODE_INT(pBody + pos, item._videoState, pos);
-                DECODE_INT(pBody + pos, item._channelState, pos);
-                DECODE_INT(pBody + pos, item._recordState, pos);
+                DECODE_INT32(pBody + pos, item._isOnLine, pos);
+                DECODE_INT32(pBody + pos, item._videoState, pos);
+                DECODE_INT32(pBody + pos, item._channelState, pos);
+                DECODE_INT32(pBody + pos, item._recordState, pos);
                 _channels.push_back(item);
             }
 

@@ -83,8 +83,8 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _channelBigType, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _channelBigType, pos);
             ENCODE_STRING(pBody + pos, _beginTime, pos);
             ENCODE_STRING(pBody + pos, _endTime, pos);
 
@@ -101,8 +101,8 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _channelBigType, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _channelBigType, pos);
             DECODE_STRING(pBody + pos, _beginTime, pos);
             DECODE_STRING(pBody + pos, _endTime, pos);
 
@@ -155,19 +155,19 @@ namespace Dream {
 
             int pos = 0;
             _alarmCounts = _alarms.size();
-            ENCODE_INT(pBody + pos, _alarmCounts, pos);
+            ENCODE_INT32(pBody + pos, _alarmCounts, pos);
             for (unsigned i = 0; i < _alarmCounts; ++i) {
                 ENCODE_STRING(pBody + pos, _alarms[i]._alarmId, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._fdId, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._fdName, pos);
-                ENCODE_INT(pBody + pos, _alarms[i]._channelId, pos);
+                ENCODE_INT32(pBody + pos, _alarms[i]._channelId, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._channelName, pos);
-                ENCODE_INT(pBody + pos, _alarms[i]._channelBigType, pos);
+                ENCODE_INT32(pBody + pos, _alarms[i]._channelBigType, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._alarmTime, pos);
-                ENCODE_INT(pBody + pos, _alarms[i]._alarmCode, pos);
+                ENCODE_INT32(pBody + pos, _alarms[i]._alarmCode, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._alarmName, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._alarmSubName, pos);
-                ENCODE_INT(pBody + pos, _alarms[i]._alarmType, pos);
+                ENCODE_INT32(pBody + pos, _alarms[i]._alarmType, pos);
                 ENCODE_STRING(pBody + pos, _alarms[i]._photoUrl, pos);
             }
 
@@ -183,20 +183,20 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            DECODE_INT(pBody + pos, _alarmCounts, pos);
+            DECODE_INT32(pBody + pos, _alarmCounts, pos);
             for (unsigned i = 0; i < _alarmCounts; ++i) {
                 AlarmItem item;
                 DECODE_STRING(pBody + pos, item._alarmId, pos);
                 DECODE_STRING(pBody + pos, item._fdId, pos);
                 DECODE_STRING(pBody + pos, item._fdName, pos);
-                DECODE_INT(pBody + pos, item._channelId, pos);
+                DECODE_INT32(pBody + pos, item._channelId, pos);
                 DECODE_STRING(pBody + pos, item._channelName, pos);
-                DECODE_INT(pBody + pos, item._channelBigType, pos);
+                DECODE_INT32(pBody + pos, item._channelBigType, pos);
                 DECODE_STRING(pBody + pos, item._alarmTime, pos);
-                DECODE_INT(pBody + pos, item._alarmCode, pos);
+                DECODE_INT32(pBody + pos, item._alarmCode, pos);
                 DECODE_STRING(pBody + pos, item._alarmName, pos);
                 DECODE_STRING(pBody + pos, item._alarmSubName, pos);
-                DECODE_INT(pBody + pos, item._alarmType, pos);
+                DECODE_INT32(pBody + pos, item._alarmType, pos);
                 DECODE_STRING(pBody + pos, item._photoUrl, pos);
                 _alarms.push_back(item);
             }

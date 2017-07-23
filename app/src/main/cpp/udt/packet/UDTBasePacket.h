@@ -16,8 +16,8 @@ namespace Dream {
     class UDTBasePacket {
 
     public:
-        static unsigned DEFAULT_MAX = UINT32_MAX;
-        static unsigned SEQUENCE_NUMBER_MAX = INT32_MAX;
+        static const uint32_t DEFAULT_MAX = UINT32_MAX;
+        static const int32_t SEQUENCE_NUMBER_MAX = INT32_MAX;
 
     public:
         UDTBasePacket() = delete;
@@ -27,7 +27,7 @@ namespace Dream {
 
         }
 
-        UDTBasePacket(bool control, unsigned timestamp, unsigned dstSocketId)
+        UDTBasePacket(bool control, uint32_t timestamp, uint32_t dstSocketId)
                 : _control(control), _timestamp(timestamp), _dstSocketId(dstSocketId) {
 
         }
@@ -38,8 +38,8 @@ namespace Dream {
 
         virtual int decode(const char *pBuf, std::size_t len) = 0;
 
-        virtual std::size_t headerLength() {
-            return sizeof(_timestamp) + sizeof(_dstSocketId);
+        static std::size_t headerLength() {
+            return sizeof(uint32_t) + sizeof(uint32_t);
         }
 
         virtual std::size_t totalLength() {
@@ -56,28 +56,28 @@ namespace Dream {
         }
 
         void encodeTimestamp(char *pBuf, int &pos) {
-            ENCODE_INT(pBuf, _timestamp, pos);
+            ENCODE_INT32(pBuf, _timestamp, pos);
         }
 
         void decodeTimestamp(const char *pBuf, int &pos) {
-            DECODE_INT(pBuf, _timestamp, pos);
+            DECODE_INT32(pBuf, _timestamp, pos);
         }
 
-        static bool decodeDstSocketIdStatic(const char *pBuf, std::size_t len, unsigned& dstSocketId) {
+        static bool decodeDstSocketIdStatic(const char *pBuf, std::size_t len, uint32_t& dstSocketId) {
             if (len < 16) {
                 return false;
             }
             int pos = 0;
-            DECODE_INT(pBuf + 12, dstSocketId, pos);
+            DECODE_INT32(pBuf + 12, dstSocketId, pos);
             return true;
         }
 
         void encodeDstSocketId(char *pBuf, int &pos) {
-            ENCODE_INT(pBuf, _dstSocketId, pos);
+            ENCODE_INT32(pBuf, _dstSocketId, pos);
         }
 
-        int decodeDstSocketId(const char *pBuf, int &pos) {
-            DECODE_INT(pBuf, _dstSocketId, pos);
+        void decodeDstSocketId(const char *pBuf, int &pos) {
+            DECODE_INT32(pBuf, _dstSocketId, pos);
         }
 
         void setControl(bool control) {
@@ -88,26 +88,26 @@ namespace Dream {
             return _control;
         }
 
-        void setTimestamp(unsigned timestamp) {
+        void setTimestamp(uint32_t timestamp) {
             _timestamp = timestamp;
         }
 
-        unsigned timestamp() const {
+        uint32_t timestamp() const {
             return _timestamp;
         }
 
-        void setDstSocketId(unsigned dstSocketId) {
+        void setDstSocketId(uint32_t dstSocketId) {
             _dstSocketId = dstSocketId;
         }
 
-        unsigned dstSocketId() const {
+        uint32_t dstSocketId() const {
             return _dstSocketId;
         }
 
     private:
         bool _control;  // 是否是控制包
-        unsigned _timestamp;  // 时间戳
-        unsigned _dstSocketId;  // 目的socket id
+        uint32_t _timestamp;  // 时间戳
+        uint32_t _dstSocketId;  // 目的socket id
     };
 
 }

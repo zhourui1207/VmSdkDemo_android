@@ -31,45 +31,60 @@ include_directories(/Users/zhourui/Library/Android/sdk/ndk-bundle/sources/androi
 # 它相当于g++命令的-L选项的作用，也相当于环境变量中增加LD_LIBRARY_PATH的路径的作用
 # link_directories("")
 
-add_library( # Sets the name of the library.
-             VmNet
+add_library(VmNet
 
-             # Sets the library as a shared library.
-             SHARED
+            # Sets the library as a shared library.
+            SHARED
 
-             # Provides a relative path to your source file(s).
-             # Associated headers in the same location as their source
-             # file are automatically included.
-             src/main/cpp/VmNet-lib.cpp
-              src/main/cpp/plateform/VmNet.cpp
-              src/main/cpp/plateform/MainModule.cpp
-              src/main/cpp/plateform/StreamSessionManager.cpp
-              src/main/cpp/opensdk/RtpUdpServer.cpp
-              src/main/cpp/opensdk/StreamHeartbeatServer.cpp
-              src/main/cpp/rtp/RtpPacket.cpp
-              src/main/cpp/stream/StreamClient.cpp
-              src/main/cpp/uas/UasClient.cpp
-              src/main/cpp/util/AsioTcpClient.cpp
-              src/main/cpp/util/AsioUdpServer.cpp
-              src/main/cpp/util/ThreadPool.cpp
-              src/main/cpp/util/TaskThread.cpp
-              src/main/cpp/util/Tasks.cpp
-              src/main/cpp/util/Timer.cpp
-              src/main/cpp/dp/HB.pb.cc
-              src/main/cpp/rtsp/RtspTcpClient.cpp
-              src/main/cpp/rtsp/md5.cpp
-              src/main/cpp/rtsp/authTools.cpp)
+            # Provides a relative path to your source file(s).
+            # Associated headers in the same location as their source
+            # file are automatically included.
+            src/main/cpp/VmNet-lib.cpp
+            src/main/cpp/plateform/VmNet.cpp
+            src/main/cpp/plateform/MainModule.cpp
+            src/main/cpp/plateform/StreamSessionManager.cpp
+            src/main/cpp/opensdk/RtpUdpServer.cpp
+            src/main/cpp/opensdk/StreamHeartbeatServer.cpp
+            src/main/cpp/rtp/RtpPacket.cpp
+            src/main/cpp/stream/StreamClient.cpp
+            src/main/cpp/uas/UasClient.cpp
+            src/main/cpp/util/AsioTcpClient.cpp
+            src/main/cpp/util/AsioUdpServer.cpp
+            src/main/cpp/util/ThreadPool.cpp
+            src/main/cpp/util/TaskThread.cpp
+            src/main/cpp/util/Tasks.cpp
+            src/main/cpp/util/Timer.cpp
+            src/main/cpp/dp/HB.pb.cc
+            src/main/cpp/rtsp/RtspTcpClient.cpp
+            src/main/cpp/rtsp/md5.cpp
+            src/main/cpp/rtsp/authTools.cpp
+            )
 
 
-add_library( VmPlayer
+add_library(VmPlayer
 
-             SHARED
+            SHARED
 
-             src/main/cpp/VmPlayer-lib.cpp
-             src/main/cpp/plateform/VmPlayer.cpp
-             src/main/cpp/encdec/AACEncoder.cpp
-             src/main/cpp/encdec/Decoder.cpp
-             src/main/cpp/render/EGLRender.cpp)
+            src/main/cpp/VmPlayer-lib.cpp
+            src/main/cpp/plateform/VmPlayer.cpp
+            src/main/cpp/encdec/AACEncoder.cpp
+            src/main/cpp/encdec/Decoder.cpp
+            src/main/cpp/render/EGLRender.cpp
+            )
+
+add_library(ZRudt
+
+            SHARED
+
+            src/main/cpp/ZRudt-lib.cpp
+            src/main/cpp/udt/UDTMultiplexer.cpp
+            src/main/cpp/udt/UDTSocket.cpp
+            src/main/cpp/udt/SendGlideWindow.cpp
+            src/main/cpp/util/AsioUdpServer.cpp
+            src/main/cpp/util/ThreadPool.cpp
+            src/main/cpp/util/TaskThread.cpp
+            src/main/cpp/util/Tasks.cpp
+            )
 
 
 # Searches for a specified prebuilt library and stores the path as a
@@ -106,5 +121,8 @@ target_link_libraries(VmPlayer
                       GLESv2
                       ${log-lib}
                       android)
+
+target_link_libraries(ZRudt
+                    ${log-lib})
 
 #link_libraries()

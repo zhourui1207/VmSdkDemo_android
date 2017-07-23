@@ -83,13 +83,13 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _subChannelId, pos);
-            ENCODE_INT(pBody + pos, _beginTime, pos);
-            ENCODE_INT(pBody + pos, _endTime, pos);
-            ENCODE_INT(pBody + pos, _isNat, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _subChannelId, pos);
+            ENCODE_INT32(pBody + pos, _beginTime, pos);
+            ENCODE_INT32(pBody + pos, _endTime, pos);
+            ENCODE_INT32(pBody + pos, _isNat, pos);
             ENCODE_STRING(pBody + pos, _clientIp, pos);
-            ENCODE_INT(pBody + pos, _recordType, pos);
+            ENCODE_INT32(pBody + pos, _recordType, pos);
 
             return dataLength;
         }
@@ -104,13 +104,13 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _subChannelId, pos);
-            DECODE_INT(pBody + pos, _beginTime, pos);
-            DECODE_INT(pBody + pos, _endTime, pos);
-            DECODE_INT(pBody + pos, _isNat, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _subChannelId, pos);
+            DECODE_INT32(pBody + pos, _beginTime, pos);
+            DECODE_INT32(pBody + pos, _endTime, pos);
+            DECODE_INT32(pBody + pos, _isNat, pos);
             DECODE_STRING(pBody + pos, _clientIp, pos);
-            DECODE_INT(pBody + pos, _recordType, pos);
+            DECODE_INT32(pBody + pos, _recordType, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {
@@ -163,12 +163,12 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            ENCODE_INT(pBody + pos, _rightFlags, pos);
+            ENCODE_INT32(pBody + pos, _rightFlags, pos);
             _recordCounts = _records.size();
-            ENCODE_INT(pBody + pos, _recordCounts, pos);
+            ENCODE_INT32(pBody + pos, _recordCounts, pos);
             for (unsigned i = 0; i < _recordCounts; ++i) {
-                ENCODE_INT(pBody + pos, _records[i]._beginTime, pos);
-                ENCODE_INT(pBody + pos, _records[i]._endTime, pos);
+                ENCODE_INT32(pBody + pos, _records[i]._beginTime, pos);
+                ENCODE_INT32(pBody + pos, _records[i]._endTime, pos);
                 ENCODE_STRING(pBody + pos, _records[i]._playbackUrl, pos);
                 ENCODE_STRING(pBody + pos, _records[i]._downloadUrl, pos);
             }
@@ -185,12 +185,12 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            DECODE_INT(pBody + pos, _rightFlags, pos);
-            DECODE_INT(pBody + pos, _recordCounts, pos);
+            DECODE_INT32(pBody + pos, _rightFlags, pos);
+            DECODE_INT32(pBody + pos, _recordCounts, pos);
             for (unsigned i = 0; i < _recordCounts; ++i) {
                 RecordItem item;
-                DECODE_INT(pBody + pos, item._beginTime, pos);
-                DECODE_INT(pBody + pos, item._endTime, pos);
+                DECODE_INT32(pBody + pos, item._beginTime, pos);
+                DECODE_INT32(pBody + pos, item._endTime, pos);
                 DECODE_STRING(pBody + pos, item._playbackUrl, pos);
                 DECODE_STRING(pBody + pos, item._downloadUrl, pos);
                 _records.push_back(item);

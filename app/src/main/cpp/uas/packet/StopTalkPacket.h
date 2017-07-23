@@ -42,8 +42,8 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _talkSessionId, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _talkSessionId, pos);
             return dataLength;
         }
 
@@ -57,8 +57,8 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _talkSessionId, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _talkSessionId, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {
@@ -102,8 +102,8 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _talkSessionId, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _talkSessionId, pos);
 
             return dataLength;
         }
@@ -118,8 +118,8 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _talkSessionId, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _talkSessionId, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {

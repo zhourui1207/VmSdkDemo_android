@@ -41,10 +41,10 @@ namespace Dream {
             }
 
             int pos = 0;
-            ENCODE_INT(pBuf + pos, _length, pos);
-            ENCODE_INT(pBuf + pos, _msgType, pos);
-            ENCODE_INT(pBuf + pos, _seqNumber, pos);
-            ENCODE_INT(pBuf + pos, _status, pos);
+            ENCODE_INT32(pBuf + pos, _length, pos);
+            ENCODE_INT32(pBuf + pos, _msgType, pos);
+            ENCODE_INT32(pBuf + pos, _seqNumber, pos);
+            ENCODE_INT32(pBuf + pos, _status, pos);
             return HEADER_LENGTH;
         }
 
@@ -54,10 +54,10 @@ namespace Dream {
             }
 
             int pos = 0;
-            DECODE_INT(pBuf + pos, _length, pos);
-            DECODE_INT(pBuf + pos, _msgType, pos);
-            DECODE_INT(pBuf + pos, _seqNumber, pos);
-            DECODE_INT(pBuf + pos, _status, pos);
+            DECODE_INT32(pBuf + pos, _length, pos);
+            DECODE_INT32(pBuf + pos, _msgType, pos);
+            DECODE_INT32(pBuf + pos, _seqNumber, pos);
+            DECODE_INT32(pBuf + pos, _status, pos);
             return HEADER_LENGTH;
         }
         // ---------------------派生类重写结束---------------------

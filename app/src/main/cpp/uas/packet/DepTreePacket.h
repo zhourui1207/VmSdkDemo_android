@@ -68,7 +68,7 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            ENCODE_INT(pBody + pos, _treeType, pos);
+            ENCODE_INT32(pBody + pos, _treeType, pos);
 
             return dataLength;
         }
@@ -82,7 +82,7 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            DECODE_INT(pBody + pos, _treeType, pos);
+            DECODE_INT32(pBody + pos, _treeType, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {
@@ -129,13 +129,13 @@ namespace Dream {
 
             int pos = 0;
             _depCounts = _depTrees.size();
-            ENCODE_INT(pBody + pos, _depCounts, pos);
+            ENCODE_INT32(pBody + pos, _depCounts, pos);
             for (unsigned i = 0; i < _depCounts; ++i) {
-                ENCODE_INT(pBody + pos, _depTrees[i]._depId, pos);
+                ENCODE_INT32(pBody + pos, _depTrees[i]._depId, pos);
                 ENCODE_STRING(pBody + pos, _depTrees[i]._depName, pos);
-                ENCODE_INT(pBody + pos, _depTrees[i]._parentId, pos);
-                ENCODE_INT(pBody + pos, _depTrees[i]._onlineChannelCounts, pos);
-                ENCODE_INT(pBody + pos, _depTrees[i]._offlineChannelCounts, pos);
+                ENCODE_INT32(pBody + pos, _depTrees[i]._parentId, pos);
+                ENCODE_INT32(pBody + pos, _depTrees[i]._onlineChannelCounts, pos);
+                ENCODE_INT32(pBody + pos, _depTrees[i]._offlineChannelCounts, pos);
             }
 
             return dataLength;
@@ -150,14 +150,14 @@ namespace Dream {
             char *pBody = pBuf + usedLen;
 
             int pos = 0;
-            DECODE_INT(pBody + pos, _depCounts, pos);
+            DECODE_INT32(pBody + pos, _depCounts, pos);
             for (unsigned i = 0; i < _depCounts; ++i) {
                 DepTreeItem item;
-                DECODE_INT(pBody + pos, item._depId, pos);
+                DECODE_INT32(pBody + pos, item._depId, pos);
                 DECODE_STRING(pBody + pos, item._depName, pos);
-                DECODE_INT(pBody + pos, item._parentId, pos);
-                DECODE_INT(pBody + pos, item._onlineChannelCounts, pos);
-                DECODE_INT(pBody + pos, item._offlineChannelCounts, pos);
+                DECODE_INT32(pBody + pos, item._parentId, pos);
+                DECODE_INT32(pBody + pos, item._onlineChannelCounts, pos);
+                DECODE_INT32(pBody + pos, item._offlineChannelCounts, pos);
                 _depTrees.push_back(item);
             }
 

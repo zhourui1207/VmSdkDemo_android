@@ -76,20 +76,20 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _subChannelId, pos);
-            ENCODE_INT(pBody + pos, _monitorSessionId, pos);
-            ENCODE_INT(pBody + pos, _recordType, pos);
-            ENCODE_INT(pBody + pos, _flag, pos);
-            ENCODE_INT(pBody + pos, _startTime, pos);
-            ENCODE_INT(pBody + pos, _endTime, pos);
-            ENCODE_INT(pBody + pos, _activeFlag, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _subChannelId, pos);
+            ENCODE_INT32(pBody + pos, _monitorSessionId, pos);
+            ENCODE_INT32(pBody + pos, _recordType, pos);
+            ENCODE_INT32(pBody + pos, _flag, pos);
+            ENCODE_INT32(pBody + pos, _startTime, pos);
+            ENCODE_INT32(pBody + pos, _endTime, pos);
+            ENCODE_INT32(pBody + pos, _activeFlag, pos);
             ENCODE_STRING(pBody + pos, _videoIp, pos);
-            ENCODE_INT(pBody + pos, _videoPort, pos);
-            ENCODE_INT(pBody + pos, _videoTransMode, pos);
+            ENCODE_INT32(pBody + pos, _videoPort, pos);
+            ENCODE_INT32(pBody + pos, _videoTransMode, pos);
             ENCODE_STRING(pBody + pos, _audioIp, pos);
-            ENCODE_INT(pBody + pos, _audioPort, pos);
-            ENCODE_INT(pBody + pos, _audioTransMode, pos);
+            ENCODE_INT32(pBody + pos, _audioPort, pos);
+            ENCODE_INT32(pBody + pos, _audioTransMode, pos);
             return dataLength;
         }
 
@@ -103,20 +103,20 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _subChannelId, pos);
-            DECODE_INT(pBody + pos, _monitorSessionId, pos);
-            DECODE_INT(pBody + pos, _recordType, pos);
-            DECODE_INT(pBody + pos, _flag, pos);
-            DECODE_INT(pBody + pos, _startTime, pos);
-            DECODE_INT(pBody + pos, _endTime, pos);
-            DECODE_INT(pBody + pos, _activeFlag, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _subChannelId, pos);
+            DECODE_INT32(pBody + pos, _monitorSessionId, pos);
+            DECODE_INT32(pBody + pos, _recordType, pos);
+            DECODE_INT32(pBody + pos, _flag, pos);
+            DECODE_INT32(pBody + pos, _startTime, pos);
+            DECODE_INT32(pBody + pos, _endTime, pos);
+            DECODE_INT32(pBody + pos, _activeFlag, pos);
             DECODE_STRING(pBody + pos, _videoIp, pos);
-            DECODE_INT(pBody + pos, _videoPort, pos);
-            DECODE_INT(pBody + pos, _videoTransMode, pos);
+            DECODE_INT32(pBody + pos, _videoPort, pos);
+            DECODE_INT32(pBody + pos, _videoTransMode, pos);
             DECODE_STRING(pBody + pos, _audioIp, pos);
-            DECODE_INT(pBody + pos, _audioPort, pos);
-            DECODE_INT(pBody + pos, _audioTransMode, pos);
+            DECODE_INT32(pBody + pos, _audioPort, pos);
+            DECODE_INT32(pBody + pos, _audioTransMode, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {
@@ -205,20 +205,20 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _subChannelId, pos);
-            ENCODE_INT(pBody + pos, _monitorSessionId, pos);
-            ENCODE_INT(pBody + pos, _recordType, pos);
-            ENCODE_INT(pBody + pos, _flag, pos);
-            ENCODE_INT(pBody + pos, _startTime, pos);
-            ENCODE_INT(pBody + pos, _endTime, pos);
-            ENCODE_INT(pBody + pos, _activeFlag, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _subChannelId, pos);
+            ENCODE_INT32(pBody + pos, _monitorSessionId, pos);
+            ENCODE_INT32(pBody + pos, _recordType, pos);
+            ENCODE_INT32(pBody + pos, _flag, pos);
+            ENCODE_INT32(pBody + pos, _startTime, pos);
+            ENCODE_INT32(pBody + pos, _endTime, pos);
+            ENCODE_INT32(pBody + pos, _activeFlag, pos);
             ENCODE_STRING(pBody + pos, _videoIp, pos);
-            ENCODE_INT(pBody + pos, _videoPort, pos);
-            ENCODE_INT(pBody + pos, _videoTransMode, pos);
+            ENCODE_INT32(pBody + pos, _videoPort, pos);
+            ENCODE_INT32(pBody + pos, _videoTransMode, pos);
             ENCODE_STRING(pBody + pos, _audioIp, pos);
-            ENCODE_INT(pBody + pos, _audioPort, pos);
-            ENCODE_INT(pBody + pos, _audioTransMode, pos);
+            ENCODE_INT32(pBody + pos, _audioPort, pos);
+            ENCODE_INT32(pBody + pos, _audioTransMode, pos);
             return dataLength;
         }
 
@@ -232,20 +232,20 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _subChannelId, pos);
-            DECODE_INT(pBody + pos, _monitorSessionId, pos);
-            DECODE_INT(pBody + pos, _recordType, pos);
-            DECODE_INT(pBody + pos, _flag, pos);
-            DECODE_INT(pBody + pos, _startTime, pos);
-            DECODE_INT(pBody + pos, _endTime, pos);
-            DECODE_INT(pBody + pos, _activeFlag, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _subChannelId, pos);
+            DECODE_INT32(pBody + pos, _monitorSessionId, pos);
+            DECODE_INT32(pBody + pos, _recordType, pos);
+            DECODE_INT32(pBody + pos, _flag, pos);
+            DECODE_INT32(pBody + pos, _startTime, pos);
+            DECODE_INT32(pBody + pos, _endTime, pos);
+            DECODE_INT32(pBody + pos, _activeFlag, pos);
             DECODE_STRING(pBody + pos, _videoIp, pos);
-            DECODE_INT(pBody + pos, _videoPort, pos);
-            DECODE_INT(pBody + pos, _videoTransMode, pos);
+            DECODE_INT32(pBody + pos, _videoPort, pos);
+            DECODE_INT32(pBody + pos, _videoTransMode, pos);
             DECODE_STRING(pBody + pos, _audioIp, pos);
-            DECODE_INT(pBody + pos, _audioPort, pos);
-            DECODE_INT(pBody + pos, _audioTransMode, pos);
+            DECODE_INT32(pBody + pos, _audioPort, pos);
+            DECODE_INT32(pBody + pos, _audioTransMode, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {

@@ -8,36 +8,39 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+#include <time.h>
+#include <arpa/inet.h>
 #include <chrono>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string>
 
-#define ENCODE_INT(pBuf, nValue, nPos) do \
+#define ENCODE_INT32(pBuf, nValue, nPos) do \
     {\
-      unsigned uTmp = htonl(nValue);\
-      memcpy(pBuf, &uTmp, sizeof(int));\
-      nPos += sizeof(int);\
+      int32_t uTmp = htonl(nValue);\
+      memcpy(pBuf, &uTmp, sizeof(int32_t));\
+      nPos += sizeof(int32_t);\
     } while (0);
 
-#define DECODE_INT(pBuf, nValue, nPos) do \
+#define DECODE_INT32(pBuf, nValue, nPos) do \
     {\
-      memcpy(&nValue, pBuf, sizeof(int));\
+      memcpy(&nValue, pBuf, sizeof(int32_t));\
       nValue = ntohl(nValue);\
-      nPos += sizeof(int);\
+      nPos += sizeof(int32_t);\
     } while (0);
 
-#define ENCODE_SHORT(pBuf, shortValue, nPos) do \
+#define ENCODE_INT16(pBuf, shortValue, nPos) do \
     {\
       unsigned uTmp = htons(shortValue);\
-      memcpy(pBuf, &uTmp, sizeof(short));\
-      nPos += sizeof(short);\
+      memcpy(pBuf, &uTmp, sizeof(int16_t));\
+      nPos += sizeof(int16_t);\
     } while (0);
 
-#define DECODE_SHORT(pBuf, shortValue, nPos) do \
+#define DECODE_INT16(pBuf, shortValue, nPos) do \
     {\
-      memcpy(&shortValue, pBuf, sizeof(short));\
+      memcpy(&shortValue, pBuf, sizeof(int16_t));\
       shortValue = ntohs(shortValue);\
-      nPos += sizeof(short);\
+      nPos += sizeof(int16_t);\
     } while (0);
 
 #define ENCODE_STRING(pBuf, sValue, nPos) do \
@@ -54,13 +57,20 @@
 
 
 inline time_t getCurrentTimeStamp() {
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
+    auto tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now());
     auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
     return (time_t) tmp.count();
 }
 
-inline bool ipv4_2int(const std::string& ipStr, unsigned& ipInt) {
+inline uint64_t getCurrentTimeStampMicro() {
+    auto tp = std::chrono::time_point_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now());
+    auto tmp = std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch());
+    return (uint64_t) tmp.count();
+}
+
+inline bool ipv4_2int(const std::string &ipStr, unsigned &ipInt) {
     unsigned int findBegin = 0;
     char tmpIp[4];
     std::string tmpStr = ipStr;
@@ -82,11 +92,12 @@ inline bool ipv4_2int(const std::string& ipStr, unsigned& ipInt) {
         }
     }
     int pos = 0;
-    ENCODE_INT(tmpIp, ipInt, pos);
+    ENCODE_INT32(tmpIp, ipInt, pos);
     return true;
 }
 
 inline unsigned rangeRand(unsigned from, unsigned to) {
+    srand((unsigned) time(NULL));
     return (rand() % (to - from + 1)) + from;
 }
 

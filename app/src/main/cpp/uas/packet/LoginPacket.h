@@ -65,11 +65,11 @@ namespace Dream {
             ENCODE_STRING(pBody + pos, _loginName, pos);
             ENCODE_STRING(pBody + pos, _loginPwd, pos);
             ENCODE_STRING(pBody + pos, _loginSms, pos);
-            ENCODE_INT(pBody + pos, _loginMode, pos);
-            ENCODE_INT(pBody + pos, _loginType, pos);
+            ENCODE_INT32(pBody + pos, _loginMode, pos);
+            ENCODE_INT32(pBody + pos, _loginType, pos);
 
             ENCODE_STRING(pBody + pos, _srcIp, pos);
-            ENCODE_INT(pBody + pos, _isNat, pos);
+            ENCODE_INT32(pBody + pos, _isNat, pos);
 
             return dataLength;
         }
@@ -86,11 +86,11 @@ namespace Dream {
             DECODE_STRING(pBody + pos, _loginName, pos);
             DECODE_STRING(pBody + pos, _loginPwd, pos);
             DECODE_STRING(pBody + pos, _loginSms, pos);
-            DECODE_INT(pBody + pos, _loginMode, pos);
-            DECODE_INT(pBody + pos, _loginType, pos);
+            DECODE_INT32(pBody + pos, _loginMode, pos);
+            DECODE_INT32(pBody + pos, _loginType, pos);
 
             DECODE_STRING(pBody + pos, _srcIp, pos);
-            DECODE_INT(pBody + pos, _isNat, pos);
+            DECODE_INT32(pBody + pos, _isNat, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {

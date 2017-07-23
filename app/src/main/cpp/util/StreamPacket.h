@@ -54,8 +54,8 @@ namespace Dream {
             }
 
             int pos = 0;
-            ENCODE_INT(pBuf + pos, _length, pos);
-            ENCODE_INT(pBuf + pos, _msgType, pos);
+            ENCODE_INT32(pBuf + pos, _length, pos);
+            ENCODE_INT32(pBuf + pos, _msgType, pos);
             if (_dataLen <= len - HEADER_LENGTH) {
                 memcpy(pBuf + pos, _data, _dataLen);
             } else {
@@ -70,8 +70,8 @@ namespace Dream {
             }
 
             int pos = 0;
-            DECODE_INT(pBuf + pos, _length, pos);
-            DECODE_INT(pBuf + pos, _msgType, pos);
+            DECODE_INT32(pBuf + pos, _length, pos);
+            DECODE_INT32(pBuf + pos, _msgType, pos);
             int dataLen = _length - HEADER_LENGTH;
             if (dataLen > 0 && dataLen + HEADER_LENGTH <= len) {
 //      _data = new char[dataLen];

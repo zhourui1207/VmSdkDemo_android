@@ -15,7 +15,7 @@ namespace Dream {
     class UDTAck2Packet : public UDTControlPacket {
 
     public:
-        UDTAck2Packet(unsigned ackSeqNumber) :
+        UDTAck2Packet(int32_t ackSeqNumber) :
                 UDTControlPacket(ACK2, 0, ackSeqNumber) {
 
         }

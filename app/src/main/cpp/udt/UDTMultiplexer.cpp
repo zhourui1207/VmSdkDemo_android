@@ -7,7 +7,7 @@
 namespace Dream {
 
     UDTMultiplexer::UDTMultiplexer(ConnectionType connectionType, const std::string &localAddr,
-                                   unsigned short localPort)
+                                   uint16_t localPort)
             : _connectionType(connectionType), _udtSocketId(0) {
         _udpServerPtr.reset(new AsioUdpServer(
                 std::bind(&UDTMultiplexer::receiveData, this, std::placeholders::_1,
@@ -35,8 +35,8 @@ namespace Dream {
         }
     }
 
-    std::shared_ptr<UDTSocket> UDTMultiplexer::getSocketById(unsigned socketId) {
-        std::unique_lock lock(_mutex);
+    std::shared_ptr<UDTSocket> UDTMultiplexer::getSocketById(uint32_t socketId) {
+        std::unique_lock<std::mutex> lock(_mutex);
 
         std::shared_ptr<UDTSocket> udtSocketPtr;
         auto socketIt = _udtSocketMap.find(socketId);
@@ -48,8 +48,8 @@ namespace Dream {
     }
 
     std::shared_ptr<UDTSocket> UDTMultiplexer::getSocketByAddrAndPort(const std::string &remoteAddr,
-                                                                      unsigned short remotePort) {
-        std::unique_lock lock(_mutex);
+                                                                      uint16_t remotePort) {
+        std::unique_lock<std::mutex> lock(_mutex);
 
         std::shared_ptr<UDTSocket> udtSocketPtr;
         auto socketIt = _udtSocketMap.begin();
@@ -66,21 +66,23 @@ namespace Dream {
 
     std::shared_ptr<UDTSocket>
     UDTMultiplexer::addSocket(SocketType socketType, const std::string &remoteAddr,
-                              unsigned short remotePort, fUDTDataCallBack dataCallBack,
-                              fUDTConnectStatusCallBack statusCallBack, void *pUser,
-                              unsigned maxPacketSize, unsigned maxWindowSize) {
-        std::unique_lock lock(_mutex);
+                              uint16_t remotePort,
+                              fUDTDataCallBack dataCallBack,
+                              fUDTConnectStatusCallBack statusCallBack,
+                              void *pUser, uint32_t maxPacketSize, uint32_t maxWindowSize) {
+        std::unique_lock<std::mutex> lock(_mutex);
 
         std::shared_ptr<UDTSocket> udtSocketPtr;
         if (_connectionType == RENDEZVOUS) {  // p2p模式
             unsigned socketId = 0;
             if (getSocketId(socketId)) {
-                udtSocketPtr = std::make_shared(socketType, _connectionType, shared_from_this(),
-                                                socketId, remoteAddr, remotePort, dataCallBack,
-                                                statusCallBack, pUser, maxPacketSize,
-                                                maxWindowSize);
+                udtSocketPtr.reset(
+                        new UDTSocket(socketType, _connectionType, shared_from_this(), socketId,
+                                      remoteAddr, remotePort, dataCallBack, statusCallBack, pUser,
+                                      maxPacketSize, maxWindowSize));
+
                 udtSocketPtr->setup();  // 发起连接请求
-                _udtSocketMap.emplace(udtSocketPtr);
+                _udtSocketMap.emplace(std::make_pair(udtSocketPtr->_socketId, udtSocketPtr));
             }
         } else {
             LOGE(TAG, "Add socket must be in Rendezvous type!\n");
@@ -89,8 +91,8 @@ namespace Dream {
         return udtSocketPtr;
     }
 
-    bool UDTMultiplexer::removeSocket(unsigned socketId) {
-        std::unique_lock lock(_mutex);
+    bool UDTMultiplexer::removeSocket(uint32_t socketId) {
+        std::unique_lock<std::mutex> lock(_mutex);
 
         auto socketIt = _udtSocketMap.find(socketId);
         if (socketIt == _udtSocketMap.end()) {
@@ -112,7 +114,7 @@ namespace Dream {
      * @param len
      * @return
      */
-    bool UDTMultiplexer::sendData(const std::string &remoteAddr, unsigned short remotePort,
+    bool UDTMultiplexer::sendData(const std::string &remoteAddr, uint16_t remotePort,
                                   const char *pBuf, std::size_t len) {
         if (_udpServerPtr.get() != nullptr) {
             return _udpServerPtr->send(remoteAddr, remotePort, pBuf, len);
@@ -120,10 +122,10 @@ namespace Dream {
         return false;
     }
 
-    void UDTMultiplexer::receiveData(const std::string &remote_address, unsigned short remote_port,
+    void UDTMultiplexer::receiveData(const std::string &remote_address, uint16_t remote_port,
                                      const char *pBuf, std::size_t len) {
         // 分析dstSocketId
-        unsigned dstSocketId = 0;
+        uint32_t dstSocketId = 0;
         if (UDTBasePacket::decodeDstSocketIdStatic(pBuf, len, dstSocketId)) {  // 解析出dstSocketId才处理
             std::shared_ptr<UDTSocket> udtSocketPtr;
 
@@ -145,7 +147,7 @@ namespace Dream {
     }
 
     void UDTMultiplexer::removeAllSocket() {
-        std::unique_lock lock(_mutex);
+        std::unique_lock<std::mutex> lock(_mutex);
 
         auto socketIt = _udtSocketMap.begin();
         while (socketIt != _udtSocketMap.end()) {
@@ -156,7 +158,7 @@ namespace Dream {
         _udtSocketMap.clear();
     }
 
-    bool UDTMultiplexer::getSocketId(unsigned &socketId) {
+    bool UDTMultiplexer::getSocketId(uint32_t &socketId) {
         if (!_recoveredSocketIds.empty()) {  // 如果有回收的，先用回收的
             socketId = *(_recoveredSocketIds.begin());
             _recoveredSocketIds.erase(socketId);
@@ -169,7 +171,7 @@ namespace Dream {
         }
     }
 
-    void UDTMultiplexer::recoverySocketId(int socketId) {
+    void UDTMultiplexer::recoverySocketId(uint32_t socketId) {
         _recoveredSocketIds.emplace(socketId);
     }
 }

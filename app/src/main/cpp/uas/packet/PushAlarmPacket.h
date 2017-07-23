@@ -45,10 +45,10 @@ namespace Dream {
 
             int pos = 0;
             ENCODE_STRING(pBody + pos, _fdId, pos);
-            ENCODE_INT(pBody + pos, _channelId, pos);
-            ENCODE_INT(pBody + pos, _alarmType, pos);
-            ENCODE_INT(pBody + pos, _parameter1, pos);
-            ENCODE_INT(pBody + pos, _parameter2, pos);
+            ENCODE_INT32(pBody + pos, _channelId, pos);
+            ENCODE_INT32(pBody + pos, _alarmType, pos);
+            ENCODE_INT32(pBody + pos, _parameter1, pos);
+            ENCODE_INT32(pBody + pos, _parameter2, pos);
 
             return dataLength;
         }
@@ -63,10 +63,10 @@ namespace Dream {
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _fdId, pos);
-            DECODE_INT(pBody + pos, _channelId, pos);
-            DECODE_INT(pBody + pos, _alarmType, pos);
-            DECODE_INT(pBody + pos, _parameter1, pos);
-            DECODE_INT(pBody + pos, _parameter2, pos);
+            DECODE_INT32(pBody + pos, _channelId, pos);
+            DECODE_INT32(pBody + pos, _alarmType, pos);
+            DECODE_INT32(pBody + pos, _parameter1, pos);
+            DECODE_INT32(pBody + pos, _parameter2, pos);
 
             // 包长和实际长度不符
             if (computeLength() != length()) {

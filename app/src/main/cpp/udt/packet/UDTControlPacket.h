@@ -15,8 +15,8 @@ namespace Dream {
     class UDTControlPacket : public UDTBasePacket {
 
     public:
-        static unsigned short RESERVED_MAX = UINT16_MAX;
-        static unsigned ADDITIONAL_INFO_MAX = UINT32_MAX;
+        static const uint16_t RESERVED_MAX = UINT16_MAX;
+        static const int32_t ADDITIONAL_INFO_MAX = INT32_MAX;
 
         enum ControlPacketType {
             SYN = 0x0,  // 连接握手
@@ -34,13 +34,13 @@ namespace Dream {
         const char *TAG = "UDTControlPacket";
 
     public:
-        UDTControlPacket(ControlPacketType controlPacketType, unsigned short reserved = 0,
-                         unsigned additionalInfo = 0)
+        UDTControlPacket(ControlPacketType controlPacketType, uint16_t reserved = 0,
+                         int32_t additionalInfo = 0)
                 : UDTBasePacket(true), _controlPacketType(controlPacketType), _reserved(reserved),
                   _additionalInfo(additionalInfo) {
         }
 
-        virtual ~UDTDataPacket() = default;
+        virtual ~UDTControlPacket() = default;
 
         virtual int encode(char *pBuf, std::size_t len) override {
             if (len < totalLength()) {
@@ -53,16 +53,28 @@ namespace Dream {
             if (isControl()) {  // control
                 tmp |= (1 << 15);
             }
-            ENCODE_SHORT(pBuf, tmp, encodePos);  // type
+            ENCODE_INT16(pBuf, tmp, encodePos);  // type
 
-            ENCODE_SHORT(pBuf + encodePos, _reserved, encodePos);  // reserved
+            ENCODE_INT16(pBuf + encodePos, _reserved, encodePos);  // reserved
 
-            ENCODE_INT(pBuf + encodePos, _additionalInfo, encodePos);  // additional info
+            ENCODE_INT32(pBuf + encodePos, _additionalInfo, encodePos);  // additional info
 
             encodeTimestamp(pBuf + encodePos, encodePos);
             encodeDstSocketId(pBuf + encodePos, encodePos);
 
             return encodePos;
+        }
+
+        static bool decodeControlTypeStatic(const char *pBuf, std::size_t len, ControlPacketType& controlPacketType) {
+            if (len < headerLength()) {
+                return false;
+            }
+            int decodePos = 0;
+            uint16_t tmp;
+            DECODE_INT16(pBuf, tmp, decodePos);
+            tmp &= 0x7fff;  // type
+            controlPacketType = ControlPacketType(tmp);
+            return true;
         }
 
         virtual int decode(const char *pBuf, std::size_t len) override {
@@ -74,14 +86,14 @@ namespace Dream {
             decodeControl((const unsigned char) *pBuf);
 
             int decodePos = 0;
-            unsigned short tmp;
-            DECODE_SHORT(pBuf, tmp, decodePos);
+            uint16_t tmp;
+            DECODE_INT16(pBuf, tmp, decodePos);
             tmp &= 0x7fff;  // type
 
             _controlPacketType = ControlPacketType(tmp);
 
-            DECODE_SHORT(pBuf + decodePos, _reserved, decodePos);  // reserved
-            DECODE_INT(pBuf + decodePos, _additionalInfo, decodePos);  // additional info
+            DECODE_INT16(pBuf + decodePos, _reserved, decodePos);  // reserved
+            DECODE_INT32(pBuf + decodePos, _additionalInfo, decodePos);  // additional info
 
             decodeTimestamp(pBuf + decodePos, decodePos);
             decodeDstSocketId(pBuf + decodePos, decodePos);
@@ -89,27 +101,27 @@ namespace Dream {
             return decodePos;
         }
 
-        virtual std::size_t headerLength() override {
-            return UDTBasePacket::headerLength() + sizeof(short) + sizeof(_reserved) +
-                   sizeof(_additionalInfo);
+        static std::size_t headerLength() {
+            return UDTBasePacket::headerLength() + sizeof(uint16_t) + sizeof(uint16_t) +
+                   sizeof(int32_t);
         }
 
         virtual std::size_t totalLength() override {
             return headerLength();
         }
 
-        void setAdditionalInfo(unsigned additionalInfo) {
+        void setAdditionalInfo(int32_t additionalInfo) {
             _additionalInfo = additionalInfo;
         }
 
-        unsigned getAdditionalInfo() {
+        int32_t getAdditionalInfo() {
             return _additionalInfo;
         }
 
     private:
         ControlPacketType _controlPacketType;  // 控制包类型
-        unsigned short _reserved;  // 预留
-        unsigned _additionalInfo;  // 附加信息
+        uint16_t _reserved;  // 预留
+        int32_t _additionalInfo;  // 附加信息
     };
 
 }

@@ -26,8 +26,6 @@ namespace Dream {
 
     class ThreadPool : public Noncopyable {
     public:
-        ThreadPool() = delete;
-
         ThreadPool(std::size_t size = THREAD_POOL_SIZE_DEFAULT, std::size_t maxSize =
         THREAD_POOL_MAX_SIZE_DEFAULT, int idleTime =
         THREAD_POOL_IDLE_TIME_DEFAULT);

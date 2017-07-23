@@ -27,11 +27,11 @@ enum SocketStatus {
     CONNECTED = 3 // 已连接
 };
 
-typedef void (*fUDTDataCallBack)(unsigned uSocketId, char *pBuffer, int nLen, void *pUser);
+typedef void (*fUDTDataCallBack)(uint32_t uSocketId, char *pBuffer, std::size_t nLen, void *pUser);
 
-typedef void (*fUDTConnectStatusCallBack)(unsigned uSocketId, bool bIsConnected, void *pUser);
+typedef void (*fUDTConnectStatusCallBack)(uint32_t uSocketId, bool bIsConnected, void *pUser);
 
-typedef void (*fUDTListCallBack)(unsigned uSocketId, bool bIsConnected, void *pUser);
+typedef void (*fUDTListCallBack)(uint32_t uSocketId, bool bIsConnected, void *pUser);
 
 
 #endif //VMSDKDEMO_ANDROID_UDTTYPE_H

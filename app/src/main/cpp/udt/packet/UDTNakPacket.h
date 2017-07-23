@@ -15,11 +15,12 @@ namespace Dream {
     class UDTNakPacket : public UDTControlPacket {
 
     public:
-        UDTNakPacket(unsigned* lossSeqNumber, std::size_t lossSize) :
+        UDTNakPacket(int32_t* lossSeqNumber, std::size_t lossSize) :
                 UDTControlPacket(NAK) {
             if (lossSeqNumber != nullptr && lossSize > 0) {
-                _lossSeqNumber = new unsigned int[lossSize];
+                _lossSeqNumber = new int32_t[lossSize];
                 _lossSize = lossSize;
+                memcpy(_lossSeqNumber, lossSeqNumber, _lossSize);
             }
         }
 
@@ -39,7 +40,7 @@ namespace Dream {
 
             if (encodePos >= 0) {
                 for (int i = 0; i < _lossSize; ++i) {
-                    ENCODE_INT(pBuf + encodePos, *(_lossSeqNumber + i), encodePos);
+                    ENCODE_INT32(pBuf + encodePos, *(_lossSeqNumber + i), encodePos);
                 }
             }
 
@@ -55,12 +56,12 @@ namespace Dream {
 
             if (decodePos >= 0) {
                 std::size_t leaveLen = len - decodePos;
-                if (leaveLen > sizeof(unsigned)) {
-                    _lossSize = leaveLen / sizeof(unsigned);
+                if (leaveLen > sizeof(uint32_t)) {
+                    _lossSize = leaveLen / sizeof(uint32_t);
                     if (_lossSize > 0) {
-                        _lossSeqNumber = new unsigned int[_lossSize];
+                        _lossSeqNumber = new int32_t[_lossSize];
                         for (int i = 0; i < _lossSize; ++i) {
-                            DECODE_INT(pBuf + decodePos, *(_lossSeqNumber + i), decodePos);
+                            DECODE_INT32(pBuf + decodePos, *(_lossSeqNumber + i), decodePos);
                         }
                     }
                 }
@@ -69,16 +70,16 @@ namespace Dream {
             return decodePos;
         }
 
-        virtual std::size_t headerLength() override {
+        static std::size_t headerLength() {
             return UDTControlPacket::headerLength();
         }
 
         virtual std::size_t totalLength() override {
-            return headerLength() + sizeof(unsigned) * _lossSize;
+            return headerLength() + sizeof(int32_t) * _lossSize;
         }
 
     private:
-        unsigned *_lossSeqNumber;  // 丢失的序列号列表
+        int32_t *_lossSeqNumber;  // 丢失的序列号列表
         std::size_t _lossSize;  // 丢失数量
     };
 

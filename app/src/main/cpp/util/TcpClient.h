@@ -112,7 +112,7 @@ namespace Dream {
                 // 通过头解析包的总长度
                 unsigned packetLen = 0;
                 int tmp = 0;
-                DECODE_INT(pBuf, packetLen, tmp);
+                DECODE_INT32(pBuf, packetLen, tmp);
                 if (packetLen >= dataLen && packetLen <= _tcpClient.receiveSize()) {
 
                     _packetDataPtr.reset(new PacketData(packetLen));  // 创建包内存
@@ -148,7 +148,7 @@ namespace Dream {
 
                 unsigned msgType = 0;
                 int tmp = 0;
-                DECODE_INT(_packetDataPtr->data() + sizeof(int), msgType, tmp);
+                DECODE_INT32(_packetDataPtr->data() + sizeof(int), msgType, tmp);
                 // 向下转型
                 auto packetPtr = newPacketPtr(msgType);
 

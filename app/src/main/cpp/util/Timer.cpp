@@ -11,9 +11,10 @@
 
 namespace Dream {
 
-    Timer::Timer(const std::function<void()> &task, uint64_t delay, bool isLoop, uint64_t interval)
-            : _task(task), _delay(delay), _isLoop(isLoop), _interval(interval < 1 ? 1 : interval),
-              _running(false) {
+    Timer::Timer(const std::function<void()> &task, uint64_t delay, bool isLoop, uint64_t interval,
+                 DURATION duration)
+            : _duration(duration), _task(task), _delay(delay), _isLoop(isLoop),
+              _interval(interval < 1 ? 1 : interval), _running(false) {
 
     }
 
@@ -35,7 +36,7 @@ namespace Dream {
             _running.store(false);
             _condition.notify_one();
 
-			// 在join前不能忘记解锁
+            // 在join前不能忘记解锁
             lock.unlock();
         }
         if (_threadPtr->joinable()) {
@@ -47,11 +48,30 @@ namespace Dream {
         std::unique_lock<std::mutex> lock(_mutex);
         bool first = true;
         while (_running.load() && (first || _isLoop)) {
+
+            uint64_t waiteTime = _interval;
+
             if (first) {  // 第一次执行
+                waiteTime = _delay;
                 first = false;
-                _condition.wait_for(lock, std::chrono::milliseconds(_delay));
-            } else {  // 循环执行
-                _condition.wait_for(lock, std::chrono::milliseconds(_interval));
+            }
+
+            switch (_duration) {
+                case SEC:
+                    _condition.wait_for(lock, std::chrono::seconds(waiteTime));
+                    break;
+                case MILLI:
+                    _condition.wait_for(lock, std::chrono::milliseconds(waiteTime));
+                    break;
+                case MICRO:
+                    _condition.wait_for(lock, std::chrono::microseconds(waiteTime));
+                    break;
+                case NANO:
+                    _condition.wait_for(lock, std::chrono::nanoseconds(waiteTime));
+                    break;
+                default:
+                    _condition.wait_for(lock, std::chrono::milliseconds(waiteTime));
+                    break;
             }
 
             if (!_running.load()) {  // 如果定时器取消了，那么就退出

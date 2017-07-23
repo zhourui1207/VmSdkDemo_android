@@ -28,6 +28,9 @@ import java.nio.ByteBuffer;
 
 import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
 import static android.media.MediaFormat.KEY_COLOR_FORMAT;
+import static android.media.MediaFormat.KEY_MIME;
+import static android.media.MediaFormat.KEY_SLICE_HEIGHT;
+import static android.media.MediaFormat.KEY_STRIDE;
 
 /**
  * Created by zhourui on 16/10/28.
@@ -41,7 +44,8 @@ public class Decoder {
         System.loadLibrary("VmPlayer");
     }
 
-    private final int PAYLOAD_TYPE_PS = 96;
+    private final int PAYLOAD_TYPE_PS_H264 = 96;
+    private final int PAYLOAD_TYPE_PS_H265 = 113;
 
     private final String TAG = "Decoder";
     private final int BUFFER_MAX_SIZE = 1000;
@@ -327,7 +331,8 @@ public class Decoder {
     // 处理帧数据线程
     private class HandleFrameThread extends Thread {
         // 既有音频又有视频是为了兼容混合流
-        byte[] videoBuf = new byte[409800]; // 400k  es元数据缓存，psp，pps，i帧，p帧，音频等
+        // 1080p时400k不够大
+        byte[] videoBuf = new byte[818600]; // 400k  es元数据缓存，psp，pps，i帧，p帧，音频等
         int videoBufUsed;
         int streamBufUsed = 0;
         // 最新的4个字节内容
@@ -425,7 +430,8 @@ public class Decoder {
                     } else if (streamType == VmType.STREAM_TYPE_VIDEO) {  // 视频数据
                         // 这里需要判断是否是PS流，如果是复合的PS流，还需要再分出视频和音频流
                         boolean isVideo = true;
-                        if (payloadTypeOld == PAYLOAD_TYPE_PS) {
+                        if (payloadTypeOld == PAYLOAD_TYPE_PS_H264 || payloadTypeOld ==
+                                PAYLOAD_TYPE_PS_H265) {
                             if (mRTPSortFilter == null) {
                                 mRTPSortFilter = new RTPSortFilter(5);
                                 mRTPSortFilter.setSort(true);
@@ -436,7 +442,8 @@ public class Decoder {
                                     @Override
                                     public void onSorted(final int payloadType, byte[]
                                             outRTPdata, int
-                                            rtpStart, int rtpLen, int timeStamp, int seqNumber,
+                                                                 rtpStart, int rtpLen, int
+                                                                 timeStamp, int seqNumber,
                                                          boolean
                                                                  mark) {
                                         begin[0] = rtpStart;
@@ -747,7 +754,7 @@ public class Decoder {
             payloadTypeOld = payloadType;
             timestampOld = timestamp;
 
-//            if (payloadTypeOld == PAYLOAD_TYPE_PS) {  // 若是PS流
+//            if (payloadTypeOld == PAYLOAD_TYPE_PS_H264) {  // 若是PS流
 //                videoBuf[0] = 0x00;
 //                videoBuf[1] = 0x00;
 //                videoBuf[2] = 0x01;
@@ -1059,6 +1066,7 @@ public class Decoder {
                             MediaFormat mediaFormat = MediaFormat.createVideoFormat(mime, w, h);
                             // 虽说这个只有编码的时候才有用，但是小米2s上是有用的
                             if (mModel.contains("MI 2S")) {
+//                            if (true) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                     mediaFormat.setInteger(KEY_COLOR_FORMAT,
                                             MediaCodecInfo.CodecCapabilities
@@ -1513,7 +1521,8 @@ public class Decoder {
                     decodeConfDecoderHandle = DecoderInit(payloadType);
                 }
 //                long decodeConfDecoderHandle = DecoderInit(payloadType);
-                int ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastSpsBuffer, lastSpsBuffer.length, null,
+                int ret = DecodeNalu2RGB(decodeConfDecoderHandle, lastSpsBuffer, lastSpsBuffer
+                                .length, null,
                         frameConfHolder);
 
 //                byte[] outBuf = new byte[w * h];
@@ -1652,6 +1661,9 @@ public class Decoder {
             @Override
             public void run() {
 //                setPriority(Thread.MAX_PRIORITY);
+                int stride = 0;
+                int sliceHeigth = 0;
+
                 while (isRunning && !this.isInterrupted()) {
                     try {
                         if (!getConf || mediaCodecDecoder == null || !inputConf) {
@@ -1682,8 +1694,21 @@ public class Decoder {
                                     mColorFormatType = mediaCodecDecoder.getOutputFormat
                                             ().getInteger(KEY_COLOR_FORMAT);
 
+                                    mime = mediaCodecDecoder.getOutputFormat().getString(KEY_MIME);
+
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                        stride = mediaCodecDecoder.getOutputFormat().getInteger
+                                                (KEY_STRIDE);
+                                    }
+
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                        sliceHeigth = mediaCodecDecoder.getOutputFormat()
+                                                .getInteger(KEY_SLICE_HEIGHT);
+                                    }
+
                                     Log.w(TAG, "colorFormatType = " + mColorFormatType + ", " +
-                                            "outlen=" + info.size);
+                                            "outlen=" + info.size + ", mime=" + mime + ", " +
+                                            "stride=" + stride + ", sliceHeigth=" + sliceHeigth);
                                 }
 
                                 int yL = w * h;
@@ -1704,14 +1729,25 @@ public class Decoder {
                                         mTmpVUBuffer = new byte[uL * 2];
                                     }
 
-                                    if (mModel.contains("MI 2S")) {
+                                    if (mModel.contains("MI 2S") || mModel.contains("LON-AL00")) {
                                         YUVSP2YUVP(outData, yL, uL * 2, mTmpVUBuffer);  // 小米2s
                                     } else {
-                                        int offset = info.size * 2 / 3 - yL;
-                                        if (offset < 0) {
-                                            return;
+//                                        int offset = info.size * 2 / 3 - yL;
+//                                        if (offset < 0) {
+//                                            return;
+//                                        } else if (offset > 0) {
+//                                            // todo:判断一下offset
+//                                            Log.e(TAG, "offset > 0, " + outData[yL]);
+//                                        }
+                                        // 找不到那种情况了，好奇怪，相同的手机，解码不通的视频还不一样，3500平台需要加上offset
+//                                        offset = 0;
+                                        int pos = yL;
+                                        int offset = sliceHeigth * stride;
+                                        if (offset > yL && offset < info.size) {
+                                            pos = offset;
                                         }
-                                        YUVSP2YUVP(outData, yL + offset, uL * 2, mTmpVUBuffer);
+
+                                        YUVSP2YUVP(outData, pos, uL * 2, mTmpVUBuffer);
                                         // 其他
                                     }
 

@@ -15,7 +15,7 @@ namespace Dream {
     class UDTMDRPacket : public UDTControlPacket {
 
     public:
-        UDTMDRPacket(unsigned msgId, unsigned firstSeqNumber, unsigned lastSeqNumber) :
+        UDTMDRPacket(uint32_t msgId, int32_t firstSeqNumber, int32_t lastSeqNumber) :
                 UDTControlPacket(MDR, 0, msgId), _firstSeqNumber(firstSeqNumber),
                 _lastSeqNumber(lastSeqNumber) {
 
@@ -31,8 +31,8 @@ namespace Dream {
             int encodePos = UDTControlPacket::encode(pBuf, len);
 
             if (encodePos >= 0) {
-                ENCODE_INT(pBuf + encodePos, _firstSeqNumber, encodePos);
-                ENCODE_INT(pBuf + encodePos, _lastSeqNumber, encodePos);
+                ENCODE_INT32(pBuf + encodePos, _firstSeqNumber, encodePos);
+                ENCODE_INT32(pBuf + encodePos, _lastSeqNumber, encodePos);
             }
 
             return encodePos;
@@ -46,15 +46,15 @@ namespace Dream {
             int decodePos = UDTControlPacket::decode(pBuf, len);
 
             if (decodePos >= 0) {
-                DECODE_INT(pBuf + decodePos, _firstSeqNumber, decodePos);
-                DECODE_INT(pBuf + decodePos, _lastSeqNumber, decodePos);
+                DECODE_INT32(pBuf + decodePos, _firstSeqNumber, decodePos);
+                DECODE_INT32(pBuf + decodePos, _lastSeqNumber, decodePos);
             }
 
             return decodePos;
         }
 
-        virtual std::size_t headerLength() override {
-            return UDTControlPacket::headerLength() + sizeof(_firstSeqNumber) + sizeof(_lastSeqNumber);
+        virtual static std::size_t headerLength() {
+            return UDTControlPacket::headerLength() + sizeof(int32_t) + sizeof(int32_t);
         }
 
         virtual std::size_t totalLength() override {
@@ -62,8 +62,8 @@ namespace Dream {
         }
 
     private:
-        unsigned _firstSeqNumber;  // 第一个丢弃的序列号
-        unsigned _lastSeqNumber;  // 最后一个丢弃的序列号
+        int32_t _firstSeqNumber;  // 第一个丢弃的序列号
+        int32_t _lastSeqNumber;  // 最后一个丢弃的序列号
 
     };
 
