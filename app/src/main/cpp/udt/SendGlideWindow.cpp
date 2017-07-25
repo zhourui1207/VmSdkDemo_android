@@ -38,18 +38,6 @@ namespace Dream {
         }
     }
 
-    bool SendGlideWindow::removeFirstLossPacket(int32_t &seqNumber) {
-        std::unique_lock<std::mutex> lock(_mutex);
-
-        if (!_lossList.empty()) {
-            seqNumber = *(_lossList.begin());
-            _lossList.pop_front();
-            return true;
-        }
-
-        return false;
-    }
-
     std::shared_ptr<UDTDataPacket> SendGlideWindow::getPacket(int32_t seqNumber) {
         std::unique_lock<std::mutex> lock(_mutex);
 
@@ -116,79 +104,24 @@ namespace Dream {
         }
     }
 
-    bool SendGlideWindow::nakPacket(int32_t seqNumber) {
+    void SendGlideWindow::nakPacket(SendLossList& sendLossList, int32_t seqNumber) {
         std::unique_lock<std::mutex> lock(_mutex);
 
-        // 先判断是否在窗口中
-        if ((_left >= 0 && _right >= 0) &&
-            ((_right > _left) && (seqNumber > _left) && (seqNumber <= _right)) ||
-            ((_right < _left) && (seqNumber > _left || seqNumber <= _right))) {
-            addLossList(seqNumber);
-            return true;
-        } else {
-            return false;
-        }
+        sendLossList.addLossList(seqNumber, _left, _right);
     }
 
-    bool SendGlideWindow::checkExpAndLossNothing() {
+    bool SendGlideWindow::checkExpAndLossNothing(SendLossList& sendLossList) {
         std::unique_lock<std::mutex> lock(_mutex);
 
         if (!_packetList.empty()) {
             // 倒序检查提高性能
             auto packetIt = --(_packetList.end());
             for (; packetIt != _packetList.begin(); --packetIt) {
-                addLossList((*packetIt)->seqNumber());
+                sendLossList.addLossList((*packetIt)->seqNumber(), _left, _right);
             }
-            addLossList((*packetIt)->seqNumber());
+            sendLossList.addLossList((*packetIt)->seqNumber(), _left, _right);
         }
 
-        return _lossList.empty();
+        return sendLossList.empty();
     }
-
-    inline void SendGlideWindow::setWindowSize(std::size_t windowSize) {
-        _windowSize = windowSize;
-    }
-
-    // 接收线程调用
-    inline std::size_t SendGlideWindow::getWindowSize() {
-        return _windowSize;
-    }
-
-    void SendGlideWindow::addLossList(int32_t seqNumber) {
-        if (_lossList.size() >= _windowSize) {
-            return;
-        }
-
-        bool exist = false;
-        auto insertPositionIt = _lossList.begin();
-        bool normal = (_left < _right);  // true:正常情况 false:到最大值重置时
-        for (; insertPositionIt != _lossList.end(); ++insertPositionIt) {
-            if (seqNumber == *(insertPositionIt)) {  // 相等
-                exist = true;
-                break;
-            }
-            if (normal && (seqNumber < *(insertPositionIt))) {  // 假如元素大于seqnumber，那么应插到元素的前面
-                break;
-            }
-            if (!normal) {
-                // 假如元素值大于左边界，那么就转成负数来比较
-                int32_t eleSeqNumber = *(insertPositionIt);
-                if (eleSeqNumber > _left) {
-                    eleSeqNumber = ~eleSeqNumber + 1;  // 负数
-                }
-                int32_t tmpSeqNumber = seqNumber;
-                if (seqNumber > _left) {
-                    seqNumber = ~seqNumber + 1;
-                }
-                if (tmpSeqNumber < eleSeqNumber) {
-                    break;
-                }
-            }
-        }
-
-        if (!exist) {  // 如果不存在，那么插入列表
-            _lossList.insert(insertPositionIt, seqNumber);
-        }
-    }
-
 }

@@ -34,7 +34,7 @@ namespace Dream {
                       uint32_t msgNumber = 0)
                 : UDTBasePacket(false), _dataBuf(nullptr), _dataLen(0), _seqNumber(seqNumber),
                   _dataPacketType(dataPacketType), _order(order), _msgNumber(msgNumber),
-                  _usSendTimestamp(0) {
+                  _usSendTimestamp(0), _drop(false) {
             if (pBuf != nullptr && len > 0) {
                 _dataBuf = new char[len];
                 _dataLen = len;
@@ -147,6 +147,14 @@ namespace Dream {
             _usSendTimestamp = timestamp;
         }
 
+        void setDrop(bool drop) {
+            _drop = drop;
+        }
+
+        bool isDrop() {
+            return _drop;
+        }
+
     private:
         char *_dataBuf;  // 数据
         std::size_t _dataLen;  // 数据长度
@@ -155,8 +163,9 @@ namespace Dream {
         bool _order;  // 是否按顺序
         uint32_t _msgNumber;  // 消息序列号
 
-        // 加上一个高精度的时间戳记录发送时间, base包里默认的时间戳是32位，无法表示微秒
+        // 加上一个高精度的时间戳记录发送或接收时间, base包里默认的时间戳是32位，无法表示微秒
         uint64_t _usSendTimestamp;
+        bool _drop;  // 是否丢弃
     };
 
 }
