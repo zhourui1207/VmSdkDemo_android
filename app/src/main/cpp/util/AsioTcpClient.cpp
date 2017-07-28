@@ -48,7 +48,7 @@ namespace Dream {
 
         // 发起连接
         doConnect();
-//  _threadPtr->detach();
+//  _sendThreadPtr->detach();
 //
 //  std::thread thread(&AsioTcpClient::run, this);
 //  thread.detach();

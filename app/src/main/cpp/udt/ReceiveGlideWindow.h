@@ -20,9 +20,11 @@ namespace Dream {
     public:
         ReceiveGlideWindow(
                 std::function<void(std::shared_ptr<UDTDataPacket>)> reliablePacketCallback,
-                int32_t initSeqNumber, std::size_t windowSize = 1);
+                std::size_t windowSize = 1);
 
         virtual ~ReceiveGlideWindow() = default;
+
+        void setInitSeqNumber(int32_t seqNumber);
 
         // 尝试接收包，如果返回true，则从缓存队列中移除并发送ack，否则不移除
         bool tryReceivePacket(std::shared_ptr<UDTDataPacket> udtDataPacket);

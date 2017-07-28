@@ -80,6 +80,9 @@ add_library(ZRudt
             src/main/cpp/udt/UDTMultiplexer.cpp
             src/main/cpp/udt/UDTSocket.cpp
             src/main/cpp/udt/SendGlideWindow.cpp
+            src/main/cpp/udt/SendLossList.cpp
+            src/main/cpp/udt/ReceiveGlideWindow.cpp
+            src/main/cpp/udt/ReceiveLossList.cpp
             src/main/cpp/util/AsioUdpServer.cpp
             src/main/cpp/util/ThreadPool.cpp
             src/main/cpp/util/TaskThread.cpp

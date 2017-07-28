@@ -34,7 +34,7 @@ namespace Dream {
         AsioUdpServer(
                 std::function<void(const std::string &remote_address, unsigned short remote_port,
                                    const char *pBuf, std::size_t len)> callback,
-                const std::string &local_address, unsigned short local_port,
+                const std::string &local_address, unsigned short local_port = 0, bool ipv6 = false,
                 unsigned receiveSize = DEFAULT_READ_SIZE,
                 unsigned sendSize = DEFAULT_WRITE_SIZE);
 
@@ -80,6 +80,7 @@ namespace Dream {
 
         std::string _local_address;
         unsigned short _local_port;
+        bool _ipv6;
         unsigned _receiveSize;
         unsigned _sendSize;
 

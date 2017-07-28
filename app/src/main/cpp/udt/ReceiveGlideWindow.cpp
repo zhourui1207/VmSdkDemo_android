@@ -8,14 +8,23 @@ namespace Dream {
 
     ReceiveGlideWindow::ReceiveGlideWindow(
             std::function<void(std::shared_ptr<UDTDataPacket>)> reliablePacketCallback,
-            int32_t initSeqNumber, std::size_t windowSize)
+            std::size_t windowSize)
             : GlideWindow(windowSize),
-              _reliablePacketCallback(reliablePacketCallback), _left(initSeqNumber),
-              _right(increaseSeqNumber(_left, _windowSize)) {
+              _reliablePacketCallback(reliablePacketCallback) {
 
     }
 
+    void ReceiveGlideWindow::setInitSeqNumber(int32_t seqNumber) {
+        _left = seqNumber;
+        _right = increaseSeqNumber(_left, _windowSize);
+    }
+
     bool ReceiveGlideWindow::tryReceivePacket(std::shared_ptr<UDTDataPacket> udtDataPacket) {
+        if (_left < 0 || _right < 0) {
+            LOGE(TAG, "SeqNumber is't be init!\n");
+            return false;
+        }
+
         int32_t seqNumber = udtDataPacket->seqNumber();
         if (continuousSeqNumber(_left, seqNumber)) {  // 如果是连续的
             onReliablePacket(seqNumber, udtDataPacket);

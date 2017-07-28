@@ -18,7 +18,7 @@ namespace Dream {
         return false;
     }
 
-    inline bool SendLossList::empty() const {
+    bool SendLossList::empty() const {
         return _lossList.empty();
     }
 
@@ -29,22 +29,22 @@ namespace Dream {
         auto insertPositionIt = _lossList.begin();
         bool normal = (left < right);  // true:正常情况 false:到最大值重置时
         for (; insertPositionIt != _lossList.end(); ++insertPositionIt) {
-            if (seqNumber == *(insertPositionIt)) {  // 相等
+            int32_t eleSeqNumber = *insertPositionIt;
+            if (seqNumber == eleSeqNumber) {  // 相等
                 exist = true;
                 break;
             }
-            if (normal && (seqNumber < *(insertPositionIt))) {  // 假如元素大于seqnumber，那么应插到元素的前面
+            if (normal && (seqNumber < eleSeqNumber)) {  // 假如元素大于seqnumber，那么应插到元素的前面
                 break;
             }
             if (!normal) {
                 // 假如元素值大于左边界，那么就转成负数来比较
-                int32_t eleSeqNumber = *(insertPositionIt);
                 if (eleSeqNumber > left) {
                     eleSeqNumber = ~eleSeqNumber + 1;  // 负数
                 }
                 int32_t tmpSeqNumber = seqNumber;
-                if (seqNumber > left) {
-                    seqNumber = ~seqNumber + 1;
+                if (tmpSeqNumber > left) {
+                    tmpSeqNumber = ~tmpSeqNumber + 1;
                 }
                 if (tmpSeqNumber < eleSeqNumber) {
                     break;

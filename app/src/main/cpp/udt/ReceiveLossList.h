@@ -12,26 +12,25 @@
 
 namespace Dream {
 
-    class ReceiveLossList {
-
-    private:
-        std::list<std::shared_ptr<LossInfo>> _lossList;
-    };
-
     class LossInfo {
     public:
-        LossInfo(int32_t seqNumber)
-        : _seqNumber(seqNumber) {
+        LossInfo(int32_t seqNumber, uint64_t feedbackTime)
+                : _seqNumber(seqNumber), _latestFeedbackTime(feedbackTime),
+                  _feedbackNumber(1) {
 
         }
 
         virtual ~LossInfo() = default;
 
-        void updateLatestFeedbackTime(uint64_t time) {
-            _latestFeedbackTime = time;
+        int32_t seqNumber() const {
+            return _seqNumber;
         }
 
-        uint64_t latestFeedbackTime() {
+        void updateLatestFeedbackTime(uint64_t feedbackTime) {
+            _latestFeedbackTime = feedbackTime;
+        }
+
+        uint64_t latestFeedbackTime() const {
             return _latestFeedbackTime;
         }
 
@@ -39,7 +38,7 @@ namespace Dream {
             _feedbackNumber = number;
         }
 
-        int feedbackNumber() {
+        int feedbackNumber() const {
             return _feedbackNumber;
         }
 
@@ -47,6 +46,20 @@ namespace Dream {
         int32_t _seqNumber;  // 丢失数据包序列号
         uint64_t _latestFeedbackTime;  // 最后反馈时间
         int _feedbackNumber;  // 反馈次数
+    };
+
+    class ReceiveLossList {
+    public:
+        ReceiveLossList() = default;
+
+        virtual ~ReceiveLossList() = default;
+
+        void addLossPacket(int32_t seqNumber, uint64_t feedbackTime, int32_t left, int32_t right);
+
+        bool removeLossPacket(int32_t seqNumber);
+
+    private:
+        std::list<std::shared_ptr<LossInfo>> _lossList;
     };
 
 }

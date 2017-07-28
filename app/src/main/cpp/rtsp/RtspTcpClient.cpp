@@ -283,10 +283,10 @@ namespace Dream {
 
                             } else if (_currentMethodStatus == SETUP_AUDIO) {
                                 _currentMethodStatus = PLAY;
-                            } else if (_currentMethodStatus == WAITE_PLAY) {
+                            } else if (_currentMethodStatus == WAIT_PLAY) {
                                 _currentMethodStatus = PLAY;
                                 needUpdte = false;
-                            } else if (_currentMethodStatus == WAITE_PAUSE) {
+                            } else if (_currentMethodStatus == WAIT_PAUSE) {
                                 _currentMethodStatus = PAUSE;
                                 needUpdte = false;
                             }
@@ -582,7 +582,7 @@ namespace Dream {
         int endTimePos = _paramUrl.find("endtime=");
         // 都有的话就是录像回放
         if (startTimePos != std::string::npos && endTimePos != std::string::npos) {
-            if (_currentMethodStatus != PAUSE && _currentMethodStatus != WAITE_PLAY) {  // 如果不是暂停状态, 需要解析starttime和endtime
+            if (_currentMethodStatus != PAUSE && _currentMethodStatus != WAIT_PLAY) {  // 如果不是暂停状态, 需要解析starttime和endtime
                 std::string startTime = readValue(_paramUrl, (size_t) (startTimePos + 10));
                 std::string endTime = readValue(_paramUrl, (size_t) (endTimePos + 8));
                 sBuffer += "Range:clock=";

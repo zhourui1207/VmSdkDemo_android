@@ -29,8 +29,8 @@ namespace Dream {
         const char *TAG = "UDTDataPacket";
 
     public:
-        UDTDataPacket(const char *pBuf, std::size_t len, int32_t seqNumber,
-                      DataPacketType dataPacketType = MIDDLE, bool order = true,
+        UDTDataPacket(const char *pBuf = nullptr, std::size_t len = 0, int32_t seqNumber = 0,
+                      DataPacketType dataPacketType = ONLY, bool order = true,
                       uint32_t msgNumber = 0)
                 : UDTBasePacket(false), _dataBuf(nullptr), _dataLen(0), _seqNumber(seqNumber),
                   _dataPacketType(dataPacketType), _order(order), _msgNumber(msgNumber),
@@ -38,6 +38,7 @@ namespace Dream {
             if (pBuf != nullptr && len > 0) {
                 _dataBuf = new char[len];
                 _dataLen = len;
+                memcpy(_dataBuf, pBuf, _dataLen);
             }
         }
 
@@ -93,7 +94,7 @@ namespace Dream {
                 memcpy(pBuf + encodePos, _dataBuf, _dataLen);
             }
 
-            return encodePos;
+            return encodePos + _dataLen;
         }
 
         virtual int decode(const char *pBuf, std::size_t len) override {
@@ -120,7 +121,14 @@ namespace Dream {
             decodeTimestamp(pBuf + decodePos, decodePos);
             decodeDstSocketId(pBuf + decodePos, decodePos);
 
-            return decodePos;
+            int dataLen = len - decodePos;
+            if (dataLen > 0) {
+                _dataBuf = new char[dataLen];
+                _dataLen = (size_t) dataLen;
+                memcpy(_dataBuf, pBuf + decodePos, _dataLen);
+            }
+
+            return len;
         }
 
         static std::size_t headerLength() {
@@ -139,8 +147,8 @@ namespace Dream {
             return _msgNumber;
         }
 
-        uint64_t sendTimestamp() {
-            _usSendTimestamp;
+        uint64_t sendTimestamp() const {
+            return _usSendTimestamp;
         }
 
         void setSendTimestamp(uint64_t timestamp) {
@@ -151,8 +159,16 @@ namespace Dream {
             _drop = drop;
         }
 
-        bool isDrop() {
+        bool isDrop() const {
             return _drop;
+        }
+
+        const char* data() const {
+            return _dataBuf;
+        }
+
+        std::size_t len() const {
+            return _dataLen;
         }
 
     private:

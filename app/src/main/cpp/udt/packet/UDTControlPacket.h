@@ -27,7 +27,8 @@ namespace Dream {
             SHUTDOWN = 0x5,  // 关闭
             ACK2 = 0x6,  // 确认包的确认包
             MDR = 0x7,  // Message Drop Request， 消息丢失请求，消息存在丢失列表中超出了生命周期，那么就放弃发送并发送mdq
-            USER = 0x7fff  // 用户自定义控制包
+            USER = 0x7fff,  // 用户自定义控制包
+            UNKNOW = 0xffff  // 未知时
         };
 
     private:
@@ -67,6 +68,9 @@ namespace Dream {
 
         static bool decodeControlTypeStatic(const char *pBuf, std::size_t len, ControlPacketType& controlPacketType) {
             if (len < headerLength()) {
+                return false;
+            }
+            if (!UDTBasePacket::decodeControlStatic((const unsigned char) *pBuf)) {
                 return false;
             }
             int decodePos = 0;

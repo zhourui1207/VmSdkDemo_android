@@ -27,7 +27,7 @@ enum SocketStatus {
     CONNECTED = 3 // 已连接
 };
 
-typedef void (*fUDTDataCallBack)(uint32_t uSocketId, char *pBuffer, std::size_t nLen, void *pUser);
+typedef void (*fUDTDataCallBack)(uint32_t uSocketId, const char *pBuffer, std::size_t nLen, void *pUser);
 
 typedef void (*fUDTConnectStatusCallBack)(uint32_t uSocketId, bool bIsConnected, void *pUser);
 

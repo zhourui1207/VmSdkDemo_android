@@ -14,6 +14,11 @@ namespace Dream {
 
     }
 
+    bool SendGlideWindow::empty() {
+        std::unique_lock<std::mutex> lock(_mutex);
+        return _left == _right;
+    }
+
     bool
     SendGlideWindow::trySendPacket(std::shared_ptr<UDTDataPacket> udtDataPacket, uint64_t setupTime) {
         std::unique_lock<std::mutex> lock(_mutex);

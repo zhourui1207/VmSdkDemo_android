@@ -6,8 +6,8 @@
 #define DREAM_SENDGLIDEWINDOW_H
 
 #include <list>
+#include <memory>
 #include "GlideWindow.h"
-#include "UDTMultiplexer.h"
 #include "packet/UDTDataPacket.h"
 #include "SendLossList.h"
 
@@ -22,6 +22,8 @@ namespace Dream {
         SendGlideWindow(std::size_t windowSize = 1);
 
         virtual ~SendGlideWindow() = default;
+
+        bool empty();
 
         // 能加入滑动窗口的包才能被发送  发送线程调用
         bool trySendPacket(std::shared_ptr<UDTDataPacket> udtDataPacket, uint64_t setupTime);
@@ -38,6 +40,7 @@ namespace Dream {
 
         // 检查超时并且没有丢失包 超时的包加入losslist 接收线程调用  返回: true: loss list空
         bool checkExpAndLossNothing(SendLossList& sendLossList);
+
 
     private:
         std::mutex _mutex;

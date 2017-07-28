@@ -82,7 +82,11 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     long rtspStreamId;
 
     TextView mTimeTextView;
+    TextView mTimeTextView2;
+    TextView mTimeTextView3;
 
+    ArrayList[] mLists = new ArrayList[9];
+    String[] list = new String[9];
     @NonNull
     private final RecordDownloader mRecordDownloader = new RecordDownloader();
 
@@ -215,6 +219,10 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         setContentView(R.layout.activity_main);
 
         mScaleText = (TextView) findViewById(R.id.sample_text);
+
+        for (int i = 0; i < mLists.length; ++i) {
+            ArrayList<String> list = mLists[i];
+        }
 
         mTimeTextView = (TextView) findViewById(R.id.textView_time);
 

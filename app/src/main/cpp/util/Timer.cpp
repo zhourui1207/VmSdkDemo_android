@@ -49,28 +49,28 @@ namespace Dream {
         bool first = true;
         while (_running.load() && (first || _isLoop)) {
 
-            uint64_t waiteTime = _interval;
+            uint64_t waitTime = _interval;
 
             if (first) {  // 第一次执行
-                waiteTime = _delay;
+                waitTime = _delay;
                 first = false;
             }
 
             switch (_duration) {
                 case SEC:
-                    _condition.wait_for(lock, std::chrono::seconds(waiteTime));
+                    _condition.wait_for(lock, std::chrono::seconds(waitTime));
                     break;
                 case MILLI:
-                    _condition.wait_for(lock, std::chrono::milliseconds(waiteTime));
+                    _condition.wait_for(lock, std::chrono::milliseconds(waitTime));
                     break;
                 case MICRO:
-                    _condition.wait_for(lock, std::chrono::microseconds(waiteTime));
+                    _condition.wait_for(lock, std::chrono::microseconds(waitTime));
                     break;
                 case NANO:
-                    _condition.wait_for(lock, std::chrono::nanoseconds(waiteTime));
+                    _condition.wait_for(lock, std::chrono::nanoseconds(waitTime));
                     break;
                 default:
-                    _condition.wait_for(lock, std::chrono::milliseconds(waiteTime));
+                    _condition.wait_for(lock, std::chrono::milliseconds(waitTime));
                     break;
             }
 

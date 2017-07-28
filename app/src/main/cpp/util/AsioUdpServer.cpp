@@ -18,10 +18,10 @@ namespace Dream {
     AsioUdpServer::AsioUdpServer(
             std::function<void(const std::string &remote_address, unsigned short remote_port,
                                const char *pBuf, std::size_t len)> callback,
-            const std::string &local_address, unsigned short local_port = 0,
+            const std::string &local_address, unsigned short local_port, bool ipv6,
             unsigned receiveSize, unsigned sendSize)
             : _callback(callback), _local_address(local_address), _local_port(local_port),
-              _receiveSize(receiveSize), _sendSize(sendSize), _receive(nullptr) {
+              _receiveSize(receiveSize), _ipv6(ipv6), _sendSize(sendSize), _receive(nullptr) {
         _receive = new char[receiveSize];
     }
 
@@ -85,18 +85,26 @@ namespace Dream {
         while (!bindSuccess) {
             try {
                 if (!_local_address.empty()) {
-                    boost::asio::ip::udp::endpoint endpoint(
-                            boost::asio::ip::address_v4::from_string(_local_address), _local_port);
+                    boost::asio::ip::address address;
+                    if (_local_address.find(":") != std::string::npos) {
+                        address = boost::asio::ip::address_v6::from_string(_local_address);
+                    } else {
+                        address = boost::asio::ip::address_v4::from_string(_local_address);
+                    }
+                    boost::asio::ip::udp::endpoint endpoint(address, _local_port);
                     if (_socketPtr.get() == nullptr) {
                         _socketPtr.reset(
-                                new boost::asio::ip::udp::socket(*(_ioServicePtr.get()), endpoint));
+                                new boost::asio::ip::udp::socket(*(_ioServicePtr.get()),
+                                                                 endpoint));
                     }
                 } else {
-                    boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::udp::v4(),
-                                                            _local_port);
+                    boost::asio::ip::udp::endpoint endpoint(
+                            _ipv6 ? boost::asio::ip::udp::v6() : boost::asio::ip::udp::v4(),
+                            _local_port);
                     if (_socketPtr.get() == nullptr) {
                         _socketPtr.reset(
-                                new boost::asio::ip::udp::socket(*(_ioServicePtr.get()), endpoint));
+                                new boost::asio::ip::udp::socket(*(_ioServicePtr.get()),
+                                                                 endpoint));
                     }
                 }
                 bindSuccess = true;
@@ -135,11 +143,18 @@ namespace Dream {
         if (_socketPtr.get() == nullptr) {
             return;
         }
+
+        boost::asio::ip::address address;
+        if (_ipv6) {
+            address = boost::asio::ip::address_v6::from_string(_sendQueue.front()->address());
+        } else {
+            address = boost::asio::ip::address_v4::from_string(_sendQueue.front()->address());
+        }
         _socketPtr->async_send_to(
+
+
                 boost::asio::buffer(_sendQueue.front()->data(), _sendQueue.front()->length()),
-                boost::asio::ip::udp::endpoint(
-                        boost::asio::ip::address_v4::from_string(_sendQueue.front()->address()),
-                        _sendQueue.front()->port()),
+                boost::asio::ip::udp::endpoint(address, _sendQueue.front()->port()),
                 [this](boost::system::error_code ec, std::size_t /*length*/) {
                     if (!ec) {
                         _sendQueue.pop();
@@ -147,7 +162,8 @@ namespace Dream {
                             do_write();
                         }
                     } else {
-                        LOGE("AsioUdpServer", "AsioUdpServer sned data exception [%s]\n", ec.message().c_str());
+                        LOGE("AsioUdpServer", "AsioUdpServer sned data exception [%s]\n",
+                             ec.message().c_str());
                     }
                 });
     }
@@ -161,10 +177,12 @@ namespace Dream {
         JNIEnv *pJniEnv = nullptr;
         if (g_pJavaVM) {
             if (g_pJavaVM->AttachCurrentThread(&pJniEnv, nullptr) == JNI_OK) {
-                LOGW("AsioUdpServer", "[%s][%d] attach android thread success！\n", _local_address.c_str(),
+                LOGW("AsioUdpServer", "[%s][%d] attach android thread success！\n",
+                     _local_address.c_str(),
                      _local_port);
             } else {
-                LOGE("AsioUdpServer", "[%s][%d] attach android thread failed！\n", _local_address.c_str(),
+                LOGE("AsioUdpServer", "[%s][%d] attach android thread failed！\n",
+                     _local_address.c_str(),
                      _local_port);
                 return;
             }
@@ -182,7 +200,8 @@ namespace Dream {
 #ifdef _ANDROID
         // 解绑android线程
         if (g_pJavaVM && pJniEnv) {
-            LOGW("AsioUdpServer", "[%s][%d] detach android thread！\n", _local_address.c_str(), _local_port);
+            LOGW("AsioUdpServer", "[%s][%d] detach android thread！\n", _local_address.c_str(),
+                 _local_port);
             g_pJavaVM->DetachCurrentThread();
         }
 #endif
@@ -195,7 +214,8 @@ namespace Dream {
 //                _socketPtr->shutdown(boost::asio::ip::udp::socket::shutdown_both);
                 _socketPtr->close();  // 关闭套接字
             } catch (std::exception &e) {
-                LOGE("AsioUdpServer", "AsioUdpServer [%s]_socketPtr->close() exception！！[%s]\n", _local_address.c_str(),
+                LOGE("AsioUdpServer", "AsioUdpServer [%s]_socketPtr->close() exception！！[%s]\n",
+                     _local_address.c_str(),
                      e.what());  // 一般是由于本机网络异常，导致endpoint未连接
             }
 
@@ -207,9 +227,11 @@ namespace Dream {
         }
 
         if (_threadPtr.get() != nullptr) {
-            LOGW("AsioUdpServer", "AsioUdpServer [%s]waiting ioService stop...\n", _local_address.c_str());
+            LOGW("AsioUdpServer", "AsioUdpServer [%s]waiting ioService stop...\n",
+                 _local_address.c_str());
             _threadPtr->join();  // 等待线程执行完毕，避免线程还在连接的时候进行关闭操作
-            LOGW("AsioUdpServer", "AsioUdpServer [%s]waited ioService stop...\n", _local_address.c_str());
+            LOGW("AsioUdpServer", "AsioUdpServer [%s]waited ioService stop...\n",
+                 _local_address.c_str());
 
             _threadPtr.reset();
         }

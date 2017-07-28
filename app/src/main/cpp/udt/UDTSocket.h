@@ -13,6 +13,9 @@
 #include "packet/UDTSynPacket.h"
 #include "../util/ThreadPool.h"
 #include "../util/UdpData.h"
+#include "ReceiveGlideWindow.h"
+#include "ReceiveLossList.h"
+#include "SendGlideWindow.h"
 
 namespace Dream {
 
@@ -33,20 +36,20 @@ namespace Dream {
 
         const static uint16_t RTT_SAMPLE_NUM = 5;  // tts样本数
 
+        const static std::size_t BUFFER_SIZE_DEFAULT = 5000;  // 默认缓存队列大小
+
+        const static uint32_t HISTORY_WINDOW_SIZE = 16;
+
     public:
         virtual ~UDTSocket();
 
+        bool postData(const char *pBuf, std::size_t len);
+
         void shutdown();  // 关闭
 
-        std::string getRemoteAddr() {
-            return _remoteAddr;
-        }
+        std::string getRemoteAddr() const;
 
-        unsigned short getRemotePort() {
-            return _remotePort;
-        }
-
-        void changeSocketStatus(SocketStatus socketStatus);
+        unsigned short getRemotePort() const;
 
     private:
         UDTSocket(SocketType socketType, ConnectionType connectionType,
@@ -54,31 +57,46 @@ namespace Dream {
                   const std::string &remoteAddr, uint16_t remotePort,
                   fUDTDataCallBack dataCallBack, fUDTConnectStatusCallBack statusCallBack,
                   void *pUser, uint32_t maxPacketSize = DEFAULT_MTU,
-                  uint32_t maxWindowSize = DEFAULT_WINDOW_SIZE_MAX);
+                  uint32_t maxWindowSize = DEFAULT_WINDOW_SIZE_MAX,
+                  std::size_t sndBufSize = BUFFER_SIZE_DEFAULT,
+                  std::size_t recBufSize = BUFFER_SIZE_DEFAULT);
 
         void setup();  // 连接
 
-        void run();
+        void changeSocketStatus(SocketStatus socketStatus);
+
+        void sendLoop();
+
+        void receiveLoop();
 
         void checkSocketStatus();
+
+        void sendDataPacket(std::shared_ptr<UDTDataPacket> dataPacketPtr);
 
         void
         receiveData(const std::string &remote_address, uint16_t remote_port, const char *pBuf,
                     std::size_t len);
 
-        void handleData(std::shared_ptr<UdpData> udpDataPtr);
+        std::shared_ptr<UdpData> tryGetReceivedPacket();
+
+        // 处理控制包
+        void handleControlPacket(std::shared_ptr<UdpData> udpDataPtr,
+                                 const UDTControlPacket::ControlPacketType &controlPacketType);
+
+        // 处理数据包
+        void handleDataPacket(std::shared_ptr<UdpData> udpDataPtr);
 
         void sendSynPacket();
 
-        void handleSynPacket(const UDTSynPacket& packet);
+        void handleSynPacket(const UDTSynPacket &packet);
 
         void sendKeepAlivePacket();
 
-        void sendAckPacket(unsigned seqNumber);
+        void sendAckPacket(int32_t seqNumber);
 
-        void sendNakPacket();
+        void sendNakPacket(const std::vector<int32_t > &seqNumberList);
 
-        void sendAck2Packet(unsigned ackSeqNumber);
+        void sendAck2Packet(int32_t ackSeqNumber);
 
         void sendShutdownPacket();
 
@@ -86,7 +104,7 @@ namespace Dream {
 
         void shutdownWithoutRemove();
 
-        void handleRevice();
+        bool handleRevice();
 
         void ackTask();
 
@@ -101,18 +119,9 @@ namespace Dream {
 //        is dynamically updated to 4 * RTT_+ RTTVar + SYN, where RTTVar is the
 //        variance of RTT samples.
 
-        void updateRttVariance() {  // 获取rtt样本方差
-            uint32_t sum = 0;
-            for (int i = 0; i < RTT_SAMPLE_NUM; ++i) {
-                uint32_t offset = _rttSamples[i] - _rttUs;
-                sum += (offset * offset);
-            }
-            _rttVariance = sum / RTT_SAMPLE_NUM;
-        }
+        void updateRttVariance();
 
-        uint32_t getNakPeriod() {
-            return 4 * _rttUs + _rttVariance + SYN_TIME_US;
-        }
+        uint32_t getNakPeriod();
 
 
 //        EXP is used to trigger data packets retransmission and maintain
@@ -121,63 +130,28 @@ namespace Dream {
 //                avoid unnecessary timeout, a minimum threshold (e.g., 0.5 second)
 //        should be used in the implementation.
 
-        uint32_t getExpPeriod() {
-            unsigned period = _timeoutNumber * getNakPeriod();
-            return period < EXP_PERIOD_MIN ? EXP_PERIOD_MIN : period;
-        }
+        uint32_t getExpPeriod();
 
-        bool ackTimeout() {
-            uint64_t currentTime = getCurrentTimeStampMicro();
-            if (_ackTime > 0 && (_ackTime + SYN_TIME_US > currentTime)) {  // 没超时
-                return false;
-            } else {
-                _ackTime = currentTime;
-                return true;
-            }
-        }
+        bool ackTimeout();
 
-        bool nakTimeout() {
-            uint64_t currentTime = getCurrentTimeStampMicro();
-            if (_nakTime > 0 && (_nakTime + getNakPeriod() > currentTime)) {  // 没超时
-                return false;
-            } else {
-                _nakTime = currentTime;
-                return true;
-            }
-        }
+        bool nakTimeout();
 
-        bool expTimeout() {
-            uint64_t currentTime = getCurrentTimeStampMicro();
-            if (_expTime > 0 && (_expTime + getExpPeriod() > currentTime)) {  // 没超时
-                return false;
-            } else {
-                _expTime = currentTime;
-                return true;
-            }
-        }
+        bool expTimeout();
 
-        bool sndTimeout() {
-            uint64_t currentTime = getCurrentTimeStampMicro();
-            if (_sndTime > 0 && (_sndTime + _stp > currentTime)) {  // 没超时
-                return false;
-            } else {
-                _sndTime = currentTime;
-                return true;
-            }
-        }
+        bool sndTimeout();
 
         friend class UDTMultiplexer;
 
     private:
         SocketStatus _socketStatus;
-        SocketType _socketType;
+        const SocketType _socketType;
         int32_t _seqNumber;
-        std::size_t _maxPacketSize;
+        const std::size_t _maxPacketSize;
         std::size_t _maxWindowSize;
-        ConnectionType _connectionType;
+        const ConnectionType _connectionType;
         uint32_t _cookie;
         std::shared_ptr<UDTMultiplexer> _multiplexerPtr;
-        uint32_t _socketId;
+        const uint32_t _socketId;
         std::string _remoteAddr;
         uint16_t _remotePort;
         fUDTDataCallBack _dataCallBack;
@@ -186,7 +160,28 @@ namespace Dream {
         uint32_t _addrBytes[4];
 
         bool _running;
-        std::unique_ptr<std::thread> _threadPtr;
+
+        std::mutex _sndBufMutex;
+        std::condition_variable _sndCondition;
+        std::queue<std::shared_ptr<UDTDataPacket>> _sndBuf;  // 发送缓存
+        std::size_t _sndBufSize;
+        std::unique_ptr<std::thread> _sendThreadPtr;  // 发送线程
+        SendGlideWindow _sendGlideWindow;  // 发送端滑动窗口
+        SendLossList _sendLossList;  // 发送端丢失列表
+
+        std::mutex _recBufMutex;
+        std::condition_variable _recCondition;
+        std::queue<std::shared_ptr<UdpData>> _recBuf;  // 接收缓存
+        std::size_t _recBufSize;
+        std::unique_ptr<std::thread> _receiveThreadPtr;  // 接收线程
+        ReceiveGlideWindow _receiveGlideWindow;  // 接收端滑动窗口
+        ReceiveLossList _receiveLossList;  // 接收端丢失列表
+
+        uint64_t _pkt[HISTORY_WINDOW_SIZE];  // 数据包到达的时间
+        int _pktIndex;
+        int64_t _packetPair[HISTORY_WINDOW_SIZE];  // 数据包到达时间间隔
+        int _packetPairIndex;
+
         std::mutex _mutex;
 
         bool _firstAck;
@@ -198,14 +193,14 @@ namespace Dream {
         uint32_t _linkCapacity;
         uint32_t _rttSamples[RTT_SAMPLE_NUM];
         uint16_t _rttSampleIndex;
-        uint32_t _stp;  // 发送间隔
+        uint32_t _snd;  // 发送间隔
+        std::mutex _sndMutex;
 
-
-        int32_t _lossedSeqNumber[INIT_BUFFER_SIZE];  // 丢失包信息
-        std::size_t _lossedSize;  // 丢失包个数
+        std::mutex _sendWindowMutex;
+        bool waitAck;
 
         int32_t _lrsn;  // 最大接收包序列号
-        uint32_t _timeoutNumber;  // 连续超时次数
+        uint32_t _expCount;  // 连续超时次数
 
         // 四个定时器
         uint64_t _ackTime;  // 响应定时器，周期不能大于 SYN TIME
@@ -216,8 +211,11 @@ namespace Dream {
         // 缓存
         bool _handlePacket;
         bool _handling;
-        std::queue<std::shared_ptr<UdpData>> _recBuf;  // 接收缓存
         ThreadPool _threadPool;
+
+        uint64_t _setupTime;
+
+        void resetExpTimer();
     };
 
 }

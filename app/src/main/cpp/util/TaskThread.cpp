@@ -48,9 +48,9 @@ namespace Dream {
 //            LOGW("TaskThread", "thread stop wait\n");
             _condition.wait(lock, [&]()-> bool { return _exited;});
 //            if (_waiting.load()) {  // 如果正在等待
-//                _threadPtr->join();  // 等待线程执行完毕
+//                _sendThreadPtr->join();  // 等待线程执行完毕
 //            } else {  // 如果正在执行，就不等待了，可能会死锁
-//                _threadPtr->detach();
+//                _sendThreadPtr->detach();
 //            }
         }
         if (_threadPtr.get() != nullptr) {

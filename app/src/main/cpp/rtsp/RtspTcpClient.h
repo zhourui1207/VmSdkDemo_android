@@ -21,9 +21,9 @@ namespace Dream {
             DESCRIBE,
             SETUP_VIDEO,
             SETUP_AUDIO,
-            WAITE_PLAY,
+            WAIT_PLAY,
             PLAY,
-            WAITE_PAUSE,
+            WAIT_PAUSE,
             PAUSE,
             TEARDOWN
         };
@@ -72,7 +72,7 @@ namespace Dream {
         bool pause() {
             std::lock_guard<std::mutex> lock(_mutex);
             if (_currentMethodStatus == PLAY) {
-                _currentMethodStatus = WAITE_PAUSE;
+                _currentMethodStatus = WAIT_PAUSE;
                 return sendPausePacket();
             }
             return false;
@@ -81,7 +81,7 @@ namespace Dream {
         bool play() {
             std::lock_guard<std::mutex> lock(_mutex);
             if (_currentMethodStatus == PAUSE || _currentMethodStatus == PLAY) {
-                _currentMethodStatus = WAITE_PLAY;
+                _currentMethodStatus = WAIT_PLAY;
                 return sendPlayPacket();
             }
             return false;

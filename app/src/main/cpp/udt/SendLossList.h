@@ -17,6 +17,10 @@ namespace Dream {
     class SendLossList {
 
     public:
+        SendLossList() = default;
+
+        virtual ~SendLossList() = default;
+
         // 移除并获取loss列表中第一个序列号  发送线程调用  返回值: true:移除成功 false:移除失败
         bool removeFirstLossPacket(int32_t &seqNumber);
 
