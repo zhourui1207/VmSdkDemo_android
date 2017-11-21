@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">VmNetSdkTest</string>
+    <string name="smartconfigtest">SmartConfigTest</string>
+    <string name="please_input_wifi_password">请输入wifi密码</string>
+    <string name="clear_found">清空搜索</string>
+    <string name="found_device">搜索到的设备</string>
 </resources>

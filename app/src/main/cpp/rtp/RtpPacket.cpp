@@ -8,21 +8,25 @@
 #include <cstring>
 
 #include "RtpPacket.h"
+#include "../util/public/platform.h"
 
 namespace Dream {
 
     RtpPacket::RtpPacket() :
             m_nSequenceNumber(0), m_nPayloadType(0), m_bMarker(false), m_nTimeStamp(0), m_nSsrc(
             0), m_pBuffer(nullptr), m_nBufferLen(0), m_pPayloadData(nullptr), m_nPayloadDataLen(0),
-            m_bForceFu(
-                    false) {
+            m_bForceFu(false), m_extLength(0), m_defineProfile(0), m_bJWExtHeader(false), m_magic(0),
+            m_defVersion(0), m_res(0), m_isFirstFrame(0), m_isLastFrame(0), m_utcTimeStamp(0) {
     }
 
     RtpPacket::~RtpPacket() {
         delete[] m_pBuffer;
     }
 
-    int RtpPacket::Parse(char *pBuffer, int bufferSize) {
+    int RtpPacket::Parse(const char *pBuffer, size_t bufferSize) {
+//        LOGE("!!!", "Parse len[%d] data[%s]", bufferSize, getHexString(pBuffer, 0, bufferSize).c_str());
+//        LOGE("!!!", "Parse len[%d]]\n", bufferSize);
+
         if (bufferSize < 12) {
             return -1;
         }
@@ -31,39 +35,78 @@ namespace Dream {
                             &m_nSequenceNumber, &m_nTimeStamp, &m_nSsrc))
             return -1;
 
+//        LOGE("!!!", "seqnumber [%d]", m_nSequenceNumber);
         m_pBuffer = new char[bufferSize];
 
         memcpy(m_pBuffer, pBuffer, bufferSize);
 
-        if ((pBuffer[0] & 0x02) == 0x02) {  // 占位标志P，则在该报文的尾部填充一个或多个额外的八位组
+        m_defineProfile = 0;
+        m_extLength = 0;
+        m_bJWExtHeader = false;
+        m_magic = 0;
+        m_defVersion = 0;
+        m_res = 0;
+        m_isFirstFrame = 0;
+        m_isLastFrame = 0;
+        m_utcTimeStamp = 0;
 
+        if ((pBuffer[0] & 0x10) == 0x10) {  // 扩展标示
+//            LOGE("rtp", "have ext header\n");
+            if (bufferSize < 16) {  // 后面有还有4个字节的扩展头
+                return -1;
+            }
+            int pos = 0;
+            DECODE_INT16(pBuffer + 12, m_defineProfile, pos);
+            int16_t tmpLen = 0;
+            DECODE_INT16(pBuffer + 14, tmpLen, pos);
+//            LOGE("rtp", "jwheader, profile [%d], extLength[%d]\n", m_defineProfile, tmpLen);
+            m_extLength = (4 + 4 * tmpLen);  // 加上扩展头字节
+
+            if (bufferSize < 12 + m_extLength) {
+                return -1;
+            }
+
+            // 判断中威rtp扩展头
+            if (m_defineProfile == 0x1081 && m_extLength == 20) {
+                JW_CLOUD_RTP_EXT_DATA extData;
+                memset(&extData, 0, sizeof(extData));
+                memcpy(&extData, pBuffer + 16, sizeof(extData));
+                m_bJWExtHeader = true;
+                m_magic = extData.magic;
+                m_defVersion = extData.defVersion;
+                m_res = extData.res;
+                m_isFirstFrame = extData.isFirstFrame;
+                m_isLastFrame = extData.isLastFrame;
+                m_utcTimeStamp = extData.utcTimeStamp;
+//                LOGE("rtp", "jwheader, extData size[%d], utcTimeStamp[%lld]\n", sizeof(extData), m_utcTimeStamp);
+            }
         }
 
-        if ((m_nPayloadType == 98 || (m_nPayloadType == 96 && m_bForceFu)) && ((pBuffer[12] & 0x1F) == 28)) { // FU Type
-            if (pBuffer[13] & 0x80) {  // 是否是起始帧
-                m_pBuffer[9] = 0x00;
-                m_pBuffer[10] = 0x00;
-                m_pBuffer[11] = 0x00;
-                m_pBuffer[12] = 0x01;
-                m_pPayloadData = m_pBuffer + 9;
-                m_nPayloadDataLen = bufferSize - 9;
+        if ((m_nPayloadType == 98 || (m_nPayloadType == 96 && m_bForceFu)) && ((pBuffer[12 + m_extLength] & 0x1F) == 28)) { // FU Type
+            if (pBuffer[13 + m_extLength] & 0x80) {  // 是否是起始帧
+                m_pBuffer[9 + m_extLength] = 0x00;
+                m_pBuffer[10 + m_extLength] = 0x00;
+                m_pBuffer[11 + m_extLength] = 0x00;
+                m_pBuffer[12 + m_extLength] = 0x01;
+                m_pPayloadData = m_pBuffer + m_extLength + 9;
+                m_nPayloadDataLen = bufferSize - m_extLength - 9;
             } else {
-                m_pPayloadData = m_pBuffer + 14;
-                m_nPayloadDataLen = bufferSize - 14;
+                m_pPayloadData = m_pBuffer + m_extLength + 14;
+                m_nPayloadDataLen = bufferSize - m_extLength - 14;
             }
-            m_pBuffer[13] = (char) ((pBuffer[12] & 0xE0) + (pBuffer[13] & 0x1F));
+            m_pBuffer[13 + m_extLength] = (char) ((pBuffer[12 + m_extLength] & 0xE0) + (pBuffer[13 + m_extLength] & 0x1F));
         } else if ((m_nPayloadType == 98 || (m_nPayloadType == 96 && m_bForceFu)) &&
-                   (((pBuffer[12] & 0x1F) == 0x07) || ((pBuffer[12] & 0x1F) == 0x08) ||
-                    ((pBuffer[12] & 0x1F) == 0x06) || ((pBuffer[12] & 0x1F) == 0x01))) { // sps或pps
-            m_pBuffer[8] = 0x00;
-            m_pBuffer[9] = 0x00;
-            m_pBuffer[10] = 0x00;
-            m_pBuffer[11] = 0x01;
-            m_pPayloadData = m_pBuffer + 8;
-            m_nPayloadDataLen = bufferSize - 8;
+                   (((pBuffer[12 + m_extLength] & 0x1F) == 0x07) || ((pBuffer[12 + m_extLength] & 0x1F) == 0x08) ||
+                    ((pBuffer[12 + m_extLength] & 0x1F) == 0x06) || ((pBuffer[12 + m_extLength] & 0x1F) == 0x01))) { // sps或pps
+            m_pBuffer[8 + m_extLength] = 0x00;
+            m_pBuffer[9 + m_extLength] = 0x00;
+            m_pBuffer[10 + m_extLength] = 0x00;
+            m_pBuffer[11 + m_extLength] = 0x01;
+            m_pPayloadData = m_pBuffer + m_extLength + 8;
+            m_nPayloadDataLen = bufferSize - m_extLength - 8;
         } else {
-            m_pPayloadData = m_pBuffer + 12;
-            m_nPayloadDataLen = bufferSize - 12;
+            m_pPayloadData = m_pBuffer + m_extLength + 12;
+            m_nPayloadDataLen = bufferSize - m_extLength - 12;
         }
 
         return 0;

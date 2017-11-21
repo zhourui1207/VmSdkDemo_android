@@ -48,12 +48,12 @@ namespace Dream {
                 return -1;
             }
 
-            int encodePos = 0;
-
             unsigned short tmp = _controlPacketType;
             if (isControl()) {  // control
                 tmp |= (1 << 15);
             }
+            
+            int encodePos = 0;
             ENCODE_INT16(pBuf, tmp, encodePos);  // type
 
             ENCODE_INT16(pBuf + encodePos, _reserved, encodePos);  // reserved
@@ -118,7 +118,7 @@ namespace Dream {
             _additionalInfo = additionalInfo;
         }
 
-        int32_t getAdditionalInfo() {
+        int32_t getAdditionalInfo() const {
             return _additionalInfo;
         }
 

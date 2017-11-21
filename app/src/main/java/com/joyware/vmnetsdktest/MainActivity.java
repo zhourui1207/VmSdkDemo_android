@@ -8,12 +8,16 @@ import android.content.Intent;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.opengl.GLSurfaceView;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Message;
+import android.os.MessageQueue;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Surface;
+import android.view.ScaleGestureDetector;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
@@ -21,7 +25,6 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.joyware.util.TimeUtil;
 import com.joyware.vmsdk.Channel;
 import com.joyware.vmsdk.ChannelsHolder;
 import com.joyware.vmsdk.DepTree;
@@ -29,26 +32,28 @@ import com.joyware.vmsdk.DepTreesHolder;
 import com.joyware.vmsdk.RecordDownloader;
 import com.joyware.vmsdk.VmNet;
 import com.joyware.vmsdk.VmPlayer;
+import com.joyware.vmsdk.WifiConfig;
 import com.joyware.vmsdk.core.AudioCollector;
-import com.joyware.vmsdk.core.BlockingBuffer;
-import com.joyware.vmsdk.core.CheckAudioPermission;
 import com.joyware.vmsdk.core.JWAsyncTask;
-import com.joyware.vmsdk.core.PriorityData;
-import com.joyware.vmsdk.core.RTPSortFilter;
-import com.joyware.vmsdk.core.RecordThread;
-import com.joyware.vmsdk.util.OpenGLESUtil;
 import com.joyware.vmsdk.util.opengles.GLFrameRenderer;
 import com.joyware.widget.time.RecordTimeCell;
 import com.joyware.widget.time.TimeBar;
 
-import java.io.File;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
+
 public class MainActivity extends AppCompatActivity implements VmNet.ServerConnectStatusCallback {
 
-    private static SurfaceView surfaceView;
+    private SurfaceView surfaceView;
     private static int id = 0;
     GLFrameRenderer mGLFRenderer;
     GLSurfaceView mGLSurfaceView;
@@ -79,7 +84,12 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 
     ProgressBar mProgressBar;
 
-    long rtspStreamId;
+    int rtspStreamId;
+    Looper mLooper;
+    Handler mHandler;
+    Message mMessage;
+    MessageQueue mMessageQueue;
+    HandlerThread mHandlerThread;
 
     TextView mTimeTextView;
     TextView mTimeTextView2;
@@ -88,12 +98,13 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
     ArrayList[] mLists = new ArrayList[9];
     String[] list = new String[9];
     @NonNull
-    private final RecordDownloader mRecordDownloader = new RecordDownloader();
+    private final RecordDownloader mRecordDownloader = new RecordDownloader(null);
 
-    public static Surface getNativeSurface() {
-        Log.e("!!", "getNativeSurface");
-        return surfaceView.getHolder().getSurface();
-    }
+    ScaleGestureDetector scaleGestureDetector;
+
+    Button mStartSmartConfigBtn;
+    Button mStopSmartConfigBtn;
+
 
     /**
      * This method is called by SDL using JNI.
@@ -218,222 +229,267 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
                 .LayoutParams.FLAG_KEEP_SCREEN_ON);  //保持屏幕常亮
         setContentView(R.layout.activity_main);
 
-        mScaleText = (TextView) findViewById(R.id.sample_text);
+        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
 
-        for (int i = 0; i < mLists.length; ++i) {
-            ArrayList<String> list = mLists[i];
-        }
-
-        mTimeTextView = (TextView) findViewById(R.id.textView_time);
-
-        mProgressTextView = (TextView) findViewById(R.id.textView_progress);
-        mProgressBar = (ProgressBar) findViewById(R.id.pb);
-
-        findViewById(R.id.btn_show_timebar).setOnClickListener(new View.OnClickListener() {
+        mStartSmartConfigBtn = (Button) findViewById(R.id.btn_start_smart_config);
+        mStartSmartConfigBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                timeBar.setVisibility(View.VISIBLE);
+                WifiConfig.config("zr-wifi", "88888888");
             }
         });
-
-        findViewById(R.id.btn_hide_timebar).setOnClickListener(new View.OnClickListener() {
+        mStopSmartConfigBtn = (Button) findViewById(R.id.btn_stop_smart_config);
+        mStopSmartConfigBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                timeBar.setVisibility(View.GONE);
+                WifiConfig.stop();
             }
         });
 
-
-        mRecordDownloader.setOnRecordDownloadStatusListener(new RecordDownloader
-                .OnRecordDownloadStatusListener() {
-
-
-            @Override
-            public void onRecordDownloadStart(RecordDownloader recordDownloader) {
-                mProgressTextView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mProgressTextView.setText("开始录像");
-                        mProgressBar.setProgress(0);
-                    }
-                });
-            }
-
-            @Override
-            public void onRecordDownloadProgress(RecordDownloader recordDownloader, final float
-                    progress) {
-//                Log.e(TAG, "onRecordDownloadProgress progress = " + progress);
-                mProgressTextView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mProgressTextView.setText("录像进度:" + (progress * 100) + "%");
-                        mProgressBar.setProgress((int) (progress * 100));
-                    }
-                });
-            }
-
-            @Override
-            public void onRecordDownloadSuccess(RecordDownloader recordDownloader) {
-                mProgressTextView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mProgressTextView.setText("录像下载成功");
-                        mProgressBar.setProgress(100);
-                    }
-                });
-            }
-
-            @Override
-            public void onRecordDownloadFailed(RecordDownloader recordDownloader, int errorCode,
-                                               final String message) {
-                mProgressTextView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mProgressTextView.setText("录像下载失败:" + message);
-                    }
-                });
-            }
-        });
-
-
-        findViewById(R.id.btn_start_rtsp).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                rtspStreamId = VmNet.startStreamByRtsp
-                        ("rtsp://admin:admin12345@192.168.3.38:554/Streaming/Channels/101" +
-                                "?transportmode=unicast&profile=Profile_1", new VmNet
-                                .StreamCallbackV2() {
-                    @Override
-                    public void onStreamConnectStatus(boolean isConnected) {
-                        Log.e(TAG, "onStreamConnectStatus isConnected = " + isConnected);
-                    }
-
-                    @Override
-                    public void onReceiveStream(byte[] streamData, int streamLen) {
-                        Log.e(TAG, "onReceiveStream streamLen = " + streamLen);
-                    }
-                });
-
-                Log.e(TAG, "startStreamByRtsp rtspStreamId=" + rtspStreamId);
-            }
-        });
-
-        findViewById(R.id.btn_stop_rtsp).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (rtspStreamId != 0) {
-                    VmNet.stopStreamByRtsp(rtspStreamId);
-                    rtspStreamId = 0;
-                }
-            }
-        });
-
-        findViewById(R.id.btn_start_download_record).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.e(TAG, "startRecordTask");
-                int startTime = 1498452620;
-                mRecordDownloader.startRecordTask(RecordThread.RECORD_FILE_TYPE_MP4,
-                        "/sdcard/MVSS/test.mp4", true, "201706151925230392", 1, startTime,
-                        startTime + 60 * 2);
-            }
-        });
-
-        findViewById(R.id.btn_cancel_download_record).setOnClickListener(new View.OnClickListener
-                () {
-            @Override
-            public void onClick(View v) {
-                Log.e(TAG, "cancelRecordTask");
-                mRecordDownloader.cancelRecordTask();
-            }
-        });
-
-        findViewById(R.id.btn_start_talk).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (CheckAudioPermission.isHasPermission(MainActivity.this)) {
-                    mAudioCollector.setOnAudioDataListener(new AudioCollector
-                            .OnG711AudioDataListener() {
-
-                        @Override
-                        public void onG711AudioData(byte[] audioData, int audioLen) {
-                            Log.e(TAG, "onG711AudioData audiolen=" + audioLen);
-                        }
-                    });
-                    mAudioCollector.startRecord();
-                }
-            }
-        });
-
-        findViewById(R.id.btn_stop_talk).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mAudioCollector.stopRecord();
-            }
-        });
-
-        findViewById(R.id.btn_start_talk_play).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mAudioCollector.setPlay(true);
-            }
-        });
-
-        findViewById(R.id.btn_stop_talk_play).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mAudioCollector.setPlay(false);
-            }
-        });
-
+//        byte[] a = new byte[30000];
+//        String content = new String(a);
+//        byte[] contentByte = content.getBytes();
+//        byte [] encBytes;
+//        System.out.println("contentByte size = " + contentByte.length);
+//        long begin = System.currentTimeMillis();
+//        for ( int i = 0 ; i < 100000; i++)
+//        {
+//            String key = "1221212121212333";
+//            encBytes= encrypt(contentByte, key);
+//        }
+//        Math.pow(1,2);
+//
+//        System.out.println("time = " + ((System.currentTimeMillis() - begin) / 1000));
+//
+//
 //        mJWDefaultScaleFilter = new JWDefaultScaleFilter(this, new Runnable() {
+//
 //            @Override
 //            public void run() {
 //                player.scaleTo(true, mJWDefaultScaleFilter.getLeftPercent(),
-//                        mJWDefaultScaleFilter.getTopPercent(), mJWDefaultScaleFilter
-//                                .getScaleFactor(), mJWDefaultScaleFilter.getScaleFactor());
+//                        mJWDefaultScaleFilter.getTopPercent(), mJWDefaultScaleFilter.getScaleFactor(),
+//                        mJWDefaultScaleFilter.getScaleFactor());
 //            }
 //        });
-//        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+//
 //        mJWDefaultScaleFilter.setView(surfaceView);
 //
-        final JWAsyncTask myAsyncTask = new MyAsyncTask().execute(2);
-
-        BlockingBuffer blockingBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType
-                .PRIORITY);
-
-        int i = 0;
-        blockingBuffer.addObject(new PriorityData("1", 5, ++i));
-        blockingBuffer.addObject(new PriorityData("2", 4, ++i));
-        blockingBuffer.addObject(new PriorityData("3", 4, ++i));
-        blockingBuffer.addObject(new PriorityData("4", 4, ++i));
-        blockingBuffer.addObject(new PriorityData("5", 4, ++i));
-        blockingBuffer.addObject(new PriorityData("6", 4, ++i));
-        blockingBuffer.addObject(new PriorityData("7", 4, ++i));
-        blockingBuffer.addObject(new PriorityData("8", 1, ++i));
-
-        for (int j = 0; j < 8; ++j) {
-            try {
-                PriorityData priorityData = (PriorityData) blockingBuffer.removeObjectBlocking();
-                Log.e(TAG, priorityData.toString());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                myAsyncTask.cancel(true);
-            }
-        }).start();
-
-
+//        mScaleText = (TextView) findViewById(R.id.sample_text);
+//
+//        for (int i = 0; i < mLists.length; ++i) {
+//            ArrayList<String> list = mLists[i];
+//        }
+//
+//        mTimeTextView = (TextView) findViewById(R.id.textView_time);
+//
+//        mProgressTextView = (TextView) findViewById(R.id.textView_progress);
+//        mProgressBar = (ProgressBar) findViewById(R.id.pb);
+//
+//        findViewById(R.id.btn_show_timebar).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                timeBar.setVisibility(View.VISIBLE);
+//            }
+//        });
+//
+//        findViewById(R.id.btn_hide_timebar).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                timeBar.setVisibility(View.GONE);
+//            }
+//        });
+//
+//
+//        mRecordDownloader.setOnRecordDownloadStatusListener(new RecordDownloader
+//                .OnRecordDownloadStatusListener() {
+//
+//
+//            @Override
+//            public void onRecordDownloadStart(RecordDownloader recordDownloader) {
+//                mProgressTextView.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        mProgressTextView.setText("开始录像");
+//                        mProgressBar.setProgress(0);
+//                    }
+//                });
+//            }
+//
+//            @Override
+//            public void onRecordDownloadProgress(RecordDownloader recordDownloader, final float
+//                    progress) {
+//                Log.e(TAG, "onRecordDownloadProgress progress = " + progress);
+//                mProgressTextView.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        mProgressTextView.setText("录像进度:" + (progress * 100) + "%");
+//                        mProgressBar.setProgress((int) (progress * 100));
+//                    }
+//                });
+//            }
+//
+//            @Override
+//            public void onRecordDownloadSuccess(RecordDownloader recordDownloader) {
+//                mProgressTextView.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        mProgressTextView.setText("录像下载成功");
+//                        mProgressBar.setProgress(100);
+//                    }
+//                });
+//            }
+//
+//            @Override
+//            public void onRecordDownloadFailed(RecordDownloader recordDownloader, int errorCode,
+//                                               final String message) {
+//                mProgressTextView.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        mProgressTextView.setText("录像下载失败:" + message);
+//                    }
+//                });
+//            }
+//        });
+//
+//
+////        findViewById(R.id.btn_start_rtsp).setOnClickListener(new View.OnClickListener() {
+////            @Override
+////            public void onClick(View v) {
+////                rtspStreamId = VmNet.startStreamByRtsp
+////                        ("rtsp://admin:admin12345@192.168.3.38:554/Streaming/Channels/101" +
+////                                "?transportmode=unicast&profile=Profile_1", new VmNet
+////                                .StreamCallbackV2() {
+////                    @Override
+////                    public void onStreamConnectStatus(boolean isConnected) {
+////                        Log.e(TAG, "onStreamConnectStatus isConnected = " + isConnected);
+////                    }
+////
+////                    @Override
+////                    public void onReceiveStream(byte[] streamData, int streamLen) {
+////                        Log.e(TAG, "onReceiveStream streamLen = " + streamLen);
+////                    }
+////                });
+////
+////                Log.e(TAG, "startStreamByRtsp rtspStreamId=" + rtspStreamId);
+////            }
+////        });
+//
+//        findViewById(R.id.btn_stop_rtsp).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if (rtspStreamId != 0) {
+//                    VmNet.stopStreamByRtsp(rtspStreamId);
+//                    rtspStreamId = 0;
+//                }
+//            }
+//        });
+//
+//        findViewById(R.id.btn_start_download_record).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                Log.e(TAG, "startRecordTask");
+//                int startTime = (int) (System.currentTimeMillis() / 1000 - 3600 * 2);
+//                mRecordDownloader.startRecordTask(RecordThread.RECORD_FILE_TYPE_MP4,
+//                        "/sdcard/MVSS/test.mp4", true, "201709181056175272", 2, startTime,
+//                        startTime + 60 * 2);
+//            }
+//        });
+//
+//        findViewById(R.id.btn_cancel_download_record).setOnClickListener(new View.OnClickListener
+//                () {
+//            @Override
+//            public void onClick(View v) {
+//                Log.e(TAG, "cancelRecordTask");
+//                mRecordDownloader.cancelRecordTask();
+//            }
+//        });
+//
+//        findViewById(R.id.btn_start_talk).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if (CheckAudioPermission.isHasPermission(MainActivity.this)) {
+//                    mAudioCollector.setOnAudioDataListener(new AudioCollector
+//                            .OnG711AudioDataListener() {
+//
+//                        @Override
+//                        public void onG711AudioData(byte[] audioData, int audioLen) {
+//                            Log.e(TAG, "onG711AudioData audiolen=" + audioLen);
+//                        }
+//                    });
+//                    mAudioCollector.startRecord();
+//                }
+//            }
+//        });
+//
+//        findViewById(R.id.btn_stop_talk).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                mAudioCollector.stopRecord();
+//            }
+//        });
+//
+//        findViewById(R.id.btn_start_talk_play).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                mAudioCollector.setPlay(true);
+//            }
+//        });
+//
+//        findViewById(R.id.btn_stop_talk_play).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                mAudioCollector.setPlay(false);
+//            }
+//        });
+//
+////        mJWDefaultScaleFilter = new JWDefaultScaleFilter(this, new Runnable() {
+////            @Override
+////            public void run() {
+////                player.scaleTo(true, mJWDefaultScaleFilter.getLeftPercent(),
+////                        mJWDefaultScaleFilter.getTopPercent(), mJWDefaultScaleFilter
+////                                .getScaleFactor(), mJWDefaultScaleFilter.getScaleFactor());
+////            }
+////        });
+////        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+////        mJWDefaultScaleFilter.setView(surfaceView);
+////
+//        final JWAsyncTask myAsyncTask = new MyAsyncTask().execute(2);
+//
+//        BlockingBuffer blockingBuffer = new BlockingBuffer(BlockingBuffer.BlockingBufferType
+//                .PRIORITY);
+//
+//        int i = 0;
+//        blockingBuffer.addObject(new PriorityData("1", 5, ++i));
+//        blockingBuffer.addObject(new PriorityData("2", 4, ++i));
+//        blockingBuffer.addObject(new PriorityData("3", 4, ++i));
+//        blockingBuffer.addObject(new PriorityData("4", 4, ++i));
+//        blockingBuffer.addObject(new PriorityData("5", 4, ++i));
+//        blockingBuffer.addObject(new PriorityData("6", 4, ++i));
+//        blockingBuffer.addObject(new PriorityData("7", 4, ++i));
+//        blockingBuffer.addObject(new PriorityData("8", 1, ++i));
+//
+//        for (int j = 0; j < 8; ++j) {
+//            try {
+//                PriorityData priorityData = (PriorityData) blockingBuffer.removeObjectBlocking();
+//                Log.e(TAG, priorityData.toString());
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    Thread.sleep(5000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+////                myAsyncTask.cancel(true);
+//            }
+//        }).start();
+//
+//
 //        scaleGestureDetector = new ScaleGestureDetector(this, new ScaleGestureDetector
 //                .OnScaleGestureListener() {
 //
@@ -494,7 +550,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 ////                mZoom = false;
 //            }
 //        });
-
+//
 //        surfaceView.setOnTouchListener(new View.OnTouchListener() {
 //            @Override
 //            public boolean onTouch(View v, MotionEvent event) {
@@ -540,156 +596,158 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 ////                return true;
 //            }
 //        });
-        textView = (TextView) findViewById(R.id.tv);
-        timeBar = (TimeBar) findViewById(R.id.tb);
-        timeBar.setOnCurrentTimeChangListener(new TimeBar.OnCurrentTimeChangListener() {
-            @Override
-            public void onCurrentTimeChanging(long currentTime) {
-                mTimeTextView.setText(TimeUtil.timeStamp2Date(currentTime, "HH:mm:ss"));
-            }
-
-            @Override
-            public void onCurrentTimeChanged(long currentTime) {
-                mTimeTextView.setText(TimeUtil.timeStamp2Date(currentTime, "HH:mm:ss"));
-            }
-        });
-
-        String currentStr = TimeUtil.timeStamp2Date(System.currentTimeMillis(), null);
-        String[] sub = currentStr.split(" ");
-        String dayBegin = sub[0] + " 00:00:00";
-        long beginTime = TimeUtil.date2TimeStamp(dayBegin, null);
-        timeBar.setBeginTime(beginTime);
-        timeBar.setCurrentTime(System.currentTimeMillis());
-        timeBar.setRecordList(recordTimeCellList);
-//        timeBar.setCurrentTimeChangListener(new TimeBar.CurrentTimeChangListener() {
+//        textView = (TextView) findViewById(R.id.tv);
+//        timeBar = (TimeBar) findViewById(R.id.tb);
+//        timeBar.setOnCurrentTimeChangListener(new TimeBar.OnCurrentTimeChangListener() {
 //            @Override
 //            public void onCurrentTimeChanging(long currentTime) {
-//                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+//                mTimeTextView.setText(TimeUtil.timeStamp2Date(currentTime, "HH:mm:ss"));
 //            }
 //
 //            @Override
 //            public void onCurrentTimeChanged(long currentTime) {
-//                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
-//                player.stopPlay();
-//                player.startPlayback("201610111654538071", 1, true, (int) (currentTime / 1000L),
-//                        (int) (System.currentTimeMillis() / 1000L), 0, false);
+//                mTimeTextView.setText(TimeUtil.timeStamp2Date(currentTime, "HH:mm:ss"));
 //            }
 //        });
-
-
-//    surfaceView2 = (SurfaceView) findViewById(R.id.surfaceView2);
-//    surfaceView3 = (SurfaceView) findViewById(R.id.surfaceView3);
-//    surfaceView4 = (SurfaceView) findViewById(R.id.surfaceView4);
-//    surfaceView5 = (SurfaceView) findViewById(R.id.surfaceView5);
-//    surfaceView6 = (SurfaceView) findViewById(R.id.surfaceView6);
-//    surfaceView7 = (SurfaceView) findViewById(R.id.surfaceView7);
-//    surfaceView8 = (SurfaceView) findViewById(R.id.surfaceView8);
-//    surfaceView9 = (SurfaceView) findViewById(R.id.surfaceView9);
-
-
-        button = (Button) findViewById(R.id.button);
-//    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
-
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (player == null) {
-                    return;
-                }
-                if (audioOpen) {
-                    player.closeAudio();
-                    audioOpen = false;
-                    button.setText("打开声音");
-                } else {
-                    audioOpen = player.openAudio();
-                    if (audioOpen) {
-                        button.setText("关闭声音");
-                    }
-                }
-            }
-//                Log.e("!!!", "stop start");
-//                player.stopPlay();
-//                Log.e("!!!", "stop end");
-//                try {
-//                    Thread.sleep(1000);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//                Log.e("!!!", "startRealplay start");
-//                player.startRealplay("201610111654538071", 1, false, 2, false, false,
-// surfaceView.getHolder(), MainActivity.this);
-//                Log.e("!!!", "startRealplay end");
 //
+//
+//
+//        String currentStr = TimeUtil.timeStamp2Date(System.currentTimeMillis(), null);
+//        String[] sub = currentStr.split(" ");
+//        String dayBegin = sub[0] + " 00:00:00";
+//        long beginTime = TimeUtil.date2TimeStamp(dayBegin, null);
+//        timeBar.setBeginTime(beginTime);
+//        timeBar.setCurrentTime(System.currentTimeMillis());
+//        timeBar.setRecordList(recordTimeCellList);
+////        timeBar.setCurrentTimeChangListener(new TimeBar.CurrentTimeChangListener() {
+////            @Override
+////            public void onCurrentTimeChanging(long currentTime) {
+////                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+////            }
+////
+////            @Override
+////            public void onCurrentTimeChanged(long currentTime) {
+////                textView.setText(TimeUtil.timeStamp2Date(currentTime, null));
+////                player.stopPlay();
+////                player.startPlayback("201610111654538071", 1, true, (int) (currentTime / 1000L),
+////                        (int) (System.currentTimeMillis() / 1000L), 0, false);
+////            }
+////        });
+//
+//
+////    surfaceView2 = (SurfaceView) findViewById(R.id.surfaceView2);
+////    surfaceView3 = (SurfaceView) findViewById(R.id.surfaceView3);
+////    surfaceView4 = (SurfaceView) findViewById(R.id.surfaceView4);
+////    surfaceView5 = (SurfaceView) findViewById(R.id.surfaceView5);
+////    surfaceView6 = (SurfaceView) findViewById(R.id.surfaceView6);
+////    surfaceView7 = (SurfaceView) findViewById(R.id.surfaceView7);
+////    surfaceView8 = (SurfaceView) findViewById(R.id.surfaceView8);
+////    surfaceView9 = (SurfaceView) findViewById(R.id.surfaceView9);
+//
+//
+//        button = (Button) findViewById(R.id.button);
+////    glSurfaceView = (GLSurfaceView) findViewById(R.id.glSurfaceView);
+//
+//        button.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                if (player == null) {
+//                    return;
+//                }
+//                if (audioOpen) {
+//                    player.closeAudio();
+//                    audioOpen = false;
+//                    button.setText("打开声音");
+//                } else {
+//                    audioOpen = player.openAudio();
+//                    if (audioOpen) {
+//                        button.setText("关闭声音");
+//                    }
+//                }
 //            }
-        });
-
-        record = (Button) findViewById(R.id.record);
-        record.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String saveDir = "/sdcard/MVSS/Localrecord";
-                File dir = new File(saveDir);
-                if (!dir.exists()) {
-                    dir.mkdir();
-                }
-
-
-                if (recording) {
-                    player.stopRecord();
-                    recording = false;
-                    record.setText("开始录像");
-                } else {
-                    recording = player.startRecord("/sdcard/MVSS/Localrecord/test1.mp4");
-                    if (recording) {
-                        record.setText("停止录像");
-                    }
-                }
-            }
-//      }
-        });
-
-        // Example of a call to a native method
-        TextView tv = (TextView) findViewById(R.id.sample_text);
-
-        boolean supportOpenGLES = OpenGLESUtil.detectOpenGLES20(this);
-        if (supportOpenGLES) {
-            tv.setText("支持openGLES2.0");
-        } else {
-            tv.setText("不支持openGLES2.0");
-        }
-//    glSurfaceView.setEGLContextClientVersion(2);
-//    mGLFRenderer = new GLFrameRenderer(glSurfaceView);
-//    glSurfaceView.setRenderer(mGLFRenderer);
-
-
-        new RealplayTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-
-        RTPSortFilter rtpSortFilter = new RTPSortFilter(5);
-        rtpSortFilter.setOnSortedCallback(new RTPSortFilter.OnSortedCallback() {
-            @Override
-            public void onSorted(int payloadType, byte[] buffer, int start, int len, int
-                    timeStamp, int seqNumber, boolean mark) {
-                Log.e(TAG, "onSorted seqNumber=" + seqNumber);
-            }
-        });
-
-        rtpSortFilter.setOnMissedCallback(new RTPSortFilter.OnMissedCallback() {
-            @Override
-            public void onMissed(int missedStartSeqNumber, int missedNumber) {
-                Log.e(TAG, "onMissed missedStartSeqNumber=" + missedStartSeqNumber + " , " +
-                        "missedNumbe=" + missedNumber);
-            }
-        });
-
-        rtpSortFilter.receive(1,null, 0, 0, 0, 1, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 2, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 3, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 5, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 6, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 4, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 8, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 7, false);
-        rtpSortFilter.receive(1,null, 0, 0, 0, 9, false);
+////                Log.e("!!!", "stop start");
+////                player.stopPlay();
+////                Log.e("!!!", "stop end");
+////                try {
+////                    Thread.sleep(1000);
+////                } catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+////                Log.e("!!!", "startRealplay start");
+////                player.startRealplay("201610111654538071", 1, false, 2, false, false,
+//// surfaceView.getHolder(), MainActivity.this);
+////                Log.e("!!!", "startRealplay end");
+////
+////            }
+//        });
+//
+//        record = (Button) findViewById(R.id.record);
+//        record.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                String saveDir = "/sdcard/MVSS/Localrecord";
+//                File dir = new File(saveDir);
+//                if (!dir.exists()) {
+//                    dir.mkdir();
+//                }
+//
+//
+//                if (recording) {
+//                    player.stopRecord();
+//                    recording = false;
+//                    record.setText("开始录像");
+//                } else {
+//                    recording = player.startRecord("/sdcard/MVSS/Localrecord/test1.mp4");
+//                    if (recording) {
+//                        record.setText("停止录像");
+//                    }
+//                }
+//            }
+////      }
+//        });
+//
+//        // Example of a call to a native method
+//        TextView tv = (TextView) findViewById(R.id.sample_text);
+//
+//        boolean supportOpenGLES = OpenGLESUtil.detectOpenGLES20(this);
+//        if (supportOpenGLES) {
+//            tv.setText("支持openGLES2.0");
+//        } else {
+//            tv.setText("不支持openGLES2.0");
+//        }
+////    glSurfaceView.setEGLContextClientVersion(2);
+////    mGLFRenderer = new GLFrameRenderer(glSurfaceView);
+////    glSurfaceView.setRenderer(mGLFRenderer);
+//
+//
+//        new RealplayTask().execute();
+//
+//        RTPSortFilter rtpSortFilter = new RTPSortFilter(5);
+//        rtpSortFilter.setOnSortedCallback(new RTPSortFilter.OnSortedCallback() {
+//            @Override
+//            public void onSorted(int payloadType, byte[] buffer, int start, int len, int
+//                    timeStamp, int seqNumber, boolean mark) {
+//                Log.e(TAG, "onSorted seqNumber=" + seqNumber);
+//            }
+//        });
+//
+//        rtpSortFilter.setOnMissedCallback(new RTPSortFilter.OnMissedCallback() {
+//            @Override
+//            public void onMissed(int missedStartSeqNumber, int missedNumber) {
+//                Log.e(TAG, "onMissed missedStartSeqNumber=" + missedStartSeqNumber + " , " +
+//                        "missedNumbe=" + missedNumber);
+//            }
+//        });
+//
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 1, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 2, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 3, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 5, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 6, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 4, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 8, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 7, false);
+//        rtpSortFilter.receive(1, null, 0, 0, 0, 9, false);
 //    final Thread sdlThread = new Thread(new SDLMain(), "SDLThread");
 //    sdlThread.start();
     }
@@ -708,11 +766,11 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         }
     }
 
-    class RealplayTask extends AsyncTask<Void, Void, Void> {
+    class RealplayTask extends JWAsyncTask<Void, Void, Void> {
 
         @Override
         protected Void doInBackground(Void... voids) {
-            VmNet.init(10);
+            VmNet.init(1);
 
 //            Log.e(TAG, "connect start");
 //            VmNet.connect("10.234.11.3", 5516, MainActivity.this);
@@ -727,7 +785,7 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
 //            Log.e(TAG, "disconnect end");
 
 
-            VmNet.connect("10.100.23.142", 5516, MainActivity.this);
+            VmNet.connect("10.151.0.166", 5516, MainActivity.this);
 //            VmNet.connect("118.178.132.146", 5516, MainActivity.this);
 //            VmNet.connect("10.151.0.252", 5516, MainActivity.this);
 
@@ -828,12 +886,12 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
         protected void onPostExecute(Void aVoid) {
 
 //            timeBar.invalidate();
-//            player = new VmPlayer();
+            player = new VmPlayer();
 //      player.startRealplay("201612022115042811", 1, true, 1, false, false, surfaceView
 // .getHolder(), MainActivity.this);
             // gb122
-//            player.setSurfaceHolder(surfaceView.getHolder());
-//            player.startRealplay("201701161314340662", 1, false, 0, false);
+            player.setSurfaceHolder(surfaceView.getHolder());
+            player.startRealplay("201708011704208212", 1, true, 0, false);
             // gb_hk119
 //            player.startRealplay("201702131054154181", 1, true, 0, false, false, surfaceView
 // .getHolder(), MainActivity.this);
@@ -891,6 +949,37 @@ public class MainActivity extends AppCompatActivity implements VmNet.ServerConne
             Log.e(TAG, "doInBackground end");
             return 10;
         }
+    }
+
+    public static byte[] encrypt(byte[] content, String password) {
+        try {
+//                KeyGenerator kgen = KeyGenerator.getInstance("AES");
+//                kgen.init(128, new SecureRandom(password.getBytes()));
+//                SecretKey secretKey = kgen.generateKey();
+//                byte[] enCodeFormat = secretKey.getEncoded();
+            SecretKeySpec key = new SecretKeySpec(password.getBytes(), "AES");
+//                SecretKeySpec key = new SecretKeySpec(enCodeFormat, "AES");
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");// 创建密码器
+//                byte[] byteContent = content.getBytes("utf-8");
+
+            cipher.init(Cipher.ENCRYPT_MODE, key);// 初始化
+            byte[] result  = null;
+            //	for ( int i = 0 ; i < 1000000; i++)
+            result = cipher.doFinal(content);
+
+            return result; // 加密
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

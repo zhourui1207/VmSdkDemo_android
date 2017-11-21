@@ -11,13 +11,14 @@
 #define PACKETDATA_H_
 
 #include <cstring>
+#include "public/platform.h"
 // #include <stdio.h>
 
 namespace Dream {
 
 // todo 看情况需要改成使用内存池提高性能
     class PacketData {
-    private:
+    public:
         static const std::size_t PACKET_DATA_DEFAULT_SIZE = 100 * 1024;
 
     public:
@@ -27,8 +28,7 @@ namespace Dream {
                 : _length(length) {
             // printf("PacketData 构造\n");
             if (length > PACKET_DATA_DEFAULT_SIZE) {  // 超出最大值
-                printf("传入长度[%zd]超出允许的最大值[%zd]\n", length, PACKET_DATA_DEFAULT_SIZE);
-                throw std::bad_alloc();
+                LOGE("PacketData", "传入长度[%zd]超出允许的最大值[%zd]\n", length, PACKET_DATA_DEFAULT_SIZE);
             }
 //    memset(_data, 0, PACKET_DATA_DEFAULT_SIZE);
             if (data != nullptr) {

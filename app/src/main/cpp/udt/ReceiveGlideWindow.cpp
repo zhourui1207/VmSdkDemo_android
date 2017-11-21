@@ -34,7 +34,7 @@ namespace Dream {
                 while (packetIt != _packetList.end()) {
                     int32_t eleSeqNumber = (*packetIt)->seqNumber();
                     if (continuousSeqNumber(_left, eleSeqNumber)) {
-                        onReliablePacket(seqNumber, udtDataPacket);
+                        onReliablePacket(eleSeqNumber, *packetIt);
                         packetIt = _packetList.erase(packetIt);
                     } else {
                         break;
@@ -112,6 +112,7 @@ namespace Dream {
     void ReceiveGlideWindow::onReliablePacket(int32_t seqNumber,
                                               std::shared_ptr<UDTDataPacket> udtDataPacket) {
         glideTo(seqNumber);
+        LOGD("!!!", "onReliablePacket seqNumber[%d]\n", seqNumber);
         if (_reliablePacketCallback && !udtDataPacket->isDrop()) {
             _reliablePacketCallback(udtDataPacket);
         }
@@ -120,5 +121,9 @@ namespace Dream {
     void ReceiveGlideWindow::setWindowSize(std::size_t windowSize) {
         GlideWindow::setWindowSize(windowSize);
         _right = increaseSeqNumber(_left, windowSize);
+    }
+
+    size_t ReceiveGlideWindow::size() const {
+        return _packetList.size();
     }
 }

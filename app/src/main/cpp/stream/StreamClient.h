@@ -28,12 +28,14 @@ namespace Dream {
     public:
         StreamClient() = delete;
 
-        StreamClient(const std::string &address, unsigned port,
+        StreamClient(const std::string &address, unsigned short port,
                      std::function<void(
                              const std::shared_ptr<StreamData> &streamDataPtr)> streamCallback,
-                     uint64_t heartbeatInterval = HEARTBEAT_INTERVAL) :
+                     const std::string &monitorId, const std::string &deviceId,
+                     int playType, int clientType, uint64_t heartbeatInterval = HEARTBEAT_INTERVAL) :
                 TcpClient<StreamPacket>(_pool, address, port), _pool(1, 1), _streamCallback(
-                streamCallback), _heartbeatInterval(heartbeatInterval) {
+                streamCallback), _monitorId(monitorId), _deviceId(deviceId), _playType(playType),
+                _clientType(clientType), _heartbeatInterval(heartbeatInterval), _auth(false) {
         }
 
         virtual ~StreamClient() {
@@ -73,13 +75,22 @@ namespace Dream {
         // 心跳
         void heartbeat();
 
+        // 鉴权
+        void auth();
+
     private:
         ThreadPool _pool;
         std::function<void(
                 const std::shared_ptr<StreamData> &streamDataPtr)> _streamCallback; // 码流回调，由于使用了线程池异步，所以使用智能指针来管理内存释放比较合理
-        uint64_t _heartbeatInterval;  // 心跳保活间隔
+
         std::mutex _mutex;
         std::shared_ptr<Timer> _timerPtr;  // 心跳定时器智能指针
+        std::string _monitorId;
+        std::string _deviceId;
+        int _playType;
+        int _clientType;
+        uint64_t _heartbeatInterval;  // 心跳保活间隔
+        bool _auth;
     };
 
 } /* namespace Dream */

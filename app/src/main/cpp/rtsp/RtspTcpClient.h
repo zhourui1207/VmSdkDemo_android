@@ -14,7 +14,7 @@ namespace Dream {
 
     private:
         const char* TAG = "RtspTcpClient";
-        static const size_t RECEIVE_SIZE = 50 * 1024;
+        static const size_t RECEIVE_SIZE = 100 * 1024;
 
         enum RTSP_METHOD_STATUS {
             OPTIONS = 0,
@@ -37,7 +37,7 @@ namespace Dream {
     public:
         RtspTcpClient() = delete;
 
-        RtspTcpClient(const std::string &rtspUrl);
+        RtspTcpClient(const std::string &rtspUrl, bool encrypt = false);
 
         virtual ~RtspTcpClient();
 
@@ -78,8 +78,11 @@ namespace Dream {
             return false;
         }
 
-        bool play() {
+        bool play(float speed = -1) {
             std::lock_guard<std::mutex> lock(_mutex);
+            if (speed > 0) {
+                _scale = speed;
+            }
             if (_currentMethodStatus == PAUSE || _currentMethodStatus == PLAY) {
                 _currentMethodStatus = WAIT_PLAY;
                 return sendPlayPacket();
@@ -129,6 +132,7 @@ namespace Dream {
         std::string readValue(const std::string& str, std::size_t pos);
 
     private:
+        const bool _encrypt;  // 是否加密
         std::mutex _mutex;
         RTSP_METHOD_STATUS _currentMethodStatus;
 
@@ -167,6 +171,7 @@ namespace Dream {
         char _tmpData[4];  // 查询字节"\r\n\r\n"时使用
 
         void *_pUser;
+        float _scale;
     };
 
 }

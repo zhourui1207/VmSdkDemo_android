@@ -25,7 +25,11 @@ namespace Dream {
                 _socketId(socketId), _synCookie(synCookie) {
             memset(_address, 0, 4);
             if (remoteAddr != nullptr) {
-                memcpy(_address, remoteAddr, 4);
+//                memcpy(_address, remoteAddr, 4);
+                _address[0] = remoteAddr[0];
+                _address[1] = remoteAddr[1];
+                _address[2] = remoteAddr[2];
+                _address[3] = remoteAddr[3];
             }
         }
 
@@ -47,7 +51,7 @@ namespace Dream {
             ENCODE_INT32(pBuf + encodePos, _socketId, encodePos);
             ENCODE_INT32(pBuf + encodePos, _synCookie, encodePos);
             for (int i = 0; i < 4; ++i) {
-                ENCODE_INT32(pBuf + encodePos, *(_address + i), encodePos);
+                ENCODE_INT32(pBuf + encodePos, _address[i], encodePos);
             }
 
             return encodePos;
@@ -69,7 +73,7 @@ namespace Dream {
             DECODE_INT32(pBuf + decodePos, _socketId, decodePos);
             DECODE_INT32(pBuf + decodePos, _synCookie, decodePos);
             for (int i = 0; i < 4; ++i) {
-                DECODE_INT32(pBuf + decodePos, *(_address + i), decodePos);
+                DECODE_INT32(pBuf + decodePos, _address[i], decodePos);
             }
 
             return decodePos;
@@ -86,8 +90,60 @@ namespace Dream {
             return headerLength();
         }
 
+        uint32_t version() const {
+            return _version;
+        }
+
+        uint32_t socketType() const {
+            return _socketType;
+        }
+
+        int32_t initSeqNumber() const {
+            return _initSeqNumber;
+        }
+
+        uint32_t maxPacketSize() const {
+            return _maxPacketSize;
+        }
+
+        uint32_t maxWindowSize() const {
+            return _maxWindowSize;
+        }
+
+        uint32_t socketId() const {
+            return _socketId;
+        }
+
         int32_t connectionType() const {
             return _connectionType;
+        }
+
+        uint32_t synCookie() const {
+            return _synCookie;
+        }
+
+        const std::string address() const {
+            char ip[100] = {0};
+            if (_address[0] == 0 && _address[1] == 0 && _address[2] == 0) {  // ipv4
+                int ip1 = ((_address[3] & 0xff000000) >> 24);
+                int ip2 = ((_address[3] & 0x00ff0000) >> 16);
+                int ip3 = ((_address[3] & 0x0000ff00) >> 8);
+                int ip4 = (_address[3] & 0x000000ff);
+
+                sprintf(ip, "%d.%d.%d.%d", ip1, ip2, ip3, ip4);
+            } else {  // ipv6
+                sprintf(ip, "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                        (_address[0] & 0xffff0000) >> 16, (_address[0] & 0x0000ffff),
+                        (_address[1] & 0xffff0000) >> 16, (_address[1] & 0x0000ffff),
+                        (_address[2] & 0xffff0000) >> 16, (_address[2] & 0x0000ffff),
+                        (_address[3] & 0xffff0000) >> 16, (_address[3] & 0x0000ffff));
+            }
+
+            return std::string(ip);
+        }
+
+        const uint32_t* addressBytes() const {
+            return _address;
         }
 
     private:
@@ -97,9 +153,9 @@ namespace Dream {
         uint32_t _maxPacketSize;
         uint32_t _maxWindowSize;
         int32_t _connectionType;  // regular or rendezvous  正常sc/同时连接p2p
-        uint32_t _socketId;
+        uint32_t _socketId;  // 发送方的socketid
         uint32_t _synCookie;
-        uint32_t _address[4];  // 兼容ipv6，采用128位，如果是ipv4，使用最后32位即可
+        uint32_t _address[4];  // 兼容ipv6，采用128位，如果是ipv4，使用最后32位即可 接收方的ip地址
 
     };
 

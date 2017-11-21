@@ -16,13 +16,16 @@ public class StreamData implements Comparable<StreamData> {
     private int seqNumber;
     private boolean isMark;
     private long recNumber;
+    private boolean isJWHeader;
+    private long utcTimeStamp;
 
     private StreamData() {
 
     }
 
     public StreamData(int streamId, int streamType, int payloadType, byte[] buffer, int
-            bufferStart, int bufferLen, int timeStamp, int seqNumber, boolean isMark, long recNumber) {
+            bufferStart, int bufferLen, int timeStamp, int seqNumber, boolean isMark, long
+            recNumber, boolean isJWHeader, long utcTimeStamp) {
         this.streamId = streamId;
         this.streamType = streamType;
         this.payloadType = payloadType;
@@ -35,6 +38,8 @@ public class StreamData implements Comparable<StreamData> {
         this.seqNumber = seqNumber;
         this.isMark = isMark;
         this.recNumber = recNumber;
+        this.isJWHeader = isJWHeader;
+        this.utcTimeStamp = utcTimeStamp;
     }
 
     public int getStreamId() {
@@ -93,11 +98,27 @@ public class StreamData implements Comparable<StreamData> {
         isMark = mark;
     }
 
+    public boolean isJWHeader() {
+        return isJWHeader;
+    }
+
+    public void setJWHeader(boolean JWHeader) {
+        isJWHeader = JWHeader;
+    }
+
+    public long getUtcTimeStamp() {
+        return utcTimeStamp;
+    }
+
+    public void setUtcTimeStamp(long utcTimeStamp) {
+        this.utcTimeStamp = utcTimeStamp;
+    }
+
     @Override
     public int compareTo(@NonNull StreamData o) {
-        int compare = ((Integer)seqNumber).compareTo(o.seqNumber);
+        int compare = ((Integer) seqNumber).compareTo(o.seqNumber);
         if (compare == 0) {
-            compare = ((Long)recNumber).compareTo(recNumber);
+            compare = ((Long) recNumber).compareTo(recNumber);
         }
         return compare;
     }

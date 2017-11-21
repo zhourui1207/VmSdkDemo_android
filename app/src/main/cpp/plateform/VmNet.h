@@ -24,7 +24,7 @@ VMNET_API bool CALL_METHOD VmNet_Init(unsigned uMaxThreadCount);
 VMNET_API void CALL_METHOD VmNet_UnInit();
 
 // 开启对讲
-VMNET_API bool CALL_METHOD VmNet_StartTalk(fStreamCallBackV3 streamCallback, void* pUser);
+VMNET_API bool CALL_METHOD VmNet_StartTalk(fStreamCallBackV3 streamCallback, void *pUser);
 
 // 发送对讲数据
 VMNET_API bool CALL_METHOD
@@ -38,8 +38,9 @@ VMNET_API void CALL_METHOD VmNet_StopTalk();
 VMNET_API bool CALL_METHOD VmNet_StartStreamHeartbeatServer();
 // 发送心跳
 VMNET_API bool CALL_METHOD
-VmNet_SendHeartbeat(const char *sRemoteAddress, unsigned short usRemotePort, unsigned uHeartbeatType,
-               const char* sMonitorId, const char* sSrcId);
+VmNet_SendHeartbeat(const char *sRemoteAddress, unsigned short usRemotePort,
+                    unsigned uHeartbeatType,
+                    const char *sMonitorId, const char *sSrcId);
 
 // 关闭心跳服务
 VMNET_API void CALL_METHOD VmNet_StopStreamHeartbeatServer();
@@ -158,25 +159,52 @@ VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId, unsign
 // 入参    sAddr： uPort cbRealData：码流数据回调函数；cbConnectStatus ；pUser：用户参数
 // 出参    uStreamId：码流id
 VMNET_API unsigned CALL_METHOD VmNet_StartStream(const char *sAddr,
-                                                 unsigned uPort, fStreamCallBack cbRealData,
+                                                 unsigned short uPort, fStreamCallBack cbRealData,
                                                  fStreamConnectStatusCallBack cbConnectStatus,
-                                                 void *pUser,
-                                                 VMNET_OUT unsigned &uStreamId);
+                                                 void *pUser, VMNET_OUT unsigned &uStreamId,
+                                                 const char *sMonitorId = nullptr,
+                                                 const char *sDeviceId = nullptr,
+                                                 int playType = VMNET_PLAY_TYPE_REALPLAY,
+                                                 int clientType = VMNET_CLIENT_TYPE_ANDROID);
+
+VMNET_API unsigned CALL_METHOD VmNet_StartStreamExt(const char *sAddr,
+                                                 unsigned short uPort, fStreamCallBackExt cbRealData,
+                                                 fStreamConnectStatusCallBack cbConnectStatus,
+                                                 void *pUser, VMNET_OUT unsigned &uStreamId,
+                                                 const char *sMonitorId = nullptr,
+                                                 const char *sDeviceId = nullptr,
+                                                 int playType = VMNET_PLAY_TYPE_REALPLAY,
+                                                 int clientType = VMNET_CLIENT_TYPE_ANDROID);
 
 // 停止获取码流
 // 入参    uStreamId：码流id（由开始获取码流时获得）
 VMNET_API void CALL_METHOD VmNet_StopStream(unsigned uStreamId);
 
-VMNET_API bool CALL_METHOD
+//VMNET_API bool CALL_METHOD
+//VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbRealData,
+//                        fStreamConnectStatusCallBackV2 cbStatus, void *pUser, VMNET_OUT
+//                        long &rtspStreamHandle, bool encrypt = false);
+//
+//VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle);
+//
+//VMNET_API bool CALL_METHOD VmNet_PauseStreamByRtsp(long rtspStreamHandle);
+//
+//VMNET_API bool CALL_METHOD VmNet_PlayStreamByRtsp(long rtspStreamHandle);
+
+VMNET_API unsigned CALL_METHOD
 VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbRealData,
-                        fStreamConnectStatusCallBackV2, void *pUser, VMNET_OUT
-                        long &rtspStreamHandle);
+                        fStreamConnectStatusCallBackV2 cbStatus, void *pUser, VMNET_OUT
+                        unsigned &rtspStreamId, bool encrypt = false);
 
-VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle);
+VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(unsigned rtspStreamId);
 
-VMNET_API bool CALL_METHOD VmNet_PauseStreamByRtsp(long rtspStreamHandle);
+VMNET_API unsigned CALL_METHOD VmNet_PauseStreamByRtsp(unsigned rtspStreamId);
 
-VMNET_API bool CALL_METHOD VmNet_PlayStreamByRtsp(long rtspStreamHandle);
+VMNET_API unsigned CALL_METHOD VmNet_PlayStreamByRtsp(unsigned rtspStreamId);
+
+VMNET_API unsigned CALL_METHOD VmNet_SpeedStreamByRtsp(unsigned rtspStreamId, float speed);
+
+VMNET_API bool CALL_METHOD VmNet_StreamIsValid(unsigned streamId);
 
 // 发送控制指令
 // 入参    sFdId：设备序列号； nChannelId：通道号； uControlType：控制类型（详见VmType.h）； uParm1：参数1； uParm2：参数2
@@ -192,6 +220,17 @@ VMNET_API bool CALL_METHOD VmNet_FilterRtpHeader(const char *inData, int inLen,
                                                  int &payloadLen, VMNET_OUT
                                                  int &payloadType, VMNET_OUT int &seqNumber,
                                                  VMNET_OUT int &timestamp, VMNET_OUT bool &isMark);
+
+
+VMNET_API bool CALL_METHOD VmNet_FilterRtpHeader_EXT(const char *inData, int inLen,
+                                                     VMNET_OUT char *payloadData, VMNET_OUT
+                                                     int &payloadLen, VMNET_OUT
+                                                     int &payloadType, VMNET_OUT int &seqNumber,
+                                                     VMNET_OUT int &timestamp, VMNET_OUT
+                                                     bool &isMark, VMNET_OUT bool &isJWHeader,
+                                                     VMNET_OUT bool &isFirstFrame, VMNET_OUT
+                                                     bool &isLastFrame, VMNET_OUT
+                                                     uint64_t &utcTimeStamp);
 
 
 #ifdef __cplusplus

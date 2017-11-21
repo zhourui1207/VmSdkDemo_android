@@ -29,7 +29,7 @@ namespace Dream {
         const char *TAG = "UDTDataPacket";
 
     public:
-        UDTDataPacket(const char *pBuf = nullptr, std::size_t len = 0, int32_t seqNumber = 0,
+        UDTDataPacket(const char *pBuf = nullptr, std::size_t len = 0, int32_t seqNumber = -1,
                       DataPacketType dataPacketType = ONLY, bool order = true,
                       uint32_t msgNumber = 0)
                 : UDTBasePacket(false), _dataBuf(nullptr), _dataLen(0), _seqNumber(seqNumber),
@@ -142,7 +142,11 @@ namespace Dream {
         int32_t seqNumber() const {
             return _seqNumber;
         }
-
+        
+        void setSeqNumber(int32_t seqNumber) {
+            _seqNumber = seqNumber;
+        }
+        
         uint32_t msgNumber() const {
             return _msgNumber;
         }
@@ -169,6 +173,10 @@ namespace Dream {
 
         std::size_t len() const {
             return _dataLen;
+        }
+        
+        DataPacketType dataPacketType() const {
+            return _dataPacketType;
         }
 
     private:

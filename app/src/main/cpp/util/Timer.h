@@ -59,7 +59,7 @@ namespace Dream {
         uint64_t _delay;  // 执行延时  单位毫秒
         bool _isLoop;  // 是否循环
         uint64_t _interval;  // 执行间隔  单位毫秒
-        std::atomic<bool> _running;
+        bool _running;
         std::unique_ptr<std::thread> _threadPtr;
         std::condition_variable _condition;
         std::mutex _mutex;

@@ -29,7 +29,9 @@ public class PsStreamFilterUtil {
     // 找到数据起始
     private boolean haveData;
 
-    private long pts;
+    private boolean isPs;
+
+    private long pts = -1L;
 
     public interface OnDataCallback {
         void onESData(boolean video, long pts, byte[] outData, int outStart, int outLen);
@@ -41,16 +43,16 @@ public class PsStreamFilterUtil {
      * 去除PS头
      * 返回新的begin
      */
-    public void filterPsHeader(final byte[] data, int begin, int len, int readBegin,
+    public boolean filterPsHeader(final byte[] data, int begin, int len, int readBegin,
                                OnDataCallback callback) {
         if (readBegin + len > data.length || len < 4 || callback == null) {
-            return;
+            return isPs;
         }
 
-        filter(data, begin, len, readBegin, callback);
+        return filter(data, begin, len, readBegin, callback);
     }
 
-    private void filter(byte[] data, int begin, int len, int readBegin, OnDataCallback callback) {
+    private boolean filter(byte[] data, int begin, int len, int readBegin, OnDataCallback callback) {
         int tmp;
 
         // 当前读取字节位置
@@ -59,18 +61,20 @@ public class PsStreamFilterUtil {
         // 数据开始位置
         int dataBegin = begin;
 
+//        Log.e(TAG, "begin=" + begin + ", len=" + len + ", readBegin=" + readBegin);
+
         try {
             // 循环遍历读取字节
             for (; currentPosition < readBegin + len; ++currentPosition) {
                 tmp = (data[currentPosition]) & 0xFF;  // 转化成无符号
-
-                //Log.e(TAG, "trans=" + trans);
+//                Log.e(TAG, "currentPosition=" + currentPosition);
                 trans <<= 8;
                 //Log.e(TAG, "trans=" + trans);
                 trans |= tmp;
 
                 // 判断读取到的4个字节
                 if (trans == 0x000001BA) {  // ps头
+                    isPs = true;
                     trans = 0xFFFFFFFF;  // 先恢复这个判断变量
 
                     if (isDebug) {
@@ -93,7 +97,7 @@ public class PsStreamFilterUtil {
 
                     // 获取PS包头长度
                     if (currentPosition >= readBegin + len) {  // 长度不足，则全部过滤掉
-                        return;
+                        return isPs;
                     }
 
                     // 获取PS包头长度
@@ -102,12 +106,13 @@ public class PsStreamFilterUtil {
                     if (stuffingLength > 0) {  // 如果还有额外数据
                         currentPosition += stuffingLength;
                         if (currentPosition >= readBegin + len) {  // 长度不足，则全部过滤掉
-                            return;
+                            return isPs;
                         }
                     }
 
                     dataBegin = currentPosition + 1;
                 } else if (trans == 0x000001BB || trans == 0x000001BC) {  // 系统标题头或节目映射流
+                    isPs = true;
                     trans = 0xFFFFFFFF;  // 先恢复这个判断变量
 
                     if (isDebug) {
@@ -130,7 +135,7 @@ public class PsStreamFilterUtil {
 
                     // 获取PS包头长度
                     if (currentPosition >= readBegin + len) {  // 长度不足，则全部过滤掉
-                        return;
+                        return isPs;
                     }
 
                     // 获取PS包头长度
@@ -141,13 +146,14 @@ public class PsStreamFilterUtil {
                     if (length > 0) {  // 如果还有额外数据
                         currentPosition += length;
                         if (currentPosition >= readBegin + len) {  // 长度不足，则全部过滤掉
-                            return;
+                            return isPs;
                         }
                     }
 
                     dataBegin = currentPosition + 1;
                 } else if (((trans & 0xFFFFFFE0) == 0x000001E0) || ((trans & 0xFFFFFFE0) ==
                         0x000001C0)) {  // 视频头
+                    isPs = true;
 
                     // 如果前面有数据，那么就调用回调让上层拼帧
                     if (haveData) {
@@ -177,7 +183,7 @@ public class PsStreamFilterUtil {
                     // 向后移动4个字节判断是否有pts
                     currentPosition += 4;
                     if (currentPosition >= readBegin + len) {
-                        return;
+                        return isPs;
                     }
 
                     boolean havePts = false;
@@ -189,7 +195,7 @@ public class PsStreamFilterUtil {
                     // i向后移动1字节, pes包头长度
                     currentPosition += 1;
                     if (currentPosition >= readBegin + len) {  // 长度不足，则全部过滤掉
-                        return;
+                        return isPs;
                     }
 
                     // 获取PS包头长度
@@ -199,17 +205,18 @@ public class PsStreamFilterUtil {
                     if (havePts) {
                         int ptsPosition = currentPosition + 5;
                         if (ptsPosition >= readBegin + len) {
-                            return;
+                            return true;
                         }
-                        this.pts = ((data[currentPosition + 1] & 0x0e) << 29);
+                        this.pts = 0L;
+                        this.pts += (((long)(data[currentPosition + 1] & 0x0e)) << 29);  // 这个计算出来可能是负的
 
-                        long tmpPts = ((data[currentPosition + 2] & 0xFF) << 8);
-                        tmpPts += (data[currentPosition + 3] & 0xFF);
-                        this.pts += ((tmpPts & 0xfffe) << 14);
+                        long tmpPts = (long) ((data[currentPosition + 2] & 0xFF) << 8);
+                        tmpPts += (long) (data[currentPosition + 3] & 0xFF);
+                        this.pts += ((tmpPts & 0x000000000000fffe) << 14);
 
-                        tmpPts = ((data[currentPosition + 4] & 0xFF) << 8);
-                        tmpPts += (data[currentPosition + 5] & 0xFF);
-                        this.pts += ((tmpPts & 0xfffe) >> 1);
+                        tmpPts = (long) ((data[currentPosition + 4] & 0xFF) << 8);
+                        tmpPts += (long) (data[currentPosition + 5] & 0xFF);
+                        this.pts += ((tmpPts & 0x000000000000fffe) >> 1);
                     } else {
 //                        this.pts = 0; 没有pts的话就默认用上前一个
                     }
@@ -217,7 +224,7 @@ public class PsStreamFilterUtil {
                     if (length > 0) {  // 如果还有额外数据
                         currentPosition += length;
                         if (currentPosition >= readBegin + len) {  // 长度不足，则全部过滤掉
-                            return;
+                            return isPs;
                         }
                     }
 
@@ -249,5 +256,6 @@ public class PsStreamFilterUtil {
             }
         }
 
+        return isPs;
     }
 }

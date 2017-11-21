@@ -39,6 +39,8 @@ namespace Dream {
         // 接收线程调用
         void setWindowSize(std::size_t windowSize);
 
+        std::size_t size() const;
+
     private:
         std::list<std::shared_ptr<UDTDataPacket>> _packetList;
         std::function<void(std::shared_ptr<UDTDataPacket>)> _reliablePacketCallback;  // 可靠包回调

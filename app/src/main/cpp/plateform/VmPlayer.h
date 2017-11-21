@@ -9,7 +9,7 @@
 
 #define VMPLAYER_API
 #define CALL_METHOD
-#define out
+#define VMPLAYER_OUT
 
 #ifdef __cplusplus
 extern "C" {

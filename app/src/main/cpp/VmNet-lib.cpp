@@ -5,6 +5,7 @@
 
 #include "plateform/VmNet.h"
 #include "plateform/ErrorCode.h"
+#include "cipher/jw_cipher.h"
 
 #define TAG "VmNet-jni" // 这个是自定义的LOG的标识
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__) // 定义LOGD类型
@@ -22,7 +23,7 @@ const char *METHOD_NAME_ON_STREAM_CONNECT_STATUS = "onStreamConnectStatus";
 const char *METHOD_SIG_ON_STREAM_CONNECT_STATUS = "(IZLjava/lang/Object;)V";
 
 const char *METHOD_NAME_ON_STREAM = "onStream";
-const char *METHOD_SIG_ON_STREAM = "(III[BIIIZLjava/lang/Object;)V";
+const char *METHOD_SIG_ON_STREAM = "(III[BIIIZZZZJLjava/lang/Object;)V";
 
 const char *METHOD_NAME_ON_STREAM_CONNECT_STATUS_V2 = "onStreamConnectStatusV2";
 const char *METHOD_SIG_ON_STREAM_CONNECT_STATUS_V2 = "(ZLjava/lang/Object;)V";
@@ -53,6 +54,8 @@ const char *METHOD_SIG_STREAMIDHOLDER_SET = "(I)V";
 
 const char *METHOD_NAME_RTPINFOHOLDER_INIT = "init";
 const char *METHOD_SIG_RTPINFOHOLDER_INIT = "(IIIIZ)V";
+
+const char *METHOD_SIG_RTPINFOHOLDER_INIT_EXT = "(IIIIZZZZJ)V";
 
 
 enum VMNET_INIT_STATUS {
@@ -102,8 +105,7 @@ void onStreamConnectStatus(unsigned uStreamId, bool bIsConnected, void *pUser) {
         if (jniEnv) {
             try {
                 jniEnv->CallStaticVoidMethod(g_vmNet, g_onStreamConnectStatus, uStreamId,
-                                             bIsConnected,
-                                             static_cast<jobject>(pUser));
+                                             bIsConnected, static_cast<jobject>(pUser));
             } catch (...) {
 
             }
@@ -114,7 +116,8 @@ void onStreamConnectStatus(unsigned uStreamId, bool bIsConnected, void *pUser) {
 // 码流回调
 void onStream(unsigned uStreamId, unsigned uStreamType,
               char payloadType, char *pBuffer, int nLen, unsigned uTimeStamp,
-              unsigned short seqNumber, bool isMark, void *pUser) {
+              unsigned short seqNumber, bool isMark, bool isJWHeader, bool isFirstFrame,
+              bool isLastFrame, uint64_t utcTimeStamp, void *pUser) {
 //  LOGE("开始调用onStream函数");
     if (g_pJavaVM && g_onStream) {
 
@@ -130,8 +133,8 @@ void onStream(unsigned uStreamId, unsigned uStreamType,
 //    LOGE("onStream onStream start！\n");
         try {
             jniEnv->CallStaticVoidMethod(g_vmNet, g_onStream, uStreamId, uStreamType, payloadType,
-                                         buffer,
-                                         nLen, uTimeStamp, seqNumber, isMark,
+                                         buffer, nLen, uTimeStamp, seqNumber, isMark, isJWHeader,
+                                         isFirstFrame, isLastFrame, utcTimeStamp,
                                          static_cast<jobject>(pUser));
         } catch (...) {
 
@@ -897,23 +900,51 @@ Java_com_joyware_vmsdk_VmNet_ControlPlayback(JNIEnv *env, jobject, jint monitorI
     return ret;
 }
 
-jint Java_com_joyware_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring address, jint port,
-                                              jobject cb, jobject streamIdHolder) {
+jint Java_com_joyware_vmsdk_VmNet_StartStream(JNIEnv *env, jobject ob, jstring address, jint port,
+                                              jobject cb, jstring monitorId, jstring deviceId,
+                                              int playType, int clientType,
+                                              jobject streamIdHolder) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return (jboolean) false;
     }
 
-    const char *sAddress = env->GetStringUTFChars(address, 0);
+    const char *sAddress = nullptr;
+    if (address != nullptr) {
+        sAddress = env->GetStringUTFChars(address, 0);
+    }
+
+    const char *sMonitorId = nullptr;
+    if (monitorId != nullptr) {
+        sMonitorId = env->GetStringUTFChars(monitorId, 0);
+    }
+
+    const char *sDeviceId = nullptr;
+    if (deviceId != nullptr) {
+        sDeviceId = env->GetStringUTFChars(deviceId, 0);
+    }
 
     // 这里一定要传递GlobalRef给码流线程，如果直接传cb的话，由于是局部变量，后面回调时会失败，记得释放时删除
     jobject gCb = env->NewGlobalRef(cb);
 
     LOGI("Java_com_joyware_vmsdk_VmNet_StartStream(%s, %d, %zd) begin", sAddress, port, gCb);
     unsigned uStreamId = 0;
-    int ret = VmNet_StartStream(sAddress, (unsigned int) port, onStream, onStreamConnectStatus, gCb,
-                                uStreamId);
+    int ret = VmNet_StartStreamExt(sAddress != nullptr ? sAddress : "", (unsigned short) port,
+                                onStream,
+                                onStreamConnectStatus, gCb, uStreamId,
+                                sMonitorId != nullptr ? sMonitorId : "",
+                                sDeviceId != nullptr ? sDeviceId : "", playType, clientType);
 
-    env->ReleaseStringUTFChars(address, sAddress);
+    if (sDeviceId != nullptr) {
+        env->ReleaseStringUTFChars(deviceId, sDeviceId);
+    }
+
+    if (sMonitorId != nullptr) {
+        env->ReleaseStringUTFChars(monitorId, sMonitorId);
+    }
+
+    if (sAddress != nullptr) {
+        env->ReleaseStringUTFChars(address, sAddress);
+    }
 
     if (ret == ERR_CODE_OK) {
         jclass streamIdCls = env->GetObjectClass(streamIdHolder);
@@ -936,6 +967,15 @@ jint Java_com_joyware_vmsdk_VmNet_StartStream(JNIEnv *env, jobject, jstring addr
     return ret;
 }
 
+jint
+Java_com_joyware_vmsdk_VmNet_StartStreamExt(JNIEnv *env, jobject ob, jstring address, jint port,
+                                            jobject cb, jstring monitorId, jstring deviceId,
+                                            int playType, int clientType,
+                                            jobject streamIdHolder) {
+    return Java_com_joyware_vmsdk_VmNet_StartStream(env, ob, address, port, cb, monitorId, deviceId,
+                                                    playType, clientType, streamIdHolder);
+}
+
 void Java_com_joyware_vmsdk_VmNet_StopStream(JNIEnv *env, jobject, jint streamId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
@@ -945,8 +985,73 @@ void Java_com_joyware_vmsdk_VmNet_StopStream(JNIEnv *env, jobject, jint streamId
     LOGI("Java_com_joyware_vmsdk_VmNet_StopStream(%d) end", streamId);
 }
 
-jlong
-Java_com_joyware_vmsdk_VmNet_StartStreamByRtsp(JNIEnv *env, jobject, jstring rtspUrl, jobject cb) {
+jlong JNICALL
+Java_com_joyware_vmsdk_VmNet_JWCipherCreate(JNIEnv *env, jclass type, jbyteArray key_,
+                                            jint keyLen) {
+
+    jbyte *key = env->GetByteArrayElements(key_, NULL);
+
+    JW_CIPHER_CTX ctx = jw_cipher_create((const unsigned char *) key, keyLen);
+
+    env->ReleaseByteArrayElements(key_, key, 0);
+
+    return (jlong) ctx;
+}
+
+void JNICALL
+Java_com_joyware_vmsdk_VmNet_JWCipherRelease(JNIEnv *env, jclass type, jlong cipherCtx) {
+    if (cipherCtx != NULL) {
+        jw_cipher_release((void *) cipherCtx);
+    }
+}
+
+void JNICALL
+Java_com_joyware_vmsdk_VmNet_JWCipherDecryptH264(JNIEnv *env, jclass type, jlong cipherCtx,
+                                                 jint streamId, jbyteArray h264data_,
+                                                 jint dataBegin, jint dataLen) {
+    // 判断码流是否在
+    if (!VmNet_StreamIsValid((unsigned int) streamId)) {
+        return;
+    }
+
+    if (h264data_ != nullptr && dataLen > 0) {
+        jbyte *h264data = env->GetByteArrayElements(h264data_, NULL);
+
+        jw_cipher_decrypt_h264((void *) cipherCtx, (unsigned char *) (h264data + dataBegin),
+                               (size_t) dataLen);
+
+        env->ReleaseByteArrayElements(h264data_, h264data, 0);
+    }
+}
+
+int JNICALL
+Java_com_joyware_vmsdk_VmNet_JWCipherDecrypt(JNIEnv *env, jclass type, jlong cipherCtx,
+                                             jbyteArray in_, jint inBegin, jint inLen,
+                                             jbyteArray out_, jint outBegin, jint outLen) {
+
+    if (in_ != nullptr && inLen > 0 && out_ != nullptr && outLen > 0) {
+        jbyte *in = env->GetByteArrayElements(in_, NULL);
+        jbyte *out = env->GetByteArrayElements(out_, NULL);
+
+        size_t outlen = (size_t) outLen;
+        int ret = jw_cipher_decrypt((void *) cipherCtx, (const unsigned char *) (in + inBegin),
+                                    (size_t) inLen, (unsigned char *) (out + outBegin), &outlen);
+
+        env->ReleaseByteArrayElements(in_, in, 0);
+        env->ReleaseByteArrayElements(out_, out, 0);
+
+        if (ret == 0) {
+            return -1;
+        } else {
+            return outlen;
+        }
+    }
+    return -1;
+}
+
+jint
+Java_com_joyware_vmsdk_VmNet_StartStreamByRtsp(JNIEnv *env, jobject, jstring rtspUrl,
+                                               jboolean encrypt, jobject cb) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return (jboolean) false;
     }
@@ -957,43 +1062,54 @@ Java_com_joyware_vmsdk_VmNet_StartStreamByRtsp(JNIEnv *env, jobject, jstring rts
     jobject gCb = env->NewGlobalRef(cb);
 
     LOGI("Java_com_joyware_vmsdk_VmNet_StartStreamByRtsp(%s)", sUrl);
-    long lRtspStreamId = 0;
-    bool ret = VmNet_StartStreamByRtsp(sUrl, onStreamV2, onStreamConnectStatusV2, gCb,
-                                       lRtspStreamId);
+    unsigned rtspStreamId = 0;
+    unsigned ret = VmNet_StartStreamByRtsp(sUrl, onStreamV2, onStreamConnectStatusV2, gCb,
+                                           rtspStreamId, encrypt);
 
     env->ReleaseStringUTFChars(rtspUrl, sUrl);
 
-    if (!ret) {
+    if (ret != ERR_CODE_OK) {
         return 0;
     }
 
-    return lRtspStreamId;
+    return rtspStreamId;
 }
 
-void Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(JNIEnv *env, jobject, jlong rtspStreamId) {
+void Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(JNIEnv *env, jobject, jint rtspStreamId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return;
     }
-    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%lld) begin", rtspStreamId);
-    VmNet_StopStreamByRtsp(rtspStreamId);
-    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%lld) end", rtspStreamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%d) begin", rtspStreamId);
+    VmNet_StopStreamByRtsp((unsigned int) rtspStreamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_StopStreamByRtsp(%d) end", rtspStreamId);
 }
 
 
-jboolean Java_com_joyware_vmsdk_VmNet_PauseStreamByRtsp(JNIEnv *env, jclass type, jlong rtspStreamId) {
+jboolean
+Java_com_joyware_vmsdk_VmNet_PauseStreamByRtsp(JNIEnv *env, jclass type, jint rtspStreamId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return (jboolean) false;
     }
-    LOGI("Java_com_joyware_vmsdk_VmNet_PauseStreamByRtsp(%lld)", rtspStreamId);
-    return (jboolean) VmNet_PauseStreamByRtsp(rtspStreamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_PauseStreamByRtsp(%d)", rtspStreamId);
+    return (jboolean) (VmNet_PauseStreamByRtsp((unsigned int) rtspStreamId) == ERR_CODE_OK);
 }
 
-jboolean Java_com_joyware_vmsdk_VmNet_PlayStreamByRtsp(JNIEnv *env, jclass type, jlong rtspStreamId) {
+jboolean
+Java_com_joyware_vmsdk_VmNet_PlayStreamByRtsp(JNIEnv *env, jclass type, jint rtspStreamId) {
     if (g_init.load() != INITED || g_pJavaVM == nullptr) {
         return (jboolean) false;
     }
-    LOGI("Java_com_joyware_vmsdk_VmNet_PlayStreamByRtsp(%lld)", rtspStreamId);
-    return (jboolean) VmNet_PlayStreamByRtsp(rtspStreamId);
+    LOGI("Java_com_joyware_vmsdk_VmNet_PlayStreamByRtsp(%d)", rtspStreamId);
+    return (jboolean) (VmNet_PlayStreamByRtsp((unsigned int) rtspStreamId) == ERR_CODE_OK);
+}
+
+jboolean Java_com_joyware_vmsdk_VmNet_SpeedStreamByRtsp(JNIEnv *env, jclass type, jint rtspStreamId,
+                                                        jfloat speed) {
+    if (g_init.load() != INITED || g_pJavaVM == nullptr) {
+        return (jboolean) false;
+    }
+    LOGI("Java_com_joyware_vmsdk_VmNet_SpeedStreamByRtsp(%d, %f)", rtspStreamId, speed);
+    return (jboolean) (VmNet_SpeedStreamByRtsp((unsigned int) rtspStreamId, speed) == ERR_CODE_OK);
 }
 
 void Java_com_joyware_vmsdk_VmNet_SendControl(JNIEnv *env, jobject, jstring fdId, jint channelId,
@@ -1043,6 +1159,50 @@ jboolean Java_com_joyware_vmsdk_VmNet_FilterRtpHeader(JNIEnv *env, jobject ob, j
 
         env->CallVoidMethod(rtpInfoHolder, init, playloadType, outLen, seqNumber, timestamp,
                             isMark);
+
+        env->DeleteLocalRef(rtpInfoCls);
+    }
+
+    return (jboolean) success;
+}
+
+jboolean Java_com_joyware_vmsdk_VmNet_FilterRtpHeaderExt(JNIEnv *env, jobject ob, jbyteArray inData,
+                                                         jint inStart, jint inLen,
+                                                         jbyteArray outData,
+                                                         jint outStart, jint outLen,
+                                                         jobject rtpInfoHolder) {
+    jbyte *inArray = env->GetByteArrayElements(inData, 0);
+    jbyte *outArray = env->GetByteArrayElements(outData, 0);
+
+    int playloadType = 0;
+    int seqNumber = 0;
+    int timestamp = 0;
+    bool isMark = true;
+    bool isJWHeader = false;
+    bool isFirstFrame = false;
+    bool isLastFrame = false;
+    uint64_t utcTimeStamp = 0;
+    bool success = VmNet_FilterRtpHeader_EXT((const char *) (inArray + inStart), inLen,
+                                             (char *) (outArray + outStart), outLen, playloadType,
+                                             seqNumber, timestamp, isMark, isJWHeader, isFirstFrame,
+                                             isLastFrame, utcTimeStamp);
+
+    env->ReleaseByteArrayElements(inData, inArray, 0);
+    env->ReleaseByteArrayElements(outData, outArray, 0);
+
+    if (success && rtpInfoHolder) {
+        jclass rtpInfoCls = env->GetObjectClass(rtpInfoHolder);
+
+        jmethodID init = env->GetMethodID(rtpInfoCls, METHOD_NAME_RTPINFOHOLDER_INIT,
+                                          METHOD_SIG_RTPINFOHOLDER_INIT_EXT);
+        if (init == nullptr) {
+            LOGE("找不到[%s]方法!", METHOD_SIG_RTPINFOHOLDER_INIT_EXT);
+            env->DeleteLocalRef(rtpInfoCls);
+            return (jboolean) false;
+        }
+
+        env->CallVoidMethod(rtpInfoHolder, init, playloadType, outLen, seqNumber, timestamp,
+                            isMark, isJWHeader, isFirstFrame, isLastFrame, utcTimeStamp);
 
         env->DeleteLocalRef(rtpInfoCls);
     }

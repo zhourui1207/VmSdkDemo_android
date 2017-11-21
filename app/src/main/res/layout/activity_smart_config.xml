@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/smartconfigtest"
+        android:textColor="@color/colorBlack"
+        android:textSize="30sp"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/tv_wifi_ssid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/colorBlack"
+        android:textSize="24sp"/>
+
+    <EditText
+        android:id="@+id/et_wifi_pwd"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:hint="@string/please_input_wifi_password"
+        android:textColor="@color/colorBlack"
+        android:textSize="24sp"
+        android:inputType="text"/>
+
+    <ProgressBar
+        android:id="@id/pb"
+        android:layout_marginTop="5dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        style="@style/Animation.AppCompat.DropDownUp"/>
+
+    <Button
+        android:id="@+id/btn_smart_config"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:gravity="center"
+        android:textSize="24sp"
+        android:textColor="@color/colorWhite"
+        android:background="@color/colorBlue"/>
+
+    <ProgressBar
+        android:id="@+id/pb_discovery"
+        android:layout_marginTop="5dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        style="@style/Animation.AppCompat.DropDownUp"/>
+
+    <Button
+        android:id="@+id/btn_device_discovery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:gravity="center"
+        android:textSize="24sp"
+        android:textColor="@color/colorWhite"
+        android:background="@color/colorAccent"/>
+
+    <Button
+        android:id="@+id/btn_clearup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:gravity="center"
+        android:textSize="24sp"
+        android:text="@string/clear_found"
+        android:textColor="@color/colorWhite"
+        android:background="@color/colorBlack"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:gravity="center"
+        android:text="@string/found_device"
+        android:textSize="16sp"
+        android:textColor="@color/colorBlack"/>
+
+    <ListView
+        android:id="@+id/lv_device"
+        android:layout_marginTop="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    </ListView>
+
+
+</LinearLayout>
+

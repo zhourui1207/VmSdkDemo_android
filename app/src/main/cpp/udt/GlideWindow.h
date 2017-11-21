@@ -55,7 +55,7 @@ namespace Dream {
             if (tmp < 0) {
                 tmp = tmp + UDTBasePacket::SEQUENCE_NUMBER_MAX + 1;
             }
-            return false;
+            return tmp;
         }
 
         static int32_t decreaseSeqNumber(int32_t seqNumber) {

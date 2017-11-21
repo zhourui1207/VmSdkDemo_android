@@ -8,7 +8,20 @@
 #ifndef _RTPPACKET_H_
 #define _RTPPACKET_H_
 
+#include <stdint.h>
+
 namespace Dream {
+
+#pragma pack(1)
+    typedef struct {
+        uint32_t magic;
+        uint8_t defVersion;
+        uint8_t res;
+        uint8_t isFirstFrame;
+        uint8_t isLastFrame;
+        uint64_t utcTimeStamp;
+    } JW_CLOUD_RTP_EXT_DATA;
+#pragma pack ()
 
     class RtpPacket {
     public:
@@ -16,7 +29,7 @@ namespace Dream {
 
         virtual ~RtpPacket();
 
-        int Parse(char *pBuffer, int bufferSize);
+        int Parse(const char *pBuffer, size_t bufferSize);
 
         void CreateRtpPacket(unsigned short seq, char *pData, int dataSize, char nPayloadType,
                              unsigned timeStamp, int nSSRC, bool marker = false);
@@ -75,6 +88,16 @@ namespace Dream {
         int m_nPayloadDataLen;
 
         bool m_bForceFu;
+        int32_t m_extLength;
+        int16_t m_defineProfile;
+
+        bool m_bJWExtHeader;
+        uint32_t  m_magic;
+        uint8_t m_defVersion;
+        uint8_t m_res;
+        uint8_t m_isFirstFrame;
+        uint8_t m_isLastFrame;
+        uint64_t m_utcTimeStamp;
     };
 
 } /* namespace Dream */

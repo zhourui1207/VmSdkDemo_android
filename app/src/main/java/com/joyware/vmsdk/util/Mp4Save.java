@@ -11,8 +11,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingDeque;
 
 
 public class Mp4Save {
@@ -45,6 +47,11 @@ public class Mp4Save {
 
     private boolean mStart;
 
+    private long mFirstPts = -1L;
+    private long mLastPts = -1L;
+    private long mOffsetPts = 0L;  // 这个变量是当pts重置过一次的时候使用
+    private int mLastDuration = -1;
+
     @NonNull
     private List<Integer> mVideoSampleSizes = new LinkedList<>();  // 视频样本大小
 
@@ -63,6 +70,9 @@ public class Mp4Save {
 
     @NonNull
     private List<Integer> mVideoIFrames = new LinkedList<>();  // 关键帧索引
+
+    @NonNull
+    private Deque<TimeToSample> mVideoTimeToSampleDeque = new LinkedBlockingDeque<>();  // 时间-样本映射
 
     private Mp4Save() {
 
@@ -143,8 +153,12 @@ public class Mp4Save {
         return true;
     }
 
-    //不包含 0x00 0x00 0x00 0x01
     public final boolean writeNalu(boolean isIFrame, byte[] buffer, int start, int size) {
+        return writeNalu(isIFrame, buffer, start, size, -1);
+    }
+
+    //不包含 0x00 0x00 0x00 0x01
+    public final boolean writeNalu(boolean isIFrame, byte[] buffer, int start, int size, long pts) {
         if (mOut == null && mStart) {
             return false;
         }
@@ -158,6 +172,10 @@ public class Mp4Save {
         }
 
         ++mFrameCount;
+        if (pts >= 0) {
+            addVideoSample(pts);
+        }
+
 //        if (isIFrame) {
 //            ++mIFrameCount;
 //            if (mIFrameCount %2 == 0) {
@@ -295,7 +313,7 @@ public class Mp4Save {
         if (mOut != null && mStart && mFrameCount > 0) {
             try {
                 byte[] tmpBuffer = new byte[10240 + mAudioSampleIndexs.size() * 16 +
-                        mVideoSampleIndexs.size() * 16];
+                        mVideoSampleIndexs.size() * 16 + mVideoTimeToSampleDeque.size() * 8];
                 int writeLen = writeMoov(tmpBuffer, 0);
                 mOut.write(tmpBuffer, 0, writeLen);
 
@@ -382,7 +400,12 @@ public class Mp4Save {
                 0x00, 0x00, 0x00, 0x02};
 
 //        setLong(mLastTimetamp, mvhd, 24, 4);
-        setLong((long) (1.0f / mFramerate * 90000 * mFrameCount), mvhd, 24, 4);
+        // 这边的意思是这段视频的总时常
+        if (mLastPts >= 0 && mFirstPts >= 0) {
+            setLong(mLastPts - mFirstPts + mOffsetPts, mvhd, 24, 4);  // pts本来就是已经乘上90000的
+        } else {
+            setLong((long) (1.0f / mFramerate * 90000 * mFrameCount), mvhd, 24, 4);  // 90000表示一秒
+        }
 
         if (mAudioFrameCount > 0) {
             mvhd[107] = 0x03;
@@ -424,8 +447,13 @@ public class Mp4Save {
                 0x00, 0x00, 0x00, 0x00};  // height
 
 //        setLong(isVideo ? mLastTimetamp : mLastAudioTimestamp, tkhd, 28, 4);
-        setLong(isVideo ? (long) (1.0f / mFramerate * 90000 * mFrameCount) : mAudioSample * mAudioFrameCount, tkhd,
-                28, 4);
+        if (isVideo && mLastPts >= 0 && mFirstPts >= 0) {
+            setLong(mLastPts - mFirstPts + mOffsetPts, tkhd, 28, 4);
+        } else {
+            setLong(isVideo ? (long) (1.0f / mFramerate * 90000 * mFrameCount) : mAudioSample * mAudioFrameCount, tkhd,
+                    28, 4);
+        }
+
         if (isVideo) {
             setInt(mWidth, tkhd, 84, 2);
             setInt(mHeight, tkhd, 88, 2);
@@ -469,8 +497,14 @@ public class Mp4Save {
             mdhd[22] = 0x1f;
             mdhd[23] = 0x40;
         }
-        long duration = isVideo ? (long) (1.0f / mFramerate * 90000 * mFrameCount) : mAudioSample *
-                mAudioFrameCount;
+        long duration;
+        if (isVideo && mLastPts >= 0 && mFirstPts >= 0) {
+            duration = mLastPts - mFirstPts + mOffsetPts;
+        } else {
+            duration = isVideo ? (long) (1.0f / mFramerate * 90000 * mFrameCount) : mAudioSample *
+                    mAudioFrameCount;
+        }
+
         setLong(duration, mdhd, 24, 4);
 
         System.arraycopy(mdhd, 0, tmpBuffer, begin, mdhd.length);
@@ -605,6 +639,27 @@ public class Mp4Save {
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}; // 一条记录，简单点
 
         if (isVideo) {
+            if (mFirstPts >= 0 && mLastPts >= 0) {
+                int timeToSampleSize = mVideoTimeToSampleDeque.size();
+                Log.w(TAG, "VideoTimeToSampleDeque size is " + timeToSampleSize);
+
+                setInt(timeToSampleSize, stts, 12, 4);
+                int atomSize = stts.length + 8 * timeToSampleSize;
+                setInt(atomSize, stts, 0, 4);
+                System.arraycopy(stts, 0, tmpBuffer, begin, stts.length);
+
+                int i = 0;
+                for (TimeToSample timeToSample : mVideoTimeToSampleDeque) {
+                    setInt(timeToSample.sampleCount, tmpBuffer, begin + stts.length + i * 8, 4);
+                    setInt(timeToSample.duration, tmpBuffer, begin + stts.length + i * 8 + 4, 4);
+//                    Log.w(TAG, "sampleCount=" + timeToSample.sampleCount + ", duration=" + timeToSample.duration);
+                    ++i;
+                }
+
+                return atomSize;
+            }
+
+
             setInt(mFrameCount, tmpBuffer, begin + stts.length, 4);
 
 //            long duration = mLastTimetamp / mFrameCount;
@@ -833,5 +888,50 @@ public class Mp4Save {
         }
 
         return size;
+    }
+
+    private void addVideoSample(long pts) {
+//        Log.w(TAG, "addVideoSample pts=" + pts);
+        if (mFirstPts < 0) {
+            mFirstPts = pts;
+            mLastPts = pts;
+        }
+        long tmp = pts - mLastPts;
+        if (tmp < 0) {
+            if (Math.abs(tmp) > Integer.MAX_VALUE / 2) {  // 这种情况肯定是反转了
+                // 暂时可以把上次mLastPts当作最大值
+                mOffsetPts = mLastPts;
+            } else {  // 可能是错误的数据，那么就当作0处理
+                tmp = 0;
+            }
+        }
+        mLastPts = pts;  // 记录当前时间
+        int duration = (int) tmp;  // 计算出到上一次的时间间隔
+        if (duration == 0) {
+            duration = (int) (1.0f / mFramerate * 90000);
+        }
+
+        if (!mVideoTimeToSampleDeque.isEmpty() && mLastDuration >= 0 && duration == mLastDuration) {
+            // 判断跟最后一个timetosample是否相等
+            TimeToSample timeToSample = mVideoTimeToSampleDeque.peekLast();
+            if (timeToSample != null) {
+                if (timeToSample.duration == duration) {
+                    ++timeToSample.sampleCount; // 样本数量+1
+                    return;
+                }
+            }
+        }
+        TimeToSample timeToSample = new TimeToSample(duration);
+        mLastDuration = duration;
+        mVideoTimeToSampleDeque.addLast(timeToSample);
+    }
+
+    private static class TimeToSample {
+        private int sampleCount = 1;  // 有相同duration的连续sample个数
+        private int duration;  // 没有sample的duraion(间隔)
+
+        private TimeToSample(int duration) {
+            this.duration = duration;
+        }
     }
 }

@@ -61,4 +61,11 @@ public class VmType {
     public static final int HEARTBEAT_TYPE_REALPLAY = 0 ; // 实时流心跳
     public static final int HEARTBEAT_TYPE_PLAYBACK = 1;  // 录像回放心跳
     public static final int HEARTBEAT_TYPE_TALK = 2;  // 语音对讲心跳
+
+    public static final int PLAY_TYPE_REALPLAY = 1;  // 实时
+    public static final int PLAY_TYPE_PLAYBACK = 2;  // 回放
+
+    public static final int CLIENT_TYPE_ANDROID = 100;
+    public static final int CLIENT_TYPE_IOS = 200;
+    public static final int CLIENT_TYPE_PC = 300;
 }

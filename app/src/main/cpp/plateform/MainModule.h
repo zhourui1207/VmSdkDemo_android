@@ -123,13 +123,38 @@ namespace Dream {
                                  const std::string &action, const std::string &param);
 
         // 获取码流并设置码流回调
-        unsigned startStream(const std::string &addr, unsigned port,
+        unsigned startStream(const std::string &addr, unsigned short port,
                              fStreamCallBack streamCallback,
                              fStreamConnectStatusCallBack streamConnectStatusCallback, void *pUser,
-                             unsigned &streamId, bool rtp = true);
+                             unsigned &streamId, const std::string& monitorId,
+                             const std::string &deviceId, int playType, int clientType,
+                             bool rtp = true);
+
+        unsigned startStream(const std::string &addr, unsigned short port,
+                             fStreamCallBackExt streamCallback,
+                             fStreamConnectStatusCallBack streamConnectStatusCallback, void *pUser,
+                             unsigned &streamId, const std::string& monitorId,
+                             const std::string &deviceId, int playType, int clientType,
+                             bool rtp = true);
 
         // 停止获取码流
         void stopStream(unsigned streamId);
+
+        unsigned startRtspStream(const std::string &url,
+                             fStreamCallBackV2 streamCallback,
+                             fStreamConnectStatusCallBackV2 streamConnectStatusCallback, void *pUser,
+                             unsigned &streamId, bool encrypt = false);
+
+        // 停止获取码流
+        void stopRtspStream(unsigned streamId);
+
+        unsigned pauseRtspStream(unsigned streamId);
+
+        unsigned playRtspStream(unsigned streamId);
+
+        unsigned speedRtspStream(unsigned streamId, float speed);
+
+        bool streamIsValid(unsigned streamId);
 
         void clearAllStream();
 

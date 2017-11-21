@@ -24,6 +24,9 @@ namespace Dream {
         // 移除并获取loss列表中第一个序列号  发送线程调用  返回值: true:移除成功 false:移除失败
         bool removeFirstLossPacket(int32_t &seqNumber);
 
+        // 移除所有在seqnumeber之前的loss信息，包含seqnumber
+        void removePacketBeforeSeqNumber(int32_t seqNumber);
+
         bool empty() const;
 
     private:

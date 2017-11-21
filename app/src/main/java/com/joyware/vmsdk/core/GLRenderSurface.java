@@ -91,6 +91,7 @@ public class GLRenderSurface implements SurfaceHolder.Callback2 {
         WeakReference<GLRenderSurface> mGLRenderSurfaceWeakReference;
 
         private int mRenderMode = RENDERMODE_CONTINUOUSLY;
+//        private int mRenderMode = RENDERMODE_WHEN_DIRTY;
 
         private long mRenderHandle;  // 渲染器句柄
         private boolean mExited;
@@ -350,6 +351,7 @@ public class GLRenderSurface implements SurfaceHolder.Callback2 {
                             // Log the error to help developers understand why rendering stopped.
                             // EglHelper.logEglErrorAsWarning("GLThread", "eglSwapBuffers",
                             // swapError);
+                            Log.e(TAG, "swapError code [" + swapError + "]");
                             lostEglContext = true;
                             synchronized (sGLThreadManager) {
                                 mSurfaceIsBad = true;
@@ -560,6 +562,8 @@ public class GLRenderSurface implements SurfaceHolder.Callback2 {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         if (mGLRenderThread != null) {
+//            Log.w(TAG, "SurfaceChanged surfaceHolder:" + holder + ", format:" + format + ", " +
+//                    "width:" + width + ", height:" + height);
             mGLRenderThread.onWindowResize(width, height);
         }
     }

@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include <stdio.h>
+#include "public/platform.h"
 
 namespace Dream {
 
@@ -25,23 +26,30 @@ namespace Dream {
         };
 
     private:
-        static const std::size_t STREAM_DATA_DEFAULT_SIZE = 10 * 1024;
+        static const std::size_t STREAM_DATA_DEFAULT_SIZE = 100 * 1024;
 
     public:
         StreamData() = delete;
 
         StreamData(STREAM_TYPE streamType, std::size_t length, const char *data = nullptr)
-                : _streamType(streamType), _length(length) {
+                : _streamType(streamType),
+                  _length(length > STREAM_DATA_DEFAULT_SIZE ? STREAM_DATA_DEFAULT_SIZE : length)
+//                 , _data(nullptr)
+        {
             if (length > STREAM_DATA_DEFAULT_SIZE) {  // 超出最大值
-                printf("传入长度[%zd]超出允许的最大值[%zd]\n", length, STREAM_DATA_DEFAULT_SIZE);
-                throw std::bad_alloc();
+                LOGE("StreamData", "传入长度[%zd]超出允许的最大值[%zd]\n", length, STREAM_DATA_DEFAULT_SIZE);
             }
             if (data != nullptr) {
+//                _data = new char[_length];
                 memcpy(_data, data, _length);
             }
         }
 
         virtual ~StreamData() {
+//            if (_data != nullptr) {
+//                delete[] _data;
+//                _data = nullptr;
+//            }
         }
 
         STREAM_TYPE streamType() {
@@ -60,6 +68,7 @@ namespace Dream {
         STREAM_TYPE _streamType;
         std::size_t _length;
         char _data[STREAM_DATA_DEFAULT_SIZE];
+//        char *_data;
     };
 
 } /* namespace Dream */

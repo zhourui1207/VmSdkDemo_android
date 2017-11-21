@@ -15,7 +15,7 @@ namespace Dream {
     ThreadPool::ThreadPool(std::size_t size, std::size_t maxSize, int idleTime) :
             _size{size < 1 ? 1 : size}, _maxSize(maxSize < _size ? _size : maxSize), _idleTime(
             idleTime < -1 ? -1 : idleTime), _running(false) {
-        printf("_size=%zd, _maxSize=%zd, _idleTime=%d\n", _size, _maxSize, _idleTime);
+//        printf("_size=%zd, _maxSize=%zd, _idleTime=%d\n", _size, _maxSize, _idleTime);
         for (std::size_t i = 0; i < _size; ++i) {
             TaskThreadPtr threadPtr = std::make_shared<TaskThread>(_tasks);
             _pool.emplace_back(threadPtr);

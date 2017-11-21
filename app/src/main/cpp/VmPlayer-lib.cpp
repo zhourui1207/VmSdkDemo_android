@@ -3,6 +3,7 @@
 #include <android/native_window_jni.h>
 
 #include "plateform/VmPlayer.h"
+#include "cipher/jw_cipher.h"
 
 extern "C" {
 }
@@ -355,5 +356,61 @@ bool Java_com_joyware_vmsdk_core_YUVRenderer_YUVP2NV21(JNIEnv *env, jobject ob,
 
     return true;
 }
+
+//jlong JNICALL
+//Java_com_joyware_vmsdk_core_Decoder_JWCipherCreate(JNIEnv *env, jclass type, jbyteArray key_,
+//                                                   jint keyLen) {
+//    jbyte *key = env->GetByteArrayElements(key_, NULL);
+//
+//    JW_CIPHER_CTX ctx = jw_cipher_create((const unsigned char *) key, keyLen);
+//
+//    env->ReleaseByteArrayElements(key_, key, 0);
+//
+//    return (jlong) ctx;
+//}
+//
+//void JNICALL
+//Java_com_joyware_vmsdk_core_Decoder_JWCipherRelease(JNIEnv *env, jclass type, jlong cipherCtx) {
+//    if (cipherCtx != NULL) {
+//        jw_cipher_release((void *) cipherCtx);
+//    }
+//}
+//
+//void JNICALL
+//Java_com_joyware_vmsdk_core_Decoder_JWCipherDecryptH264(JNIEnv *env, jclass type, jlong cipherCtx,
+//                                                        jbyteArray h264data_, jint dataBegin,
+//                                                        jint dataLen) {
+//    if (h264data_ != nullptr && dataLen > 0) {
+//        jbyte *h264data = env->GetByteArrayElements(h264data_, NULL);
+//
+//        jw_cipher_decrypt_h264((void *) cipherCtx, (unsigned char *) (h264data + dataBegin),
+//                               (size_t) dataLen);
+//
+//        env->ReleaseByteArrayElements(h264data_, h264data, 0);
+//    }
+//}
+//
+//int JNICALL
+//Java_com_joyware_vmsdk_core_Decoder_JWCipherDecrypt(JNIEnv *env, jclass type, jlong cipherCtx,
+//                                                    jbyteArray in_, jint inBegin, jint inLen,
+//                                                    jbyteArray out_, jint outBegin, jint outLen) {
+//    if (in_ != nullptr && inLen > 0 && out_ != nullptr && outLen > 0) {
+//        jbyte *in = env->GetByteArrayElements(in_, NULL);
+//        jbyte *out = env->GetByteArrayElements(out_, NULL);
+//
+//        size_t outlen = (size_t) outLen;
+//        int ret = jw_cipher_decrypt((void *) cipherCtx, (const unsigned char *) (in + inBegin),
+//                                    (size_t) inLen, (unsigned char *) (out + outBegin), &outlen);
+//
+//        env->ReleaseByteArrayElements(in_, in, 0);
+//        env->ReleaseByteArrayElements(out_, out, 0);
+//
+//        if (ret == 0) {
+//            return -1;
+//        } else {
+//            return outlen;
+//        }
+//    }
+//}
 
 }

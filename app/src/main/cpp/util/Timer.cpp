@@ -23,18 +23,18 @@ namespace Dream {
     }
 
     void Timer::start() {
-        if (!_running.load()) {
-            _running.store(true);
+        if (!_running) {
+            _running = true;
             _threadPtr.reset(new std::thread(&Timer::run, this));
         }
     }
 
     void Timer::cancel() {
-        if (_running.load()) {  // 如果还在执行，那么就等待它停止
+        if (_running) {  // 如果还在执行，那么就等待它停止
 
             std::unique_lock<std::mutex> lock(_mutex);
-            _running.store(false);
-            _condition.notify_one();
+            _running = false;
+            _condition.notify_all();
 
             // 在join前不能忘记解锁
             lock.unlock();
@@ -47,7 +47,7 @@ namespace Dream {
     void Timer::run() {
         std::unique_lock<std::mutex> lock(_mutex);
         bool first = true;
-        while (_running.load() && (first || _isLoop)) {
+        while (_running && (first || _isLoop)) {
 
             uint64_t waitTime = _interval;
 
@@ -74,14 +74,14 @@ namespace Dream {
                     break;
             }
 
-            if (!_running.load()) {  // 如果定时器取消了，那么就退出
+            if (!_running) {  // 如果定时器取消了，那么就退出
                 return;
             }
             if (_task) {
                 _task();  // 执行任务
             }
         }
-        _running.store(false);
+        _running = false;
     }
 
 } /* namespace Dream */

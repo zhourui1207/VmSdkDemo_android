@@ -18,6 +18,43 @@ namespace Dream {
         return false;
     }
 
+    void SendLossList::removePacketBeforeSeqNumber(int32_t seqNumber) {
+        std::unique_lock<std::mutex> lock(_mutex);
+
+        auto lossIt = _lossList.begin();
+        if (_lossList.size() >= 2) {
+            int32_t left = *lossIt;
+            int32_t right = *(--_lossList.end());
+            bool normal = (left < right);  // true:正常情况 false:到最大值重置时
+            while (lossIt != _lossList.end()) {
+                int32_t eleSeqNumber = *lossIt;
+                if (seqNumber == eleSeqNumber) {  // 相等
+                    lossIt = _lossList.erase(lossIt);
+                    break;
+                }
+                if (normal && (seqNumber < eleSeqNumber)) {  // 假如元素大于seqnumber，那么应插到元素的前面
+                    break;
+                }
+                if (!normal) {
+                    // 假如元素值大于左边界，那么就转成负数来比较
+                    if (eleSeqNumber > left) {
+                        eleSeqNumber = ~eleSeqNumber + 1;  // 负数
+                    }
+                    int32_t tmpSeqNumber = seqNumber;
+                    if (tmpSeqNumber > left) {
+                        tmpSeqNumber = ~tmpSeqNumber + 1;
+                    }
+                    if (tmpSeqNumber < eleSeqNumber) {
+                        break;
+                    }
+                }
+                lossIt = _lossList.erase(lossIt);
+            }
+        } else if (lossIt != _lossList.end() && *lossIt == seqNumber) {
+            lossIt = _lossList.erase(lossIt);
+        }
+    }
+
     bool SendLossList::empty() const {
         return _lossList.empty();
     }

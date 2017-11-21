@@ -119,15 +119,29 @@ namespace Dream {
         return _uasClientPtr->controlPlayback(monitorId, controlId, action, param);
     }
 
-    unsigned MainModule::startStream(const std::string &addr, unsigned port,
+    unsigned MainModule::startStream(const std::string &addr, unsigned short port,
                                      fStreamCallBack streamCallback,
                                      fStreamConnectStatusCallBack streamConnectStatusCallback,
-                                     void *pUser, unsigned &streamId, bool rtp) {
-//  if (!_uasConnected.load() || _uasClientPtr.get() == nullptr) {
-//    return ERR_CODE_NO_CONNECT;
-//  }
+                                     void *pUser, unsigned &streamId,
+                                     const std::string &monitorId, const std::string &deviceId,
+                                     int playType, int clientType, bool rtp) {
         if (!_streamSessionManager.addStreamClient(addr, port, streamCallback,
-                                                   streamConnectStatusCallback, pUser, streamId, rtp)) {
+                                                   streamConnectStatusCallback, pUser, streamId,
+                                                   monitorId, deviceId, playType, clientType, rtp)) {
+            return ERR_CODE_CREATE_STREAM_THREAD_FAILED;
+        }
+        return ERR_CODE_OK;
+    }
+
+    unsigned MainModule::startStream(const std::string &addr, unsigned short port,
+                         fStreamCallBackExt streamCallback,
+                         fStreamConnectStatusCallBack streamConnectStatusCallback, void *pUser,
+                         unsigned &streamId, const std::string& monitorId,
+                         const std::string &deviceId, int playType, int clientType,
+                         bool rtp) {
+        if (!_streamSessionManager.addStreamClient(addr, port, streamCallback,
+                                                   streamConnectStatusCallback, pUser, streamId,
+                                                   monitorId, deviceId, playType, clientType, rtp)) {
             return ERR_CODE_CREATE_STREAM_THREAD_FAILED;
         }
         return ERR_CODE_OK;
@@ -138,6 +152,48 @@ namespace Dream {
 //    return;
 //  }
         _streamSessionManager.removeStreamClient(streamId);
+    }
+
+    unsigned MainModule::startRtspStream(const std::string &url,
+                                         fStreamCallBackV2 streamCallback,
+                                         fStreamConnectStatusCallBackV2 streamConnectStatusCallback,
+                                         void *pUser, unsigned &streamId, bool encrypt) {
+        if (!_streamSessionManager.addRTSPStreamClient(url, streamCallback,
+                                                   streamConnectStatusCallback, pUser, streamId,
+                                                   encrypt)) {
+            return ERR_CODE_CREATE_STREAM_THREAD_FAILED;
+        }
+        return ERR_CODE_OK;
+    }
+
+    // 停止获取码流
+    void MainModule::stopRtspStream(unsigned streamId) {
+        _streamSessionManager.removeRTSPStreamClient(streamId);
+    }
+
+    unsigned MainModule::pauseRtspStream(unsigned streamId) {
+        if (!_streamSessionManager.pauseRTSPStream(streamId)) {
+            return ERR_CODE_SESSION_NOEXIST;
+        }
+        return ERR_CODE_OK;
+    }
+
+    unsigned MainModule::playRtspStream(unsigned streamId) {
+        if (!_streamSessionManager.playRTSPStream(streamId)) {
+            return ERR_CODE_SESSION_NOEXIST;
+        }
+        return ERR_CODE_OK;
+    }
+
+    unsigned MainModule::speedRtspStream(unsigned streamId, float speed) {
+        if (!_streamSessionManager.playRTSPStream(streamId, speed)) {
+            return ERR_CODE_SESSION_NOEXIST;
+        }
+        return ERR_CODE_OK;
+    }
+
+    bool MainModule::streamIsValid(unsigned streamId) {
+        return _streamSessionManager.streamIsValid(streamId);
     }
 
     void MainModule::clearAllStream() {

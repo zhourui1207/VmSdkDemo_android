@@ -38,6 +38,9 @@ namespace Dream {
         // 确认丢失
         void nakPacket(SendLossList& sendLossList, int32_t seqNumber);
 
+        // 移除丢失列表中已被确认的包
+        void removeLossPacket(SendLossList& sendLossList);
+
         // 检查超时并且没有丢失包 超时的包加入losslist 接收线程调用  返回: true: loss list空
         bool checkExpAndLossNothing(SendLossList& sendLossList);
 

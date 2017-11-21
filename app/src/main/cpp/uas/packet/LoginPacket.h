@@ -74,13 +74,13 @@ namespace Dream {
             return dataLength;
         }
 
-        virtual int decode(char *pBuf, std::size_t len) override {
+        virtual int decode(const char *pBuf, std::size_t len) override {
             int usedLen = MsgPacket::decode(pBuf, len);
             if (usedLen < 0) {
                 return -1;
             }
 
-            char *pBody = pBuf + usedLen;
+            char *pBody = (char *) (pBuf + usedLen);
 
             int pos = 0;
             DECODE_STRING(pBody + pos, _loginName, pos);
@@ -119,7 +119,9 @@ namespace Dream {
 
         }
 
-        virtual ~LoginRespPacket() = default;
+        virtual ~LoginRespPacket() {
+
+        }
 
         // ---------------------派生类重写开始---------------------
         // 无包体，无需覆盖父类方法

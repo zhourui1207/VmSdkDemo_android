@@ -6,7 +6,6 @@
  */
 
 #include "AsioTcpClient.h"
-#include "public/platform.h"
 
 #ifdef _ANDROID
 extern JavaVM *g_pJavaVM;  // 定义外部变量，该变量在VmNet-lib.cpp中被定义和赋值
@@ -16,7 +15,7 @@ namespace Dream {
 
     AsioTcpClient::AsioTcpClient(
             std::function<void(const char *pBuf, std::size_t len)> callback,
-            const std::string &address, unsigned port,
+            const std::string &address, unsigned short port,
             unsigned receiveSize, unsigned sendSize, unsigned reconnectInterval) :
             _callback(callback), _address(address), _port(port), _receiveSize(
             receiveSize), _sendSize(sendSize), _reconnectInterval(
@@ -41,7 +40,7 @@ namespace Dream {
 
         // 初始化
         if (!doInit()) {
-            LOGE("AsioTcpClient", "[%s]初始化失败!\n", _address.c_str());
+            LOGE("AsioTcpClient", "[%s:%d]初始化失败!\n", _address.c_str(), _port);
             _currentStatus.store(NO_CONNECT);
             return false;
         }
@@ -60,7 +59,23 @@ namespace Dream {
 
     void AsioTcpClient::shutDown(bool isIoServiceThread) {
         std::lock_guard<std::mutex> lock(_mutex);
-        close(isIoServiceThread);
+
+        if (_ioServicePtr.get()) {
+            _ioServicePtr->post([this, isIoServiceThread]() {
+                close(isIoServiceThread);
+            });
+        }
+
+        if (!isIoServiceThread && _threadPtr.get() && _threadPtr->joinable()) {
+            LOGW("AsioTcpClient", "[%s:%d]开始等待ioService停止...\n", _address.c_str(), _port);
+            _threadPtr->join();  // 等待线程执行完毕，避免线程还在连接的时候进行关闭操作
+            LOGW("AsioTcpClient", "[%s:%d]结束等待ioService停止...\n", _address.c_str(), _port);
+            _threadPtr.reset();
+        }
+
+        if (_ioServicePtr.get()) {
+            _ioServicePtr.reset();
+        }
     }
 
     bool AsioTcpClient::send(const std::shared_ptr<PacketData> &dataPtr) {
@@ -82,7 +97,7 @@ namespace Dream {
         return true;
     }
 
-    bool AsioTcpClient::send(const char* buf, std::size_t len) {
+    bool AsioTcpClient::send(const char *buf, std::size_t len) {
         auto dataPtr = std::make_shared<PacketData>(len, buf);
         return send(dataPtr);
     }
@@ -101,7 +116,7 @@ namespace Dream {
         return sendSize > 0;
     }
 
-    bool AsioTcpClient::sendSync(const char* buf, std::size_t len) {
+    bool AsioTcpClient::sendSync(const char *buf, std::size_t len) {
         auto dataPtr = std::make_shared<PacketData>(len, buf);
         return sendSync(dataPtr);
     }
@@ -111,7 +126,10 @@ namespace Dream {
             return false;
         }
 
-        LOGW("AsioTcpClient", "[%s]正在初始化...\n", _address.c_str());
+        if (_address.empty()) {
+            LOGE("AsioTcpClient", "地址不能为[%s:%d]\n", _address.c_str(), _port);
+        }
+        LOGW("AsioTcpClient", "[%s:%d]正在初始化...\n", _address.c_str(), _port);
         _currentStatus.store(INITING);
         doOnStatus(_currentStatus);
 
@@ -127,7 +145,8 @@ namespace Dream {
             _endpointIterator = resolver.resolve({_address.c_str(), port});
         } catch (boost::system::system_error &e) {
             _ioServicePtr.reset(nullptr);
-            LOGE("AsioTcpClient", "网络异常，地址[%s]，错误信息[%s]\n", _address.c_str(), e.what());
+            _currentStatus.store(CLOSED);
+            LOGE("AsioTcpClient", "网络异常，地址[%s:%d]，错误信息[%s]\n", _address.c_str(), _port, e.what());
             return false;
         }
 
@@ -140,11 +159,11 @@ namespace Dream {
 
     void AsioTcpClient::doConnect() {
         if (_currentStatus.load() == CONNECTING || _socketPtr.get() == nullptr) {
-            LOGE("AsioTcpClient", "[%s]取消连接...\n", _address.c_str());
+            LOGE("AsioTcpClient", "[%s:%d]取消连接...\n", _address.c_str(), _port);
             return;
         }
 
-        LOGW("AsioTcpClient", "[%s]开始连接...\n", _address.c_str());
+        LOGW("AsioTcpClient", "[%s:%d]开始连接...\n", _address.c_str(), _port);
         _currentStatus.store(CONNECTING);
         doOnStatus(_currentStatus);
 
@@ -153,7 +172,8 @@ namespace Dream {
                                    [this](boost::system::error_code ec,
                                           boost::asio::ip::tcp::resolver::iterator) {
                                        if (!ec) {
-                                           LOGW("AsioTcpClient", "[%s]连接成功...\n", _address.c_str());
+                                           LOGW("AsioTcpClient", "[%s:%d]连接成功...\n",
+                                                _address.c_str(), _port);
                                            _currentStatus.store(CONNECTED);
                                            doOnStatus(_currentStatus);
                                            if (_readLengthCallback) {  // 如果上层设置了读取长度
@@ -170,8 +190,8 @@ namespace Dream {
                                                }
                                            }
                                        } else {
-                                           LOGE("AsioTcpClient", "[%s]连接失败 [%s]\n",
-                                                _address.c_str(),
+                                           LOGE("AsioTcpClient", "[%s:%d]连接失败 [%s]\n",
+                                                _address.c_str(), _port,
                                                 ec.message().c_str());
                                            if (ec.value() != 125) {
                                                doReconnect();
@@ -187,7 +207,7 @@ namespace Dream {
         if (_currentStatus.load() == CLOSEING || _currentStatus.load() == CLOSED) {
             return;
         }
-        LOGW("AsioTcpClient", "[%s]等待重连...\n", _address.c_str());
+        LOGW("AsioTcpClient", "[%s:%d]等待重连...\n", _address.c_str(), _port);
         _currentStatus.store(NO_CONNECT);
         doOnStatus(_currentStatus);
 
@@ -212,8 +232,9 @@ namespace Dream {
             return;
         }
         unsigned readLen = getReadLength();
-        if (readLen == 0 || readLen > _receiveSize) {
-            LOGE("AsioTcpClient", "上层设置的读取长度不合法，长度[%d]，无法读取数据，强制断开客户端\n", readLen);
+        if (readLen == 0) {
+            LOGE("AsioTcpClient", "[%s:%d]上层设置的读取长度不合法，长度[%d]，无法读取数据，强制断开客户端\n", _address.c_str(),
+                 _port, readLen);
 //            shutDown(true);
             return;
         }
@@ -239,8 +260,8 @@ namespace Dream {
 
                                     } else {
                                         // 异常的时候可以分为多种情况，测试出，当本机网络断开时，重连会导致崩溃
-                                        LOGE("AsioTcpClient", "读取数据异常, 连接断开:%s, error_code[%d]\n",
-                                             ec.message().c_str(), ec.value());
+                                        LOGE("AsioTcpClient", "[%s:%d]读取数据异常, 连接断开:%s, error_code[%d]\n",
+                                             _address.c_str(), _port, ec.message().c_str(), ec.value());
                                         if (ec.value() != 125) {
                                             doReconnect();
                                         }
@@ -269,8 +290,8 @@ namespace Dream {
                                             };
                                         } else if (ec) {
                                             LOGE("AsioTcpClient",
-                                                 "读取数据异常, 连接断开:%s, error_code[%d]\n",
-                                                 ec.message().c_str(), ec.value());
+                                                 "[%s:%d]读取数据异常, 连接断开:%s, error_code[%d]\n",
+                                                 _address.c_str(), _port, ec.message().c_str(), ec.value());
                                             if (ec.value() != 125) {
                                                 doReconnect();
                                             }
@@ -293,8 +314,8 @@ namespace Dream {
                                              doWrite();
                                          }
                                      } else {
-                                         LOGE("AsioTcpClient", "发送数据异常 [%s] error_code[%d]\n",
-                                              ec.message().c_str(), ec.value());
+                                         LOGE("AsioTcpClient", "[%s:%d]发送数据异常 [%s] error_code[%d]\n",
+                                              _address.c_str(), _port, ec.message().c_str(), ec.value());
                                          if (ec.value() != 125) {
                                              doReconnect();
                                          }
@@ -311,40 +332,40 @@ namespace Dream {
         JNIEnv *pJniEnv = nullptr;
         if (g_pJavaVM) {
             if (g_pJavaVM->AttachCurrentThread(&pJniEnv, nullptr) == JNI_OK) {
-                LOGW("AsioTcpClient", "[%s]绑定android线程成功pJniEnv[%zd]！\n", _address.c_str(),
+                LOGW("AsioTcpClient", "[%s:%d]绑定android线程成功pJniEnv[%zd]！\n", _address.c_str(), _port,
                      pJniEnv);
             } else {
-                LOGE("AsioTcpClient", "[%s]绑定android线程失败！\n", _address.c_str());
+                LOGE("AsioTcpClient", "[%s:%d]绑定android线程失败！\n", _address.c_str(), _port);
                 return;
             }
         } else {
-            LOGE("AsioTcpClient", "[%s]pJavaVm 为空！\n", _address.c_str());
+            LOGE("AsioTcpClient", "[%s:%d]pJavaVm 为空！\n", _address.c_str(), _port);
         }
 #endif
         // 增加一个work对象
-        boost::asio::io_service::work work(*(_ioServicePtr));
+        boost::asio::io_service::work work(*(_ioServicePtr.get()));
         try {
 //            LOGE("AsioTcpClient", "_ioServicePtr run start！！\n");
             _ioServicePtr->run();
 //            LOGE("AsioTcpClient", "_ioServicePtr run end！！\n");
         } catch (...) {
-            LOGE("AsioTcpClient", "_ioServicePtr 运行异常！！\n");
+            LOGE("AsioTcpClient", "[%s:%d]_ioServicePtr 运行异常！！\n", _address.c_str(), _port);
         }
 #ifdef _ANDROID
         // 解绑android线程
         if (g_pJavaVM && pJniEnv) {
-            LOGW("AsioTcpClient", "[%s]解绑android线程[%zd]！\n", _address.c_str(), pJniEnv);
+            LOGW("AsioTcpClient", "[%s:%d]解绑android线程[%zd]！\n", _address.c_str(), _port, pJniEnv);
             g_pJavaVM->DetachCurrentThread();
         }
 #endif
     }
 
     void AsioTcpClient::close(bool isIoServiceThread) {
-        if (_currentStatus.load() == CLOSEING || _currentStatus.load() == CLOSED) {
-            return;
-        }
+//        if (_currentStatus.load() == CLOSEING || _currentStatus.load() == CLOSED) {
+//            return;
+//        }
 
-        if (_reconnectTimerPtr.get() != nullptr) {
+        if (_reconnectTimerPtr.get()) {
             _reconnectTimerPtr->cancel();
             _reconnectTimerPtr.reset();
         }
@@ -357,43 +378,32 @@ namespace Dream {
             }
 
             // 这里一定要单独捕获异常，如果这里出错，下面没有执行的话，类析构时会崩溃，可能时由于线程还未结束，在线程析构前，必须要调用detach或者join
-            if (_socketPtr.get() != nullptr) {
+            if (_socketPtr.get()) {
                 try {
                     _socketPtr->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                     _socketPtr->close();  // 关闭套接字
                 } catch (std::exception &e) {
-                    LOGE("AsioTcpClient", "[%s]_socketPtr->close()异常！！[%s]\n", _address.c_str(),
+                    LOGE("AsioTcpClient", "[%s:%d]_socketPtr->close()异常！！[%s]\n", _address.c_str(),
+                         _port,
                          e.what());  // 一般是由于本机网络异常，导致endpoint未连接
                 }
 
                 _socketPtr.reset();
             }
 
-            if (_ioServicePtr.get() != nullptr) {
+            if (!isIoServiceThread && _ioServicePtr.get()) {
                 _ioServicePtr->stop();
             }
-
-            if (_threadPtr.get() != nullptr) {
-                if (isIoServiceThread) {
-                    _threadPtr->detach();  // io线程本身调用，则不能用join
-                } else {
-                    LOGW("AsioTcpClient", "[%s]开始等待ioService停止...\n", _address.c_str());
-                    _threadPtr->join();  // 等待线程执行完毕，避免线程还在连接的时候进行关闭操作
-                    LOGW("AsioTcpClient", "[%s]结束等待ioService停止...\n", _address.c_str());
-                }
-
-                _threadPtr.reset();
-            }
-
-            _ioServicePtr.reset();
 
             _currentStatus.store(CLOSED);
             if (isIoServiceThread) {
                 doOnStatus(_currentStatus);
             }
 
+            LOGW("AsioTcpClient", "[%s:%d]closed！\n", _address.c_str(),
+                 _port);  // 一般是由于本机网络异常，导致endpoint未连接
         } catch (std::exception &e) {
-            LOGE("AsioTcpClient", "[%s]close异常！！[%s]\n", _address.c_str(),
+            LOGE("AsioTcpClient", "[%s:%d]close异常！！[%s]\n", _address.c_str(), _port,
                  e.what());  // 一般是由于本机网络异常，导致endpoint未连接
         }
     }

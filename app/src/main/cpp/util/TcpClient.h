@@ -21,7 +21,7 @@ namespace Dream {
     public:
         TcpClient() = delete;
 
-        TcpClient(ThreadPool &pool, const std::string &address, unsigned port) :
+        TcpClient(ThreadPool &pool, const std::string &address, unsigned short port) :
                 _tcpClient(
                         std::bind(&TcpClient::receiveData, this, std::placeholders::_1,
                                   std::placeholders::_2),
@@ -113,7 +113,7 @@ namespace Dream {
                 unsigned packetLen = 0;
                 int tmp = 0;
                 DECODE_INT32(pBuf, packetLen, tmp);
-                if (packetLen >= dataLen && packetLen <= _tcpClient.receiveSize()) {
+                if (packetLen >= dataLen) {
 
                     _packetDataPtr.reset(new PacketData(packetLen));  // 创建包内存
                     memcpy(_packetDataPtr->data(), pBuf, dataLen);  // 写入头
@@ -125,19 +125,27 @@ namespace Dream {
                     } else {  // 不包含包体的话，就直接调用接收函数
                         callReceive = true;
                     }
+
                 } else {
-                    LOGE("TcpClient", "包头解析长度出错，长度＝[%d]\n", packetLen);
-//                    _tcpClient.shutDown(true);  // 这函数是io线程自身调用，必须加true
+                    LOGE("TcpClient", "[%s:%d]包头解析长度出错，长度＝[%d]\n",
+                         _tcpClient.remoteAddress().c_str(), _tcpClient.remotePort(), packetLen);
+                    _tcpClient.shutDown(true);
                     return;
                 }
             } else {  // 读取body
                 if (dataLen != _readLength) {  // 读取到的长度和想要读取的长度不相等的话，就解析错误，直接关闭客户端
-                    LOGE("TcpClient", "读取到的长度[%zd]和需要读取长度[%d]不相等，无法解析数据\n", dataLen, _readLength);
-//                    _tcpClient.shutDown(true);
+                    LOGE("TcpClient", "[%s:%d]读取到的长度[%zd]和需要读取长度[%d]不相等，无法解析数据\n",
+                         _tcpClient.remoteAddress().c_str(), _tcpClient.remotePort(), dataLen,
+                         _readLength);
+                    _tcpClient.shutDown(true);
                     return;
                 }
-                memcpy(_packetDataPtr->data() + Packet::HEADER_LENGTH, pBuf, dataLen);  // 写入body
-                callReceive = true;
+
+                if (dataLen + Packet::HEADER_LENGTH <= PacketData::PACKET_DATA_DEFAULT_SIZE) {
+                    memcpy(_packetDataPtr->data() + Packet::HEADER_LENGTH, pBuf,
+                           dataLen);  // 写入body
+                    callReceive = true;
+                }
             }
 
             // 需要调用接收函数，也就是已经保存了一个完整包的时候
@@ -159,7 +167,8 @@ namespace Dream {
                     _packetDataPtr.reset();
                     if (usedLen > 0) {
                         // 这里使用线程池提高并发处理能力
-                        _pool.addTask(std::bind(&TcpClient::receive, this, packetPtr));
+                        receive(packetPtr);
+//                        _pool.addTask(std::bind(&TcpClient::receive, this, packetPtr));
                     }
                 }
             }

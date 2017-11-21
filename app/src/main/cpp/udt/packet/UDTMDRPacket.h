@@ -53,7 +53,7 @@ namespace Dream {
             return decodePos;
         }
 
-        virtual static std::size_t headerLength() {
+        static std::size_t headerLength() {
             return UDTControlPacket::headerLength() + sizeof(int32_t) + sizeof(int32_t);
         }
 

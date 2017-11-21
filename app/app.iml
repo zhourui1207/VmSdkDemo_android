@@ -37,13 +37,16 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/opensdk" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/rtp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/stream" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/cipher" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/uas" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/util" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/dp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/rtsp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/udt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/encdec" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/render" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/smartconfig" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/devicediscovery" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/cpp/udt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/build/generated/source/r/release" isTestSource="false" generated="true" />
       <sourceFolder url="file://$MODULE_DIR$/build/generated/source/aidl/release" isTestSource="false" generated="true" />
       <sourceFolder url="file://$MODULE_DIR$/build/generated/source/buildConfig/release" isTestSource="false" generated="true" />
@@ -91,8 +94,6 @@
       <sourceFolder url="file://$MODULE_DIR$/src/androidTest/jni" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src/androidTest/rs" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src/androidTest/shaders" isTestSource="true" />
-      <excludeFolder url="file://$MODULE_DIR$/build/.DS_Store" />
-      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/.DS_Store" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/assets" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/blame" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/classes" />

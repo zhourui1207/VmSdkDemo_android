@@ -34,12 +34,14 @@ public class RecordDownloader {
     public static final int RECORD_DOWNLOAD_ERROR_CONNECT_FAILED = 1;  // 连接失败
     public static final int RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT = 2;  // 码流超时
 
+    private String mEncryptKey;  // 密钥
+
     private static final String[] ERROR_MESSAGE = {"打开码流失败", "连接失败", "长时间无码流"};
 
-    private static final int MSG_ID_RECORD_DOWNLOAD_START = 0;
-    private static final int MSG_ID_RECORD_DOWNLOAD_PROGRESS = 1;
+    private static final int MSG_ID_RECORD_DOWNLOAD_START = 1;
+    private static final int MSG_ID_RECORD_DOWNLOAD_PROGRESS = 2;
     //    private static final int MSG_ID_RECORD_DOWNLOAD_STOP = 2;
-    private static final int MSG_ID_RECORD_DOWNLOAD_CHECK_TIMEOUT = 2;
+    private static final int MSG_ID_RECORD_DOWNLOAD_CHECK_TIMEOUT = 3;
 
     private static final long STREAM_TIMEOUT_MILLIS_SEC = 10000;
     private static final long CHECK_STREAM_TIMEOUT_INTERVAL_MILLIS_SEC = 4000;
@@ -54,6 +56,14 @@ public class RecordDownloader {
 
     @NonNull
     private final Object mRecordDownloadStatusListenerMutex = new Object();
+
+    public RecordDownloader() {
+
+    }
+
+    public RecordDownloader(String encrytKey) {
+        mEncryptKey = encrytKey;
+    }
 
     public void setOnRecordDownloadStatusListener(OnRecordDownloadStatusListener
                                                           onRecordDownloadStatusListener) {
@@ -123,8 +133,7 @@ public class RecordDownloader {
 
             mHandler = new RecordDownloadHandler(mHandlerThread.getLooper(), new
                     WeakReference<RecordDownloader>(this), recordType, file, center, fdId,
-                    channelId,
-                    beginTime, endTime);
+                    channelId, beginTime, endTime, mEncryptKey);
 
 
             mFile = file;
@@ -213,7 +222,8 @@ public class RecordDownloader {
 
         RecordDownloadHandler(Looper looper, @NonNull WeakReference<RecordDownloader>
                 recordDownloaderWeakReference, int recordType, String file, boolean center,
-                              String fdId, int channelId, int beginTime, int endTime) {
+                              String fdId, int channelId, int beginTime, int endTime,
+                              String encryptKey) {
             super(looper);
             mRecordDownloaderWeakReference = recordDownloaderWeakReference;
             mRecordType = recordType;
@@ -224,7 +234,7 @@ public class RecordDownloader {
             mBeginTime = beginTime;
             mEndTime = endTime;
             mTotalMillisSec = (endTime - beginTime) * 1000L;
-            mDecoder = new Decoder(VmType.DECODE_TYPE_INTELL, false, false, false);
+            mDecoder = new Decoder(VmType.DECODE_TYPE_INTELL, false, false, false, encryptKey, 0, null);
             mDecoder.setOnESFrameDataCallback(new Decoder.OnESFrameDataCallback() {
                 @Override
                 public void onFrameData(boolean video, int timestamp, long pts, byte[] data, int
@@ -242,6 +252,7 @@ public class RecordDownloader {
 
                 @Override
                 public void onRecordProgress(long millisTime) {
+//                    Log.e(TAG, "onRecordProgress millisTime=" + millisTime);
                     Message message = Message.obtain();
                     message.what = MSG_ID_RECORD_DOWNLOAD_PROGRESS;
                     message.obj = millisTime;
@@ -263,13 +274,12 @@ public class RecordDownloader {
                 return;
             }
 
+//            Log.e(TAG, "start handle msg, what=" + msg.what);
             switch (msg.what) {
                 case MSG_ID_RECORD_DOWNLOAD_START:
                     final PlayAddressHolder playAddressHolder = new PlayAddressHolder();
                     int ret = VmNet.openPlaybackStream(mFdId, mChannelId, mCenter, mBeginTime,
-                            mEndTime,
-                            playAddressHolder);
-
+                            mEndTime, playAddressHolder);
 
                     if (ret == 0 && playAddressHolder.getMonitorId() != 0 && playAddressHolder
                             .getVideoAddr() != null && playAddressHolder.getVideoPort() > 0) {
@@ -317,7 +327,7 @@ public class RecordDownloader {
                                 }
 
                                 mDecoder.addBuffer(streamId, VmType.STREAM_TYPE_VIDEO, payloadType, buffer,
-                                        0, buffer.length, timeStamp, seqNumber, isMark);
+                                        0, buffer.length, timeStamp, seqNumber, isMark, false, 0L);
                             }
                         }, streamIdHolder);
 
@@ -384,11 +394,13 @@ public class RecordDownloader {
                     if (mCurrentPercent > 1f) {
                         mCurrentPercent = 1f;
                     }
+                    Log.w(TAG, "mCurrentPercent=" + mCurrentPercent);
                     recordDownloader.onRecordDownloadProgress(mCurrentPercent);
                     break;
 
                 case MSG_ID_RECORD_DOWNLOAD_CHECK_TIMEOUT:
-                    // 超时
+                    // 超时检测
+                    Log.w(TAG, "Record download thread check stream timeout!");
                     if (mLastReceiveStreamDataTime != 0 && (System.currentTimeMillis() -
                             mLastReceiveStreamDataTime > STREAM_TIMEOUT_MILLIS_SEC)) {
                         if (mTotalMillisSec < 10) {
@@ -404,7 +416,7 @@ public class RecordDownloader {
                                                 ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
                                 recordDownloader.threadQuitSelfLock();
                             }
-                        } else if (mTotalMillisSec < 30) {
+                        } else if (mTotalMillisSec <= 30) {
                             if (mCurrentPercent >= 0.5f || mCurrentPercent == 0f) {  //
                                 // 当前进度大于10%，认为任务完成，或者压根就没进度
                                 quit(true);
@@ -417,8 +429,21 @@ public class RecordDownloader {
                                                 ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
                                 recordDownloader.threadQuitSelfLock();
                             }
+                        } else if (mTotalMillisSec <= 600) {
+                            if (mCurrentPercent >= 0.65f || mCurrentPercent == 0f) {  //
+                                // 当前进度大于10%，认为任务完成，或者压根就没进度
+                                quit(true);
+                                recordDownloader.onRecordDownloadSuccess();
+                                recordDownloader.threadQuitSelfLock();
+                            } else {  // 任务网络超时
+                                quit(false);
+                                recordDownloader.onRecordDownloadFailed
+                                        (RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT,
+                                                ERROR_MESSAGE[RECORD_DOWNLOAD_ERROR_STREAM_TIMEOUT]);
+                                recordDownloader.threadQuitSelfLock();
+                            }
                         } else {
-                            if (mCurrentPercent >= 0.95f || mCurrentPercent == 0f) {  //
+                            if (mCurrentPercent >= 0.90f || mCurrentPercent == 0f) {  //
                                 // 当前进度大于95%，认为任务完成，或者压根就没进度
                                 quit(true);
                                 recordDownloader.onRecordDownloadSuccess();
@@ -437,9 +462,12 @@ public class RecordDownloader {
 
                     break;
             }
+
+//            Log.e(TAG, "end handle msg, what=" + msg.what);
         }
 
         private void startCheckStreamTimeout() {
+            Log.w(TAG, "start check stream timeout");
             mCheckTimeout = true;
             if (mLastReceiveStreamDataTime == 0) {
                 mLastReceiveStreamDataTime = System.currentTimeMillis();

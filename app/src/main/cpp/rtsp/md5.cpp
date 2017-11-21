@@ -1,3 +1,4 @@
+#include <cstring>
 #include "md5.h"
 
 #define S11 7

@@ -15,12 +15,12 @@ namespace Dream {
     class UDTNakPacket : public UDTControlPacket {
 
     public:
-        UDTNakPacket(int32_t* lossSeqNumber, std::size_t lossSize) :
+        UDTNakPacket(int32_t* lossSeqNumber = nullptr, std::size_t lossSize = 0) :
                 UDTControlPacket(NAK) {
             if (lossSeqNumber != nullptr && lossSize > 0) {
                 _lossSeqNumber = new int32_t[lossSize];
                 _lossSize = lossSize;
-                memcpy(_lossSeqNumber, lossSeqNumber, _lossSize);
+                memcpy(_lossSeqNumber, lossSeqNumber, sizeof(int32_t) * _lossSize);
             }
         }
 
@@ -56,8 +56,8 @@ namespace Dream {
 
             if (decodePos >= 0) {
                 std::size_t leaveLen = len - decodePos;
-                if (leaveLen > sizeof(uint32_t)) {
-                    _lossSize = leaveLen / sizeof(uint32_t);
+                if (leaveLen >= sizeof(int32_t)) {
+                    _lossSize = leaveLen / sizeof(int32_t);
                     if (_lossSize > 0) {
                         _lossSeqNumber = new int32_t[_lossSize];
                         for (int i = 0; i < _lossSize; ++i) {
@@ -76,6 +76,14 @@ namespace Dream {
 
         virtual std::size_t totalLength() override {
             return headerLength() + sizeof(int32_t) * _lossSize;
+        }
+
+        const int32_t* lossSeqNumber() const {
+            return _lossSeqNumber;
+        }
+
+        std::size_t lossSize() const {
+            return _lossSize;
         }
 
     private:

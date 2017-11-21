@@ -6,6 +6,7 @@
  *      udp服务类，包含发送和接受功能
  */
 
+#include <boost/asio.hpp>
 #include "AsioUdpServer.h"
 #include "public/platform.h"
 
@@ -32,12 +33,18 @@ namespace Dream {
         }
     }
 
-    bool AsioUdpServer::start_up() {
+    bool AsioUdpServer::start_up(const std::string& multicast_addr) {
         std::lock_guard<std::mutex> lock(_mutex);
         // 初始化
         if (!do_init()) {
             LOGE("AsioUdpServer", "[%s]AsioUdpServer init failed!\n", _local_address.c_str());
             return false;
+        }
+
+        if (_socketPtr.get() && !multicast_addr.empty()) {
+            boost::asio::ip::address multicast_address = boost::asio::ip::address::from_string(multicast_addr);
+            boost::asio::ip::multicast::join_group option(multicast_address);
+            _socketPtr->set_option(option);
         }
 
         do_read();
@@ -49,7 +56,28 @@ namespace Dream {
 
     void AsioUdpServer::shut_down() {
         std::lock_guard<std::mutex> lock(_mutex);
-        close();
+        if (_ioServicePtr.get()) {
+            _ioServicePtr->post([this]() {
+                close();
+            });
+        }
+        if (_threadPtr.get()) {
+            if (_threadPtr->joinable()) {
+                LOGW("AsioUdpServer", "AsioUdpServer [%s:%d] waiting ioService stop, join\n", _local_address.c_str(), _local_port);
+                _threadPtr->join();
+            } else {
+                LOGW("AsioUdpServer", "AsioUdpServer [%s:%d] waiting ioService stop, detach\n", _local_address.c_str(), _local_port);
+                _threadPtr->detach();
+            }
+
+            LOGW("AsioUdpServer", "AsioUdpServer [%s:%d] waited ioService stop...\n",
+                 _local_address.c_str(), _local_port);
+
+            _threadPtr.reset();
+        }
+        if (_ioServicePtr.get()) {
+            _ioServicePtr.reset();
+        }
     }
 
     bool AsioUdpServer::send(const std::shared_ptr<UdpData> &dataPtr) {
@@ -77,7 +105,7 @@ namespace Dream {
     bool AsioUdpServer::do_init() {
         LOGW("AsioUdpServer", "[%s]AsioUdpServer initing...\n", _local_address.c_str());
 
-        if (_ioServicePtr.get() == nullptr) {
+        if (!_ioServicePtr.get()) {
             _ioServicePtr.reset(new boost::asio::io_service());
         }
 
@@ -107,13 +135,22 @@ namespace Dream {
                                                                  endpoint));
                     }
                 }
+                
+                if (_local_address.empty()) {
+                    _local_address = local_address();
+                }
+                
+                if (_local_port == 0) {
+                    _local_port = local_port();
+                }
+                
                 bindSuccess = true;
             } catch (...) {
                 ++_local_port;
             }
         }
 
-        LOGW("AsioUdpServer", "AsioUdpServer udp port[%d] binded success\n", _local_port);
+        LOGW("AsioUdpServer", "[%s] AsioUdpServer udp port[%d] binded success\n", _local_address.c_str(), _local_port);
 
         return true;
     }
@@ -151,8 +188,6 @@ namespace Dream {
             address = boost::asio::ip::address_v4::from_string(_sendQueue.front()->address());
         }
         _socketPtr->async_send_to(
-
-
                 boost::asio::buffer(_sendQueue.front()->data(), _sendQueue.front()->length()),
                 boost::asio::ip::udp::endpoint(address, _sendQueue.front()->port()),
                 [this](boost::system::error_code ec, std::size_t /*length*/) {
@@ -177,26 +212,28 @@ namespace Dream {
         JNIEnv *pJniEnv = nullptr;
         if (g_pJavaVM) {
             if (g_pJavaVM->AttachCurrentThread(&pJniEnv, nullptr) == JNI_OK) {
-                LOGW("AsioUdpServer", "[%s][%d] attach android thread success！\n",
+                LOGW("AsioUdpServer", "[%s:%d] attach android thread success！\n",
                      _local_address.c_str(),
                      _local_port);
             } else {
-                LOGE("AsioUdpServer", "[%s][%d] attach android thread failed！\n",
+                LOGE("AsioUdpServer", "[%s:%d] attach android thread failed！\n",
                      _local_address.c_str(),
                      _local_port);
                 return;
             }
         } else {
-            LOGE("AsioUdpServer", "[%s]pJavaVm is null！\n", _local_address.c_str());
+            LOGW("AsioUdpServer", "[%s:%d]pJavaVm is null！\n", _local_address.c_str(), _local_port);
         }
 #endif
         // 增加一个work对象
-        boost::asio::io_service::work work(*(_ioServicePtr));
+        boost::asio::io_service::work work(*(_ioServicePtr.get()));
+        LOGW("AsioUdpServer", "io service start!\n");
         try {
             _ioServicePtr->run();
         } catch (...) {
             LOGE("AsioUdpServer", "_ioServicePtr running exception！！\n");
         }
+        LOGW("AsioUdpServer", "io service stoped!\n");
 #ifdef _ANDROID
         // 解绑android线程
         if (g_pJavaVM && pJniEnv) {
@@ -209,7 +246,7 @@ namespace Dream {
 
     void AsioUdpServer::close() {
 // 这里一定要单独捕获异常，如果这里出错，下面没有执行的话，类析构时会崩溃，可能时由于线程还未结束，在线程析构前，必须要调用detach或者join
-        if (_socketPtr.get() != nullptr) {
+        if (_socketPtr.get()) {
             try {
 //                _socketPtr->shutdown(boost::asio::ip::udp::socket::shutdown_both);
                 _socketPtr->close();  // 关闭套接字
@@ -222,21 +259,12 @@ namespace Dream {
             _socketPtr.reset();
         }
 
-        if (_ioServicePtr.get() != nullptr) {
+        if (_ioServicePtr.get()) {
+            LOGW("AsioUdpServer", "stop io service begin\n");
             _ioServicePtr->stop();
+            LOGW("AsioUdpServer", "stop io service end\n");
+//            _ioServicePtr.reset();
         }
-
-        if (_threadPtr.get() != nullptr) {
-            LOGW("AsioUdpServer", "AsioUdpServer [%s]waiting ioService stop...\n",
-                 _local_address.c_str());
-            _threadPtr->join();  // 等待线程执行完毕，避免线程还在连接的时候进行关闭操作
-            LOGW("AsioUdpServer", "AsioUdpServer [%s]waited ioService stop...\n",
-                 _local_address.c_str());
-
-            _threadPtr.reset();
-        }
-
-        _ioServicePtr.reset();
     }
 
 

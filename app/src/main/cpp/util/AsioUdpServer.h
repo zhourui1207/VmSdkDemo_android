@@ -41,7 +41,7 @@ namespace Dream {
         virtual ~AsioUdpServer();
 
     public:
-        bool start_up();
+        bool start_up(const std::string& multicast_addr = "");
 
         void shut_down();
 

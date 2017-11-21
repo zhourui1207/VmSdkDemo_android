@@ -145,7 +145,9 @@ namespace Dream {
     bool Decoder::DecodeNalu2YUV(const char *inData, int inLen, char *outYData,
                                  int &outYLen, char *outUData, int &outULen, char *outVData,
                                  int &outVLen, int &width, int &height, int &framerate) {
-        if (!_inited || nullptr == _codecContext) {
+        if (!_inited || nullptr == _codecContext || inData == nullptr || inLen <= 0 ||
+                outYData == nullptr || outYLen <= 0 || outUData == nullptr ||
+                outULen <= 0 || outVData == nullptr || outVLen <= 0) {
             return false;
         }
 

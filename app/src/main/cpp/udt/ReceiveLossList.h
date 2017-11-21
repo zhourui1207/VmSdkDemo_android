@@ -7,6 +7,7 @@
 
 
 #include <stdint.h>
+#include <vector>
 #include <list>
 #include <memory>
 
@@ -16,7 +17,7 @@ namespace Dream {
     public:
         LossInfo(int32_t seqNumber, uint64_t feedbackTime)
                 : _seqNumber(seqNumber), _latestFeedbackTime(feedbackTime),
-                  _feedbackNumber(1) {
+                  _k(2) {
 
         }
 
@@ -34,18 +35,18 @@ namespace Dream {
             return _latestFeedbackTime;
         }
 
-        void setFeedbackNumber(int number) {
-            _feedbackNumber = number;
+        void setK(int number) {
+            _k = number;
         }
 
-        int feedbackNumber() const {
-            return _feedbackNumber;
+        int k() const {
+            return _k;
         }
 
     private:
         int32_t _seqNumber;  // 丢失数据包序列号
         uint64_t _latestFeedbackTime;  // 最后反馈时间
-        int _feedbackNumber;  // 反馈次数
+        int _k;  // 反馈次数, 初始化为2
     };
 
     class ReceiveLossList {
@@ -54,9 +55,15 @@ namespace Dream {
 
         virtual ~ReceiveLossList() = default;
 
+        bool serchNakTimeoutSeqNumber(std::vector<int32_t >& seqNumberList, uint64_t feedbackTime, int32_t ttsUs);
+
         void addLossPacket(int32_t seqNumber, uint64_t feedbackTime, int32_t left, int32_t right);
 
         bool removeLossPacket(int32_t seqNumber);
+
+        int32_t getFirstSeqNumber() const;  // -1失败
+
+        bool empty() const;
 
     private:
         std::list<std::shared_ptr<LossInfo>> _lossList;

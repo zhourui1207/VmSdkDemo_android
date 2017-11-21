@@ -63,6 +63,15 @@
 #define VMNET_HEARTBEAT_TYPE_PLAYBACK 1  // 录像回放心跳
 #define VMNET_HEARTBEAT_TYPE_TALK 2  // 语音对讲心跳
 
+// 播放类型
+#define VMNET_PLAY_TYPE_REALPLAY 1  // 实时
+#define VMNET_PLAY_TYPE_PLAYBACK 2  // 回放
+
+// 客户端类型
+#define VMNET_CLIENT_TYPE_ANDROID 100  // android
+#define VMNET_CLIENT_TYPE_IOS 200  // ios
+#define VMNET_CLIENT_TYPE_PC 300  // pc
+
 // 回调函数定义开始---------------------------------------------------------
 // 实时报警回调函数
 // pFdId：设备id； nChannel：通道号； uAlarmType：报警类型； uParam1：参数1； uParam2：参数2
@@ -82,6 +91,11 @@ typedef void (CALLBACK *fStreamCallBack)(unsigned uStreamId,
                                          int nLen,
                                          unsigned uTimeStamp, unsigned short sequenceNumber,
                                          bool isMark, void *pUser);
+
+typedef void (CALLBACK *fStreamCallBackExt)(unsigned uStreamId, unsigned uStreamType, char payloadType,
+                                         char *pBuffer, int nLen, unsigned uTimeStamp,
+                                         unsigned short sequenceNumber, bool isMark, bool isJWHeader,
+                                         bool isFirstFrame, bool isLastFrame, unsigned long long utcTimeStamp, void *pUser);
 
 // stream码流连接状态回调
 // uStreamId：码流id； bIsConnected：true 已连接 false 断开； pUser：用户参数

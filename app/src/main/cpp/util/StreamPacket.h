@@ -64,7 +64,7 @@ namespace Dream {
             return computeLength();
         }
 
-        virtual int decode(char *pBuf, std::size_t len) override {
+        virtual int decode(const char *pBuf, std::size_t len) override {
             if (len < HEADER_LENGTH) {
                 return -1;
             }
@@ -75,7 +75,7 @@ namespace Dream {
             int dataLen = _length - HEADER_LENGTH;
             if (dataLen > 0 && dataLen + HEADER_LENGTH <= len) {
 //      _data = new char[dataLen];
-                _dataLen = dataLen;
+                _dataLen = (size_t) dataLen;
                 memcpy(_data, pBuf + pos, dataLen);
             } else {
                 return -1;
@@ -108,7 +108,7 @@ namespace Dream {
             return _dataLen;
         }
 
-    private:
+    protected:
         /**
          * 消息结构定义：包总长＋消息类型＋数据
          */

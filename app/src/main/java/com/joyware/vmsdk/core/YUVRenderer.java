@@ -31,9 +31,9 @@ public class YUVRenderer implements GLRenderer {
     private ByteBuffer mV;
 
     // 截图使用
-    byte[] mYuvImageData;
-    byte[] mUvTmpBuf;
-    byte[] mNv21UvBuf;
+    private byte[] mYuvImageData;
+    private byte[] mUvTmpBuf;
+    private byte[] mNv21UvBuf;
 
     private boolean mScaleEnable;
     private float mLeftPercent = 0f;
@@ -64,9 +64,11 @@ public class YUVRenderer implements GLRenderer {
 
     @Override
     public void onSizeChanged(long renderHandle, int w, int h) {
+//        Log.w(TAG, "onSizeChanged w=" + w + ", h=" + h);
         mScreenWidth = w;
         mScreenHeight = h;
         synchronized (this) {
+//            Log.w(TAG, "onSizeChanged w=" + w + ", h=" + h);
             GLHelper.scaleTo(renderHandle, mScaleEnable, Math.round(mLeftPercent * mScreenWidth),
                     Math.round(mTopPercent * mScreenHeight), Math.round(mWidthPercent *
                             mScreenWidth), Math.round(mHeightPercent * mScreenHeight));
@@ -75,8 +77,10 @@ public class YUVRenderer implements GLRenderer {
 
     @Override
     public int onDrawFrame(long renderHandle) {
+//        Log.w(TAG, "onDrawFrame");
         if (mY != null && renderHandle != 0) {
             synchronized (this) {
+//                Log.w(TAG, "onDrawFrame");
                 return GLHelper.drawYUV(renderHandle, mY.array(), 0, mY.array().length, mU.array
                                 (), 0, mU.array().length, mV.array(), 0, mV.array().length,
                         mVideoWidth, mVideoHeight);

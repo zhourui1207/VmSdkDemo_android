@@ -58,9 +58,10 @@ public class RTPSortFilter {
     }
 
     public void receive(int payloadType, byte[] buffer, int start, int len, int timeStamp, int
-            seqNumber, boolean mark) {
+            seqNumber, boolean mark, boolean haveJWHeader, long utcTimeStamp) {
         if (!mSort && mOnSortedCallback != null) {
-            mOnSortedCallback.onSorted(payloadType, buffer, start, len, timeStamp, seqNumber, mark);
+            mOnSortedCallback.onSorted(payloadType, buffer, start, len, timeStamp, seqNumber,
+                    mark, haveJWHeader, utcTimeStamp);
             return;
         }
 
@@ -73,7 +74,8 @@ public class RTPSortFilter {
         boolean needSendListSerialPacket = false;  // 需要发送列表中的连续包
 
         if (isSerial(seqNumber)) {  // 序列连续，直接调用接口
-            sendSortedPacket(payloadType, buffer, start, len, timeStamp, seqNumber, mark);
+            sendSortedPacket(payloadType, buffer, start, len, timeStamp, seqNumber, mark, haveJWHeader,
+                    utcTimeStamp);
             if (!mSortList.isEmpty()) {  // 如果队列中第一个包的序列号是跟发送出去的包是连续的
                 RTPData rtpData = mSortList.getFirst();
                 if (isSerial(rtpData.mSeqNumber)) {
@@ -84,7 +86,8 @@ public class RTPSortFilter {
             if (mSortList.size() >= mMaxSize) {  // 超过或等于最大值，那么需要强制发包
                 needSendListSerialPacket = true;
             }
-            mSortList.add(new RTPData(payloadType, buffer, start, len, timeStamp, seqNumber, mark));
+            mSortList.add(new RTPData(payloadType, buffer, start, len, timeStamp, seqNumber,
+                    mark, haveJWHeader, utcTimeStamp));
             Collections.sort(mSortList);
         }
 
@@ -122,13 +125,15 @@ public class RTPSortFilter {
 
     private void sendSortedPacket(RTPData rtpData) {
         sendSortedPacket(rtpData.mPayloadType, rtpData.mBuffer, 0, rtpData.mBuffer != null ?
-                rtpData.mBuffer.length : 0, rtpData.mTimestamp, rtpData.mSeqNumber, rtpData.mMark);
+                rtpData.mBuffer.length : 0, rtpData.mTimestamp, rtpData.mSeqNumber, rtpData
+                .mMark, rtpData.mHaveJWHeader, rtpData.mUTCTimeStamp);
     }
 
     private void sendSortedPacket(int payloadType, byte[] buffer, int start, int len, int
-            timeStamp, int seqNumber, boolean mark) {
+            timeStamp, int seqNumber, boolean mark, boolean haveJWHeader, long utcTimeStamp) {
         if (mOnSortedCallback != null) {
-            mOnSortedCallback.onSorted(payloadType, buffer, start, len, timeStamp, seqNumber, mark);
+            mOnSortedCallback.onSorted(payloadType, buffer, start, len, timeStamp, seqNumber,
+                    mark, haveJWHeader, utcTimeStamp);
         }
         if ((mOnMissedCallback != null) && !isSerial(seqNumber)) {  // 序列包不连续的话，计算丢失包的数量
 
@@ -146,7 +151,7 @@ public class RTPSortFilter {
 
     public interface OnSortedCallback {
         void onSorted(int payloadType, byte[] buffer, int start, int len, int timeStamp, int
-                seqNumber, boolean mark);
+                seqNumber, boolean mark, boolean haveJWHeader, long utcTimeStamp);
     }
 
     public interface OnMissedCallback {
@@ -159,9 +164,11 @@ public class RTPSortFilter {
         private int mTimestamp;
         private int mSeqNumber;
         private boolean mMark;
+        private boolean mHaveJWHeader;
+        private long mUTCTimeStamp;
 
         private RTPData(int payloadType, byte[] buffer, int start, int len, int timestamp,
-                        int seqNumber, boolean mark) {
+                        int seqNumber, boolean mark, boolean haveJWHeader, long utcTimeStamp) {
             mPayloadType = payloadType;
             if (len > 0) {
                 mBuffer = new byte[len];
@@ -170,6 +177,8 @@ public class RTPSortFilter {
             mTimestamp = timestamp;
             mSeqNumber = seqNumber;
             mMark = mark;
+            mHaveJWHeader = haveJWHeader;
+            mUTCTimeStamp = utcTimeStamp;
         }
 
         public int getPayloadType() {
@@ -190,6 +199,14 @@ public class RTPSortFilter {
 
         public boolean isMark() {
             return mMark;
+        }
+
+        public boolean isHaveJWHeader() {
+            return mHaveJWHeader;
+        }
+
+        public long getUTCTimeStamp() {
+            return mUTCTimeStamp;
         }
 
         @Override

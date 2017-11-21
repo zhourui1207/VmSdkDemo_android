@@ -235,6 +235,37 @@ public class RecordThread {
             }
         }
 
+        private void initConfig(byte[] data, int begin, int len) {
+            int naluType = data[begin + 4] & 0x1F;
+            if (naluType == 7) {  // sps
+                if (mSPS == null) {
+                    mSPS = new byte[len];
+                    System.arraycopy(data, begin, mSPS, 0, len);
+                    Log.w(TAG, "sps len=" + len);
+                }
+                mIFrame = null;
+            } else if (naluType == 8) {  // pps
+                if (mPPS == null) {
+                    mPPS = new byte[len];
+                    System.arraycopy(data, begin, mPPS, 0, len);
+                    Log.w(TAG, "pps len=" + len);
+                }
+                mIFrame = null;
+            } else if (naluType == 5) {  // Iframe
+                if (mIFrame == null) {
+                    mIFrame = new byte[len];
+                    System.arraycopy(data, begin, mIFrame, 0, len);
+                    Log.w(TAG, "iframe len=" + len);
+                }
+            } else if (naluType == 1) {
+                if (mIFrame != null) {
+                    mPFrame = new byte[len];
+                    System.arraycopy(data, begin, mPFrame, 0, len);
+                    Log.w(TAG, "pframe len=" + len);
+                }
+            }
+        }
+
         @Override
         public void handleMessage(Message msg) {
             RecordThread recordThread = mRecordThreadWeakReference.get();
@@ -250,40 +281,54 @@ public class RecordThread {
                     RecordData recordData = (RecordData) msg.obj;
 
                     byte[] data = recordData.getData();
-                    if (data.length < 5) {
+                    int dataLen = data.length;
+                    if (dataLen < 5) {
                         return;
                     }
+                    int dataBegin = 0;
 
                     boolean video = recordData.isVideo();
                     int naluType = data[4] & 0x1F;
-
 //                    Log.e(TAG, "naluType = " + naluType);
 
-                    if (video && !mGetConf) {
-                        if (naluType == 7) {  // sps
-                            if (mSPS == null) {
-                                mSPS = new byte[data.length];
-                                System.arraycopy(data, 0, mSPS, 0, data.length);
-                            }
-                            mIFrame = null;
-                        } else if (naluType == 8) {  // pps
-                            if (mPPS == null) {
-                                mPPS = new byte[data.length];
-                                System.arraycopy(data, 0, mPPS, 0, data.length);
-                            }
-                            mIFrame = null;
-                        } else if (naluType == 5) {  // Iframe
-                            if (mIFrame == null) {
-                                mIFrame = new byte[data.length];
-                                System.arraycopy(data, 0, mIFrame, 0, data.length);
-                            }
-                        } else if (naluType == 1) {
-                            if (mIFrame != null) {
-                                mPFrame = new byte[data.length];
-                                System.arraycopy(data, 0, mPFrame, 0, data.length);
+                    // 在没有收到sps和pps时使用分帧功能
+                    if (video && naluType == 7) {  // 在sps的时候尝试分帧
+                        int trans = 0xFFFFFFFF;
+                        int begin = 0;
+                        int len;
+                        for (int i = 0; i < data.length; ++i) {
+                            byte temp = data[i];
+                            trans <<= 8;
+                            trans |= temp;
+                            if (trans == 1 && i > 3) {  // 起始字节0x00 0x00 0x00 0x01
+                                len = i - 3 - begin;
+                                // 发现一帧
+                                if (mGetConf) {
+                                    naluType = data[begin + 4] & 0x1F;
+                                    if (naluType == 5) {
+                                        break;
+                                    }
+                                } else {
+                                    initConfig(data, begin, len);
+                                }
+                                begin += len;
                             }
                         }
+                        // 结束了的话，就当作完整的一帧
+                        len = data.length - begin;
+                        naluType = data[begin + 4] & 0x1F;
 
+                        if (mGetConf) {
+                            if (naluType != 5) {  // 如果已经获取过配置，那么只留i帧
+                                return;
+                            }
+                        } else {
+                            initConfig(data, begin, len);
+                        }
+
+                        decodeConf();
+                    } else if (video && !mGetConf) {
+                        initConfig(data, dataBegin, dataLen);
                         decodeConf();
                     }
 
@@ -293,27 +338,34 @@ public class RecordThread {
                             if (!mWriteConf && mGetConf) {
                                 recordThread.mMp4Save.writeStart();
                                 recordThread.mMp4Save.writeConfiguretion(mWidth, mHeight,
-                                        mCross ? mFramerate * 2 : mFramerate, mSPS, 0, mSPS.length, mPPS, 0, mPPS.length);
+                                        mCross ? mFramerate * 2 : mFramerate, mSPS, 0, mSPS
+                                                .length, mPPS, 0, mPPS.length);
                                 mSPS = null;
                                 mPPS = null;
                                 mWriteConf = true;
                             }
 
                             if (mWriteConf && naluType != 7 && naluType != 8 && naluType != 6) {
+                                long pts = -1;
+                                if (recordData.getPTS() >= 0) {
+                                    pts = recordData.getPTS();
+                                } else if (recordData.getTimestamp() >= 0) {
+                                    pts = recordData.getTimestamp();
+                                }
                                 if (mFirstTimestamp == 0) {
                                     // 优先使用pts
-                                    if (recordData.getPTS() != 0) {
+                                    if (recordData.getPTS() >= 0) {
                                         mFirstTimestamp = mTimestamp = recordData.getPTS();
-                                    } else if (recordData.getTimestamp() > 0) {
+                                    } else if (recordData.getTimestamp() >= 0) {
                                         mFirstTimestamp = mTimestamp = recordData.getTimestamp()
                                                 * 1000L;
                                         mUsePTS = false;
                                     }
                                 } else {
                                     // 优先使用pts
-                                    if (mUsePTS && recordData.getPTS() != 0) {
+                                    if (mUsePTS && recordData.getPTS() >= 0) {
                                         mTimestamp = recordData.getPTS();
-                                    } else if (!mUsePTS && recordData.getTimestamp() > 0) {
+                                    } else if (!mUsePTS && recordData.getTimestamp() >= 0) {
                                         mTimestamp = recordData.getTimestamp() * 1000L;
 //                                        Log.e(TAG, "mTimestamp=" + mTimestamp);
                                     }
@@ -321,14 +373,18 @@ public class RecordThread {
 
                                 if (mFirst) { // 第一帧要保证是I帧
                                     if (naluType == 5) {
-                                        recordThread.mMp4Save.writeNalu(true, data, 0, data.length);
+                                        recordThread.mMp4Save.writeNalu(true, data, dataBegin,
+                                                dataLen, pts);
                                     } else if (mIFrame != null) {
-                                        recordThread.mMp4Save.writeNalu(true, mIFrame, 0, mIFrame.length);
-                                        recordThread.mMp4Save.writeNalu(false, data, 0, data.length);
+                                        recordThread.mMp4Save.writeNalu(true, mIFrame, 0, mIFrame
+                                                .length, pts);
+                                        recordThread.mMp4Save.writeNalu(false, data, dataBegin,
+                                                dataLen, pts);
                                     }
                                     mFirst = false;
                                 } else {
-                                    recordThread.mMp4Save.writeNalu(naluType == 5, data, 0, data.length);
+                                    recordThread.mMp4Save.writeNalu(naluType == 5, data,
+                                            dataBegin, dataLen, pts);
                                 }
                             }
                         } else {
@@ -337,8 +393,8 @@ public class RecordThread {
                                 if (mAudioDecodeBuffer == null) {
                                     mAudioDecodeBuffer = new byte[2048 * 2];
                                 }
-                                int decodeLen = Decoder.AACEncodePCM2AAC(mAACEncoder, data, data
-                                        .length, mAudioDecodeBuffer);
+                                int decodeLen = Decoder.AACEncodePCM2AAC(mAACEncoder, data,
+                                        dataLen, mAudioDecodeBuffer);
                                 if (!mFirst && mGetConf && decodeLen > 0) {  // 转aac成功
                                     recordThread.mMp4Save.writeAAC(mAudioDecodeBuffer, 0,
                                             decodeLen);
@@ -353,7 +409,7 @@ public class RecordThread {
                             mFirst = false;
                         }
                         if (video) {
-                            if (!mWriteConf && mGetConf) {
+                            if (!mWriteConf && mGetConf && mSPS != null && mPPS != null) {
                                 recordThread.mFlvSave.writeConfiguretion(mSPS, 0, mSPS.length, mPPS,
                                         0, mPPS.length);
                                 mSPS = null;
@@ -403,17 +459,24 @@ public class RecordThread {
 
         // 获取视频信息
         private void decodeConf() {
-            if (!mGetConf && mSPS != null && mPPS != null && mIFrame != null && mPFrame != null) {
+            if (!mGetConf && mSPS != null) {
                 FrameConfHolder frameConfHolder = new FrameConfHolder();
                 long decodeConfDecoderHandle = Decoder.DecoderInit(98);
-                Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mSPS, mSPS.length, null,
+                int ret = Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mSPS, mSPS.length, null,
                         frameConfHolder);
-                Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mPPS, mPPS.length, null,
-                        frameConfHolder);
-                int ret = Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mIFrame, mIFrame
-                        .length, null, frameConfHolder);
-                if (ret <= 0) {
-                    mCross = true;
+
+                if (ret < 0 && mPPS != null) {
+                    ret = Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mPPS, mPPS.length, null,
+                            frameConfHolder);
+                }
+
+                if (ret < 0 && mIFrame != null) {
+                    ret = Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mIFrame, mIFrame
+                            .length, null, frameConfHolder);
+                }
+
+                if (ret <= 0 && mPFrame != null) {
+                    mCross = false;  // 这里不能这么判断
                     ret = Decoder.DecodeNalu2RGB(decodeConfDecoderHandle, mPFrame, mPFrame
                             .length, null, frameConfHolder);
                 } else {

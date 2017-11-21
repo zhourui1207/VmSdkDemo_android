@@ -138,7 +138,7 @@ namespace Dream {
         auto packetPtrIt = _receivePackets.find(seqNumber);
         if (packetPtrIt != _receivePackets.end()) {
             packetPtrIt->second = packetPtr;
-            _receiveSeqNumber.store(packetPtr->seqNumber());
+            _receiveSeqNumber = packetPtr->seqNumber();
             _condition.notify_all();
         }
     }
@@ -163,10 +163,11 @@ namespace Dream {
                 std::make_pair(seqNumber, std::shared_ptr<MsgPacket>(nullptr)));
 
         bool sendSuccess = send(msgPacket); // 发送包
-        if (sendSuccess) {  // 如果发送成功，等待返回；若失败的话，则立刻返回
+        auto waitUntilTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(_timeout);
+        while (_running && sendSuccess &&
+               _receiveSeqNumber != seqNumber && std::chrono::steady_clock::now() < waitUntilTime) {  // 如果发送成功，等待返回；若失败的话，则立刻返回
             // 线程挂起
-            _condition.wait_for(lock, std::chrono::milliseconds(_timeout),
-                                [&]() -> bool { return _receiveSeqNumber.load() == seqNumber; });
+            _condition.wait_until(lock, waitUntilTime);
         }
 
         // 等到响应包或者超时或者发送失败
@@ -182,7 +183,7 @@ namespace Dream {
     }
 
     void UasClient::onConnect() {
-        printf("已连接，开启心跳定时器\n");
+        LOGW(TAG, "已连接，开启心跳定时器\n");
         if (_timerPtr.get() != nullptr) {
             _timerPtr->cancel();
         }
@@ -194,7 +195,7 @@ namespace Dream {
 
     void UasClient::onClose() {
         if (_timerPtr.get() != nullptr) {
-            printf("已断开，关闭心跳定时器\n");
+            LOGW(TAG, "已断开，关闭心跳定时器\n");
             _timerPtr->cancel();
             _timerPtr.reset();
         }

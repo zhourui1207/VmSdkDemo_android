@@ -48,7 +48,7 @@ namespace Dream {
             return HEADER_LENGTH;
         }
 
-        virtual int decode(char *pBuf, std::size_t len) override {
+        virtual int decode(const char *pBuf, std::size_t len) override {
             if (len < HEADER_LENGTH) {
                 return -1;
             }

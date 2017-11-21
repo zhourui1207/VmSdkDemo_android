@@ -32,7 +32,7 @@ namespace Dream {
         virtual int encode(char *pBuf, std::size_t len) = 0;
 
         // 将buff内容解析成包，返回已解析的长度
-        virtual int decode(char *pBuf, std::size_t len) = 0;
+        virtual int decode(const char *pBuf, std::size_t len) = 0;
     };
 
 } /* namespace Dream */

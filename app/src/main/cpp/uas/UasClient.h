@@ -109,14 +109,36 @@ namespace Dream {
         UasClient(ThreadPool &pool, const std::string &address, unsigned port,
                   uint64_t heartbeatInterval = HEARTBEAT_INTERVAL, uint64_t timeout =
         TIMEOUT_DEFULT) :
-                TcpClient<MsgPacket>(pool, address, port), _seqNumber(0), _monitorSessionId(
-                0), _receiveSeqNumber(0), _heartbeatInterval(heartbeatInterval), _timeout(
-                timeout), _alarmListener(nullptr) {
+                TcpClient<MsgPacket>(pool, address, port), _running(false), _seqNumber(0),
+                _monitorSessionId(0), _receiveSeqNumber(0), _heartbeatInterval(heartbeatInterval),
+                _timeout(timeout), _alarmListener(nullptr) {
 
         }
 
         virtual ~UasClient() {
             onClose();
+        }
+
+        // 启动
+        virtual bool startUp() override {
+            if (!_running) {
+                _running = true;
+                return TcpClient<MsgPacket>::startUp();
+            } else {
+                return false;
+            }
+        }
+
+        // 关闭
+        virtual void shutDown() override {
+            if (_running) {
+                {
+                    std::unique_lock<std::mutex> lock(_mutex);
+                    _running = false;
+                    _condition.notify_all();
+                }
+                TcpClient<MsgPacket>::shutDown();
+            }
         }
 
         // 子类用这个函数解析包,返回一个MsgPacket智能指针,不需要delete，底层会自动删除内存
@@ -203,14 +225,14 @@ namespace Dream {
 
         // 生成序列号
         unsigned generateSeqNumber() {
-            _seqNumber = (_seqNumber % 4294967295) + 1;
+            _seqNumber = (_seqNumber % UINT32_MAX) + 1;
             return _seqNumber;
         }
 
         // 生成预览sessionid
         unsigned generateMonitorSessionId() {
             std::lock_guard<std::mutex> lock(_mutex);
-            _monitorSessionId = (_monitorSessionId % 4294967295) + 1;
+            _monitorSessionId = (_monitorSessionId % UINT32_MAX) + 1;
             return _monitorSessionId;
         }
 
@@ -225,12 +247,14 @@ namespace Dream {
                                    std::shared_ptr<MsgPacket> &respPacket);
 
     private:
+        const char* TAG = "UasClient";
+        bool _running;
         // 序列号
         unsigned _seqNumber;
         // 预览sessionid
         unsigned _monitorSessionId;
         // 接收到的序列号
-        std::atomic<unsigned> _receiveSeqNumber;
+        unsigned _receiveSeqNumber;
         uint64_t _heartbeatInterval;
         uint64_t _timeout;
         std::mutex _mutex;

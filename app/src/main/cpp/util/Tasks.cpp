@@ -12,7 +12,7 @@ namespace Dream {
 
     Tasks::Tasks(int maxSize, int warSize)
             : _maxSize(maxSize), _warSize{(warSize > maxSize) ? maxSize : warSize}, _size(0) {
-        printf("_maxSize=%d, _warSize=%d\n", _maxSize, _warSize);
+//        printf("_maxSize=%d, _warSize=%d\n", _maxSize, _warSize);
     }
 
     bool Tasks::isEmpty() {

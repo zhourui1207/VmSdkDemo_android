@@ -5,6 +5,7 @@
 #include "../util/public/platform.h"
 #include "RtspTcpClient.h"
 #include "authTools.h"
+#include "../cipher/jw_cipher.h"
 
 #ifdef _ANDROID
 
@@ -13,16 +14,11 @@ extern JavaVM *g_pJavaVM;  // 定义外部变量，该变量在VmNet-lib.cpp中�
 
 namespace Dream {
 
-    RtspTcpClient::RtspTcpClient(const std::string &rtspUrl) : _currentMethodStatus(TEARDOWN),
-                                                               _cbConnectStatusListener(nullptr),
-                                                               _cbDataPacketCallback(nullptr),
-                                                               _channel(-1),
-                                                               _serverPort(0),
-                                                               _needAuthorized(false),
-                                                               _tryAuthorized(false), _cseq(0),
-                                                               _dataPacketCallback(nullptr),
-                                                               _receiveLen(0),
-                                                               _dataPacketLen(0), _pUser(nullptr) {
+    RtspTcpClient::RtspTcpClient(const std::string &rtspUrl, bool encrypt) :
+            _encrypt(encrypt), _currentMethodStatus(TEARDOWN), _cbConnectStatusListener(nullptr),
+            _cbDataPacketCallback(nullptr), _channel(-1), _serverPort(0), _needAuthorized(false),
+            _tryAuthorized(false), _cseq(0), _dataPacketCallback(nullptr), _receiveLen(0),
+            _dataPacketLen(0), _pUser(nullptr), _scale(1) {
         // 解析url
         if (!parseUrl(rtspUrl)) {
             LOGE(TAG, "url invalid： %s\n", rtspUrl.c_str());
@@ -65,6 +61,22 @@ namespace Dream {
                 _userName = userNameAndPassword.substr(0, (unsigned int) passwordPos);
                 _password = userNameAndPassword.substr((unsigned int) (passwordPos + 1),
                                                        std::string::npos);
+            }
+
+            std::string scale = "1.00";
+            int scalePos = _paramUrl.find("scale=");
+            if (scalePos != std::string::npos) {
+                scale = readValue(_paramUrl, (std::size_t) (scalePos + 6));
+            }
+            _scale = (float) atof(scale.c_str());
+
+            if (_encrypt) {
+                char tmpPwd[23] = {0};
+                size_t outlen = 22;
+                if (jw_cipher_cloud_pass(_password.c_str(), _password.length(),
+                                         tmpPwd, &outlen) == 1) {
+                    _password = std::string(tmpPwd);
+                }
             }
         }
 
@@ -405,10 +417,10 @@ namespace Dream {
                 // 计算出后面数据的长度
                 _channel = _tmpData[1] & 0x00ff;
 
-                _dataPacketLen = (size_t) ((((_tmpData[2] & 0x00ff) << 8) & 0x00ff00) |
-                                           (_tmpData[3] & 0x00ff));
+                _dataPacketLen = (std::size_t)((((_tmpData[2] & 0x00ff) << 8) & 0x00ff00) |
+                                          (_tmpData[3] & 0x00ff));
 
-//                LOGE(TAG, "_dataPacketLen=%d, i=%d\n", _dataPacketLen, i);
+//                LOGE(TAG, "_dataPacketLen=%d, i=%d, channel=%d\n", _dataPacketLen, i, _channel);
                 // 假如这个时候临时数据还有值，那么也清空掉
                 _receiveLen = 0;
                 begin = i + 1;  // 前面的数据就全部丢掉
@@ -416,6 +428,7 @@ namespace Dream {
                 // 判断后面的数据长度能不能达到包长
                 std::size_t remainLen = dataLen - begin;
                 if (remainLen <= 0) {  // 如果没有剩余了，那么就直接等待接受下一次数据
+//                    LOGE(TAG, "a\n");
                     return;
                 }
 
@@ -427,7 +440,7 @@ namespace Dream {
                     }
                     memcpy(_receiveData, pBuf + begin, remainLen);
                     _receiveLen = remainLen;
-
+//                    LOGE(TAG, "b\n");
                     return;
                 } else {  // 能达到包长的话，就直接回调上层
                     char dataPacket[_dataPacketLen];
@@ -473,6 +486,9 @@ namespace Dream {
                 _cbDataPacketCallback(pData, dataLen, _pUser);
             }
         }
+//        else {
+//            LOGW(TAG, "Unsupport channel[%d]\n", _channel);
+//        }
     }
 
     std::string RtspTcpClient::createCommonBuffer(const std::string &method, const std::string &uri,
@@ -494,6 +510,7 @@ namespace Dream {
                 tmpUrl = _baseUrl;
             }
 
+//            LOGE(TAG, "method[%s], username[%s], password[%s], realm[%s], nonce[%s], tmpUrl[%s]\n", method.c_str(), _userName.c_str(), _password.c_str(), _realm.c_str(), _nonce.c_str(), tmpUrl.c_str());
             ComputeResponse(HRes, method.c_str(), _userName.c_str(), _password.c_str(),
                             _realm.c_str(),
                             _nonce.c_str(), tmpUrl.c_str());
@@ -506,7 +523,11 @@ namespace Dream {
             _tryAuthorized = true;
         }
 
-        tmpBuffer += "User-Agent: LibVLC/2.2.4 (LIVE555 Streaming Media v2016.02.22)\r\n";
+        if (_encrypt) {
+            tmpBuffer += "User-Agent: joyware-cloud-client/1.0.0\r\n";
+        } else {
+            tmpBuffer += "User-Agent: LibVLC/2.2.4 (LIVE555 Streaming Media v2016.02.22)\r\n";
+        }
 
         if (_session.size() > 0) {
             tmpBuffer += "Session: ";
@@ -582,9 +603,10 @@ namespace Dream {
         int endTimePos = _paramUrl.find("endtime=");
         // 都有的话就是录像回放
         if (startTimePos != std::string::npos && endTimePos != std::string::npos) {
-            if (_currentMethodStatus != PAUSE && _currentMethodStatus != WAIT_PLAY) {  // 如果不是暂停状态, 需要解析starttime和endtime
-                std::string startTime = readValue(_paramUrl, (size_t) (startTimePos + 10));
-                std::string endTime = readValue(_paramUrl, (size_t) (endTimePos + 8));
+            if (_currentMethodStatus != PAUSE &&
+                _currentMethodStatus != WAIT_PLAY) {  // 如果不是暂停状态, 需要解析starttime和endtime
+                std::string startTime = readValue(_paramUrl, (std::size_t) (startTimePos + 10));
+                std::string endTime = readValue(_paramUrl, (std::size_t) (endTimePos + 8));
                 sBuffer += "Range:clock=";
                 sBuffer += startTime;
                 sBuffer += "-";
@@ -592,14 +614,15 @@ namespace Dream {
                 sBuffer += "\r\n";
             }
 
-            int scalePos = _paramUrl.find("scale=");
-            std::string scale = "1.00";
-            if (scalePos != std::string::npos) {
-                scale = readValue(_paramUrl, (size_t) (scalePos + 6));
-            }
+            std::string scaleStr = "1.00";
+
+            char scaleCh[20] = {0};
+            sprintf(scaleCh, "%.3f", _scale);
+            scaleStr = scaleCh;
+
             sBuffer += "Rate-Control:yes\r\n";
             sBuffer += "Scale:";
-            sBuffer += scale;
+            sBuffer += scaleStr;
             sBuffer += "\r\n";
         } else {
             sBuffer += "Range: npt=0.000-\r\n";

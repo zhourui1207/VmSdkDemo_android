@@ -54,7 +54,7 @@ VMNET_API void CALL_METHOD VmNet_UnInit() {
 }
 
 // 开启对讲
-VMNET_API bool CALL_METHOD VmNet_StartTalk(fStreamCallBackV3 streamCallback, void* pUser) {
+VMNET_API bool CALL_METHOD VmNet_StartTalk(fStreamCallBackV3 streamCallback, void *pUser) {
     LOGD("VMSDK", "VmNet_StartTalk\n");
     if (g_pMainModule != nullptr) {
         return g_pMainModule->startTalk(streamCallback, pUser);
@@ -367,69 +367,141 @@ VMNET_API unsigned CALL_METHOD VmNet_ControlPlayback(unsigned uMonitorId, unsign
 }
 
 VMNET_API unsigned CALL_METHOD VmNet_StartStream(const char *sAddr,
-                                                 unsigned uPort, fStreamCallBack cbRealData,
+                                                 unsigned short uPort, fStreamCallBack cbRealData,
                                                  fStreamConnectStatusCallBack cbConnectStatus,
-                                                 void *pUser,
-                                                 VMNET_OUT unsigned &uStreamId) {
-    LOGD("VMSDK", "VmNet_StartStream\n");
+                                                 void *pUser, VMNET_OUT unsigned &uStreamId,
+                                                 const char *sMonitorId, const char* sDeviceId,
+                                                 int playType, int clientType) {
     if (g_pMainModule == nullptr) {
         return ERR_CODE_SDK_UNINIT;
     }
-    return g_pMainModule->startStream(sAddr, uPort, cbRealData, cbConnectStatus,
-                                      pUser, uStreamId);
+    return g_pMainModule->startStream(sAddr == nullptr ? "" : sAddr, uPort, cbRealData,
+                                      cbConnectStatus, pUser, uStreamId,
+                                      sMonitorId == nullptr ? "" : sMonitorId, sDeviceId, playType,
+                                      clientType, true);
+}
+
+VMNET_API unsigned CALL_METHOD VmNet_StartStreamExt(const char *sAddr,
+                                                 unsigned short uPort, fStreamCallBackExt cbRealData,
+                                                 fStreamConnectStatusCallBack cbConnectStatus,
+                                                 void *pUser, VMNET_OUT unsigned &uStreamId,
+                                                 const char *sMonitorId, const char *sDeviceId,
+                                                 int playType, int clientType) {
+    if (g_pMainModule == nullptr) {
+        return ERR_CODE_SDK_UNINIT;
+    }
+    return g_pMainModule->startStream(sAddr == nullptr ? "" : sAddr, uPort, cbRealData,
+                                      cbConnectStatus, pUser, uStreamId,
+                                      sMonitorId == nullptr ? "" : sMonitorId, sDeviceId, playType,
+                                      clientType, true);
 }
 
 VMNET_API void CALL_METHOD VmNet_StopStream(unsigned uStreamId) {
-    LOGD("VMSDK", "VmNet_StopStream\n");
+    LOGI("VMSDK", "VmNet_StopStream(%d)\n", uStreamId);
     if (g_pMainModule == nullptr) {
         return;
     }
     g_pMainModule->stopStream(uStreamId);
 }
 
-VMNET_API bool CALL_METHOD
-VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbStreamData,
-                        fStreamConnectStatusCallBackV2 cbConnectStatus,
-                        void *pUser, VMNET_OUT long &rtspStreamHandle) {
-    LOGD("VMSDK", "VmNet_StartStreamByRtsp\n");
-    Dream::RtspTcpClient *pRtspTcpClient = new Dream::RtspTcpClient(rtspUrl);
-    pRtspTcpClient->setUser(pUser);
-    pRtspTcpClient->setStreamCallback(cbStreamData);
-    pRtspTcpClient->setConnectStatusListener(cbConnectStatus);
-    if (!pRtspTcpClient->startUp()) {
-        delete pRtspTcpClient;
-        return false;
+//VMNET_API bool CALL_METHOD
+//VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbStreamData,
+//                        fStreamConnectStatusCallBackV2 cbConnectStatus,
+//                        void *pUser, VMNET_OUT long &rtspStreamHandle, bool encrypt) {
+//    LOGD("VMSDK", "VmNet_StartStreamByRtsp\n");
+//    Dream::RtspTcpClient *pRtspTcpClient = new Dream::RtspTcpClient(rtspUrl, encrypt);
+//    pRtspTcpClient->setUser(pUser);
+//    pRtspTcpClient->setStreamCallback(cbStreamData);
+//    pRtspTcpClient->setConnectStatusListener(cbConnectStatus);
+//    if (!pRtspTcpClient->startUp()) {
+//        delete pRtspTcpClient;
+//        return false;
+//    }
+//    rtspStreamHandle = (long) pRtspTcpClient;
+//    return true;
+//}
+//
+//VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle) {
+//    LOGD("VMSDK", "VmNet_StopStreamByRtsp\n");
+//    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
+//    if (pRtspTcpClient == nullptr) {
+//        return;
+//    }
+//    pRtspTcpClient->shutdown();
+//    delete pRtspTcpClient;
+//}
+//
+//VMNET_API bool CALL_METHOD VmNet_PauseStreamByRtsp(long rtspStreamHandle) {
+//    LOGD("VMSDK", "VmNet_PauseStreamByRtsp\n");
+//    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
+//    if (pRtspTcpClient != nullptr) {
+//        return pRtspTcpClient->pause();
+//    }
+//    return false;
+//}
+//
+//VMNET_API bool CALL_METHOD VmNet_PlayStreamByRtsp(long rtspStreamHandle) {
+//    LOGD("VMSDK", "VmNet_PlayStreamByRtsp\n");
+//    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
+//    if (pRtspTcpClient != nullptr) {
+//        return pRtspTcpClient->play();
+//    }
+//    return false;
+//}
+
+VMNET_API unsigned CALL_METHOD
+VmNet_StartStreamByRtsp(const char *rtspUrl, fStreamCallBackV2 cbRealData,
+                        fStreamConnectStatusCallBackV2 cbStatus, void *pUser, VMNET_OUT
+                        unsigned &rtspStreamId, bool encrypt) {
+    LOGI("VMSDK", "VmNet_StartStreamByRtsp\n");
+
+    if (g_pMainModule == nullptr) {
+        return ERR_CODE_SDK_UNINIT;
     }
-    rtspStreamHandle = (long) pRtspTcpClient;
-    return true;
+    return g_pMainModule->startRtspStream(rtspUrl == nullptr ? "" : rtspUrl, cbRealData,
+                                          cbStatus, pUser, rtspStreamId, encrypt);
 }
 
-VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(long rtspStreamHandle) {
-    LOGD("VMSDK", "VmNet_StopStreamByRtsp\n");
-    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
-    if (pRtspTcpClient == nullptr) {
+VMNET_API void CALL_METHOD VmNet_StopStreamByRtsp(unsigned rtspStreamId) {
+    LOGI("VMSDK", "VmNet_StopStreamByRtsp(%d)\n", rtspStreamId);
+    if (g_pMainModule == nullptr) {
         return;
     }
-    pRtspTcpClient->shutdown();
-    delete pRtspTcpClient;
+    g_pMainModule->stopRtspStream(rtspStreamId);
 }
 
-VMNET_API bool CALL_METHOD VmNet_PauseStreamByRtsp(long rtspStreamHandle) {
-    LOGD("VMSDK", "VmNet_PauseStreamByRtsp\n");
-    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
-    if (pRtspTcpClient != nullptr) {
-        return pRtspTcpClient->pause();
+VMNET_API unsigned CALL_METHOD VmNet_PauseStreamByRtsp(unsigned rtspStreamId) {
+    LOGI("VMSDK", "VmNet_PauseStreamByRtsp(%d)\n", rtspStreamId);
+
+    if (g_pMainModule == nullptr) {
+        return ERR_CODE_SDK_UNINIT;
     }
-    return false;
+    return g_pMainModule->pauseRtspStream(rtspStreamId);
 }
 
-VMNET_API bool CALL_METHOD VmNet_PlayStreamByRtsp(long rtspStreamHandle) {
-    LOGD("VMSDK", "VmNet_PlayStreamByRtsp\n");
-    Dream::RtspTcpClient *pRtspTcpClient = (Dream::RtspTcpClient *) rtspStreamHandle;
-    if (pRtspTcpClient != nullptr) {
-        return pRtspTcpClient->play();
+VMNET_API unsigned CALL_METHOD VmNet_PlayStreamByRtsp(unsigned rtspStreamId) {
+    LOGI("VMSDK", "VmNet_PlayStreamByRtsp(%d)\n", rtspStreamId);
+
+    if (g_pMainModule == nullptr) {
+        return ERR_CODE_SDK_UNINIT;
     }
-    return false;
+    return g_pMainModule->playRtspStream(rtspStreamId);
+}
+
+VMNET_API unsigned CALL_METHOD VmNet_SpeedStreamByRtsp(unsigned rtspStreamId, float speed) {
+    LOGI("VMSDK", "VmNet_SpeedStreamByRtsp(%d, %f)\n", rtspStreamId, speed);
+
+    if (g_pMainModule == nullptr) {
+        return ERR_CODE_SDK_UNINIT;
+    }
+    return g_pMainModule->speedRtspStream(rtspStreamId, speed);
+}
+
+VMNET_API bool CALL_METHOD VmNet_StreamIsValid(unsigned streamId) {
+    if (g_pMainModule == nullptr) {
+        return false;
+    }
+    return g_pMainModule->streamIsValid(streamId);
 }
 
 VMNET_API void CALL_METHOD VmNet_SendControl(const char *sFdId, int nChannelId,
@@ -462,6 +534,37 @@ VMNET_API bool CALL_METHOD VmNet_FilterRtpHeader(const char *inData, int inLen,
             return true;
 //            }
 //            LOGE("!!", "payloadtype[%d]\n", pRtpPacket->m_nPayloadType);
+        }
+    }
+    delete pRtpPacket;
+    return false;
+}
+
+VMNET_API bool CALL_METHOD VmNet_FilterRtpHeader_EXT(const char *inData, int inLen,
+                                                     VMNET_OUT char *payloadData, VMNET_OUT
+                                                     int &payloadLen, VMNET_OUT
+                                                     int &payloadType, VMNET_OUT int &seqNumber,
+                                                     VMNET_OUT int &timestamp, VMNET_OUT
+                                                     bool &isMark, VMNET_OUT bool &isJWHeader,
+                                                     VMNET_OUT bool &isFirstFrame, VMNET_OUT
+                                                     bool &isLastFrame, VMNET_OUT
+                                                     uint64_t &utcTimeStamp) {
+    Dream::RtpPacket *pRtpPacket = new Dream::RtpPacket();
+    pRtpPacket->ForceFu();
+    if (pRtpPacket->Parse((char *) inData, inLen) == 0) {
+        if (payloadLen > pRtpPacket->m_nPayloadDataLen) {
+            memcpy(payloadData, pRtpPacket->m_pPayloadData, (size_t) pRtpPacket->m_nPayloadDataLen);
+            payloadLen = pRtpPacket->m_nPayloadDataLen;
+            payloadType = pRtpPacket->m_nPayloadType;
+            seqNumber = pRtpPacket->m_nSequenceNumber;
+            timestamp = pRtpPacket->m_nTimeStamp;
+            isMark = pRtpPacket->m_bMarker;
+            isJWHeader = pRtpPacket->m_bJWExtHeader;
+            isFirstFrame = pRtpPacket->m_isFirstFrame == 1;
+            isLastFrame = pRtpPacket->m_isLastFrame == 1;
+            utcTimeStamp = pRtpPacket->m_utcTimeStamp;
+            delete pRtpPacket;
+            return true;
         }
     }
     delete pRtpPacket;

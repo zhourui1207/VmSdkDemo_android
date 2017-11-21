@@ -23,7 +23,9 @@ import static com.joyware.vmsdk.VmType.PLAY_STATUS_PLAYING;
  * sdk解码接口，解码接口依赖通信接口
  */
 
-public class VmPlayer implements Decoder.OnESFrameDataCallback {
+public class VmPlayer implements Decoder.OnESFrameDataCallback, Decoder.OnPlayingListener {
+
+    private static final int PAYLOAD_TYPE_END = 120;  // 表示视频结束
 
     private final String TAG = "VmPlayer";
     private int currentStatus = VmType.PLAY_STATUS_NONE;
@@ -46,6 +48,7 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
     private int audioStreamId;
     private OpenStreamTask openStreamTask;
     private StartStreamTask startStreamTask;
+    private String mEncryptKey;
     private Decoder mDecoder;
     //    private Decoder audioDecoder;
     private String recordFile;
@@ -73,10 +76,27 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
      */
     private int currentTryReconnectCount = 0;
 
+    private long utcTimeStamp = 0L;
+
+    private OnUTCTimeStampChangedListener mOnUTCTimeStampChangedListener;
+
+    public void setOnUTCTimeStampChangedListener(OnUTCTimeStampChangedListener
+                                                         onUTCTimeStampChangedListener) {
+        mOnUTCTimeStampChangedListener = onUTCTimeStampChangedListener;
+    }
+
     // 应用启动时，加载VmPlayer动态库
     static {
         System.loadLibrary("JWEncdec");  // 某些设备型号必须要加上依赖的动态库
         System.loadLibrary("VmPlayer");
+    }
+
+    public VmPlayer() {
+
+    }
+
+    public VmPlayer(String encryptKey) {
+        mEncryptKey = encryptKey;
     }
 
     /**
@@ -113,6 +133,11 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 //                    + len);
             mRecordThread.write(video, timestamp, pts, data, start, len);
         }
+    }
+
+    @Override
+    public void onPlaying() {
+        setCurrentStatus(PLAY_STATUS_PLAYING);
     }
 
     /**
@@ -294,9 +319,17 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
      * @param openAudio  是否打开音频
      * @return true：开始执行播放任务；false：未执行播放任务（通常是正在播放录像原因）
      */
+    public boolean startRealplay(String videoAddr, int videoPort, String audioAddr,
+                                 int audioPort, int decodeType,
+                                 boolean openAudio) {
+        return startRealplay(videoAddr, videoPort, audioAddr, audioPort, decodeType, openAudio,
+                null, null, VmType.PLAY_TYPE_REALPLAY, VmType.CLIENT_TYPE_ANDROID);
+    }
+
     public synchronized boolean startRealplay(String videoAddr, int videoPort, String audioAddr,
                                               int audioPort, int decodeType,
-                                              boolean openAudio) {
+                                              boolean openAudio, String authKey, String deviceId,
+                                              int playType, int clientType) {
 //    if (playMode == VmType.PLAY_MODE_PLAYBACK) {
 //      return false;
 //    }
@@ -313,6 +346,10 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 
         PlayAddressHolder holder = new PlayAddressHolder();
         holder.init(0, videoAddr, videoPort, audioAddr, audioPort);
+        holder.setAuthKey(authKey);
+        holder.setDeviceId(deviceId);
+        holder.setPlayType(playType);
+        holder.setClientType(clientType);
         doStartStreamTask(holder);
 
         doStartCheckStream();
@@ -373,6 +410,14 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
     public synchronized boolean startPlayback(String videoAddr, int videoPort, String audioAddr,
                                               int audioPort, int decodeType,
                                               boolean openAudio) {
+        return startPlayback(videoAddr, videoPort, audioAddr, audioPort, decodeType, openAudio,
+                null, null, VmType.PLAY_TYPE_PLAYBACK, VmType.CLIENT_TYPE_ANDROID);
+    }
+
+    public synchronized boolean startPlayback(String videoAddr, int videoPort, String audioAddr,
+                                              int audioPort, int decodeType,
+                                              boolean openAudio, String authKey, String deviceId,
+                                              int playType, int clientType) {
 //    if (playMode == VmType.PLAY_MODE_REALPLAY) {
 //      return false;
 //    }
@@ -389,6 +434,10 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 
         PlayAddressHolder holder = new PlayAddressHolder();
         holder.init(0, videoAddr, videoPort, audioAddr, audioPort);
+        holder.setAuthKey(authKey);
+        holder.setDeviceId(deviceId);
+        holder.setPlayType(playType);
+        holder.setClientType(clientType);
         doStartStreamTask(holder);
 
         doStartCheckStream();
@@ -703,8 +752,10 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
             PlayAddressHolder holder = playAddressHolders[0];
 
             StreamIdHolder videoStreamIdHolder = new StreamIdHolder();
+
             mErrorCode = VmNet.startStream(holder.getVideoAddr(), holder.getVideoPort(), new
-                    VideoStreamCallbackI(), videoStreamIdHolder);
+                    VideoStreamCallbackI(), holder.getAuthKey(), holder.getDeviceId(), holder
+                    .getPlayType(), holder.getClientType(), videoStreamIdHolder);
             Log.w(TAG, "startStream mErrorCode=" + mErrorCode);
 
             if (mErrorCode == ErrorCode.ERR_CODE_OK) {
@@ -721,7 +772,8 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
                 StreamIdHolder audioStreamIdHolder = new StreamIdHolder();
                 // 若音频取流失败，则不做任何处理 todo:现在的音频类型是有问题的，因为音频的头居然使用的是视频的头
                 int ret = VmNet.startStream(holder.getAudioAddr(), holder.getAudioPort(), new
-                        AudioStreamCallbackI(), audioStreamIdHolder);
+                        AudioStreamCallbackI(), holder.getAuthKey(), holder.getDeviceId(), holder
+                        .getPlayType(), holder.getClientType(), audioStreamIdHolder);
 
                 if (ret == ErrorCode.ERR_CODE_OK) {
                     mAudioStreamId = audioStreamIdHolder.getStreamId();
@@ -742,9 +794,10 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
                 // 视频开始解码
                 if (mDecoder == null) {
                     mDecoder = new Decoder(decodeType, true, openAudio, playMode == VmType
-                            .PLAY_MODE_REALPLAY);
+                            .PLAY_MODE_REALPLAY, mEncryptKey, videoStreamId, mOnUTCTimeStampChangedListener);
+                    mDecoder.setOnPlayingListener(VmPlayer.this);
                     mDecoder.setOnESFrameDataCallback(VmPlayer.this);
-                    mDecoder.setSeepScale(mSpeedScale);
+                    mDecoder.setSpeedScale(mSpeedScale);
                     mDecoder.setOnYUVFrameDataCallback(new Decoder.OnYUVFrameDataCallback() {
                         @Override
                         public void onFrameData(int width, int height, byte[] yData, int yStart,
@@ -789,7 +842,7 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 
     public void setSpeedScale(float speedScale) {
         if (mDecoder != null) {
-            mDecoder.setSeepScale(speedScale);
+            mDecoder.setSpeedScale(speedScale);
         }
         mSpeedScale = speedScale;
     }
@@ -798,7 +851,7 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
         return mSpeedScale;
     }
 
-    private class VideoStreamCallbackI implements VmNet.StreamCallback {
+    private class VideoStreamCallbackI implements VmNet.StreamCallbackExt {
         private boolean isFirst = true;
         private long receiveCount = 0;
         private int seqNumber = 0;
@@ -812,7 +865,9 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 
         @Override
         public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer,
-                                    int timeStamp, int seqNumber, boolean isMark) {
+                                    int timeStamp, int seqNumber, boolean isMark, boolean
+                                            isJWHeader, boolean isFirstFrame, boolean
+                                            isLastFrame, long utcTimeStamp) {
             lastReceiveStreamTime = System.currentTimeMillis();
             currentTryReconnectCount = 0;
 
@@ -831,23 +886,25 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 //                return;
 //            }
 
-//      Log.e(TAG, "!!");
+//            Log.e(TAG, "addBuffer isJWHeader:" + isJWHeader + ", isFirstFrame:" + isFirstFrame + ", " +
+//                    "isLastFrame:" + isLastFrame + ", utcTimeStamp:" + utcTimeStamp);
 //            Log.e(TAG, "len=" + buffer.length + ", seqNumber=" + seqNumber +", isMark=" +
-// isMark + ", playloadType=" + payloadType);
+// isMark + ", playloadType=" + payloadType + "， timeStamp=" + timeStamp + ", naluType=" +
+// (buffer[4] & 0x1F));
             if (mDecoder != null) {
                 mDecoder.addBuffer(streamId, streamType, payloadType, buffer, 0, buffer.length,
-                        timeStamp, seqNumber, isMark);
+                        timeStamp, seqNumber, isMark, isJWHeader, utcTimeStamp);
             }
 
             if (isFirst && currentStatus == VmType.PLAY_STATUS_WAITSTREAMING) {  // I帧,sps,或pps
                 // 这里需要使用主线程回调状态为PLAYING
-                setCurrentStatus(VmType.PLAY_STATUS_PLAYING);
+                setCurrentStatus(VmType.PLAY_STATUS_DECODING);
                 isFirst = false;
             }
         }
     }
 
-    private class AudioStreamCallbackI implements VmNet.StreamCallback {
+    private class AudioStreamCallbackI implements VmNet.StreamCallbackExt {
 
         @Override
         public void onStreamConnectStatus(int streamId, boolean isConnected) {
@@ -858,31 +915,37 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
 
         @Override
         public void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer,
-                                    int timeStamp, int seqNumber, boolean isMark) {
+                                    int timeStamp, int seqNumber, boolean isMark, boolean
+                                            isJWHeader, boolean isFirstFrame, boolean
+                                            isLastFrame, long utcTimeStamp) {
 
 //            if (audioDecoder != null) {
 //                audioDecoder.addBuffer(new StreamData(streamId, VmType.STREAM_TYPE_AUDIO,
 //                        payloadType, buffer, 0, buffer.length, timeStamp, seqNumber, isMark));
 //            }
+//            Log.e(TAG, "len=" + buffer.length + ", seqNumber=" + seqNumber +", isMark=" +
+//    isMark + ", playloadType=" + payloadType);
             if (mDecoder != null) {
                 mDecoder.addBuffer(streamId, VmType.STREAM_TYPE_AUDIO, payloadType, buffer, 0,
-                        buffer.length, timeStamp,
-                        seqNumber, isMark);
+                        buffer.length, timeStamp, seqNumber, isMark, isJWHeader, utcTimeStamp);
             }
         }
     }
 
     public void inputData(int streamType, byte[] buffer, int bufferStart, int bufferLen, int
-            playloadType, int timeStamp, int seqNumber, boolean mark) {
+            playloadType, int timeStamp, int seqNumber, boolean mark, boolean isJWHeader, boolean
+                                  isFirstFrame, boolean isLastFrame, long utcTimeStamp, int
+            streamId) {
         lastReceiveStreamTime = System.currentTimeMillis();
         currentTryReconnectCount = 0;
 
         // 视频开始解码
         if (mDecoder == null) {
             mDecoder = new Decoder(decodeType, true, openAudio, playMode == VmType
-                    .PLAY_MODE_REALPLAY);
+                    .PLAY_MODE_REALPLAY, mEncryptKey, streamId, mOnUTCTimeStampChangedListener);
+            mDecoder.setOnPlayingListener(VmPlayer.this);
             mDecoder.setOnESFrameDataCallback(VmPlayer.this);
-            mDecoder.setSeepScale(mSpeedScale);
+            mDecoder.setSpeedScale(mSpeedScale);
             mDecoder.setOnYUVFrameDataCallback(new Decoder.OnYUVFrameDataCallback() {
                 @Override
                 public void onFrameData(int width, int height, byte[] yData, int yStart,
@@ -899,9 +962,9 @@ public class VmPlayer implements Decoder.OnESFrameDataCallback {
         }
         if (mDecoder != null) {
             mDecoder.addBuffer(0, streamType, playloadType, buffer, bufferStart, bufferLen,
-                    timeStamp, seqNumber, mark);
+                    timeStamp, seqNumber, mark, isJWHeader, utcTimeStamp);
             if (currentStatus != VmType.PLAY_STATUS_PLAYING) {
-                setCurrentStatus(VmType.PLAY_STATUS_PLAYING);
+                setCurrentStatus(VmType.PLAY_STATUS_DECODING);
             }
         }
     }

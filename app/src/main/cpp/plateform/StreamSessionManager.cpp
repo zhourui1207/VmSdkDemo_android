@@ -16,19 +16,47 @@ extern JavaVM *g_pJavaVM;  // 定义外部变量，该变量在VmNet-lib.cpp中�
 namespace Dream {
 
     StreamSession::StreamSession(unsigned streamId, const std::string &addr,
-                                 unsigned port, fStreamCallBack streamCallback,
+                                 unsigned short port, fStreamCallBack streamCallback,
                                  fStreamConnectStatusCallBack streamConnectStatusCallback,
-                                 void *user, bool rtp) : _streamId(streamId),
-                                                         _streamClient(addr, port,
-                                                                       std::bind(
-                                                                               &StreamSession::onStream,
-                                                                               this,
-                                                                               std::placeholders::_1)),
-                                                         _streamCallback(
-                                                                 streamCallback),
-                                                         _streamConnectStatusCallback(
-                                                                 streamConnectStatusCallback),
-                                                         _user(user), _rtp(rtp) {
+                                 void *user, const std::string &monitorId,
+                                 const std::string &deviceId,
+                                 int playType, int clientType, bool rtp) : _streamId(streamId),
+                                                                           _streamClient(addr, port,
+                                                                                         std::bind(
+                                                                                                 &StreamSession::onStream,
+                                                                                                 this,
+                                                                                                 std::placeholders::_1),
+                                                                                         monitorId,
+                                                                                         deviceId,
+                                                                                         playType,
+                                                                                         clientType),
+                                                                           _streamCallback(
+                                                                                   streamCallback),
+                                                                           _streamCallbackExt(
+                                                                                   nullptr),
+                                                                           _streamConnectStatusCallback(
+                                                                                   streamConnectStatusCallback),
+                                                                           _user(user), _rtp(rtp) {
+        _streamClient.setConnectStatusListener(
+                std::bind(&StreamSession::onConnectStatus, this, std::placeholders::_1));
+    }
+
+    StreamSession::StreamSession(unsigned streamId, const std::string &addr, unsigned short port,
+                                 fStreamCallBackExt streamCallback,
+                                 fStreamConnectStatusCallBack streamConnectStatusCallback,
+                                 void *user,
+                                 const std::string &monitorId, const std::string &deviceId,
+                                 int playType, int clientType, bool rtp)
+            : _streamId(streamId),
+              _streamClient(addr, port,
+                            std::bind(&StreamSession::onStream,
+                                      this, std::placeholders::_1), monitorId, deviceId, playType,
+                            clientType),
+              _streamCallback(nullptr),
+              _streamCallbackExt(streamCallback),
+              _streamConnectStatusCallback(
+                      streamConnectStatusCallback),
+              _user(user), _rtp(rtp) {
         _streamClient.setConnectStatusListener(
                 std::bind(&StreamSession::onConnectStatus, this, std::placeholders::_1));
     }
@@ -68,6 +96,7 @@ namespace Dream {
 
     void StreamSession::onStream(const std::shared_ptr<StreamData> &streamDataPtr) {
         if (_streamCallback) {
+//            LOGE("StreamSessionManager", "_streamCallback \n");
             // 去掉rtp头后再回调
             if (_rtp) {
                 auto rtpPacketPtr = std::unique_ptr<RtpPacket>(new RtpPacket);
@@ -82,8 +111,34 @@ namespace Dream {
                     LOGE("StreamSessionManager", "rtp 解析失败\n");
                 }
             } else {
-                _streamCallback(_streamId, 0, 0, streamDataPtr->data(), streamDataPtr->length(), 0, 0,
-                                0, _user);
+                _streamCallback(_streamId, 0, 0, streamDataPtr->data(), streamDataPtr->length(), 0,
+                                0, 0, _user);
+            }
+        }
+
+        if (_streamCallbackExt) {
+//            LOGE("StreamSessionManager", "_streamCallbackExt\n");
+            // 去掉rtp头后再回调
+            if (_rtp) {
+                auto rtpPacketPtr = std::unique_ptr<RtpPacket>(new RtpPacket);
+                if (rtpPacketPtr->Parse(streamDataPtr->data(), streamDataPtr->length()) == 0) {
+                    // PS流交给上层应用处理
+                    _streamCallbackExt(_streamId, streamDataPtr->streamType(),
+                                       rtpPacketPtr->GetPayloadType(),
+                                       rtpPacketPtr->GetPayloadData(),
+                                       rtpPacketPtr->GetPayloadLength(),
+                                       rtpPacketPtr->GetTimestamp(),
+                                       rtpPacketPtr->GetSequenceNumber(), rtpPacketPtr->HasMarker(),
+                                       rtpPacketPtr->m_bJWExtHeader,
+                                       rtpPacketPtr->m_isFirstFrame == 1,
+                                       rtpPacketPtr->m_isLastFrame == 1,
+                                       rtpPacketPtr->m_utcTimeStamp, _user);
+                } else {
+                    LOGE("StreamSessionManager", "rtp 解析失败\n");
+                }
+            } else {
+                _streamCallbackExt(_streamId, 0, 0, streamDataPtr->data(), streamDataPtr->length(),
+                                   0, 0, 0, false, false, false, 0, _user);
             }
         }
     }
@@ -106,10 +161,14 @@ namespace Dream {
     }
 
     bool StreamSessionManager::addStreamClient(const std::string &addr,
-                                               unsigned port, fStreamCallBack streamCallback,
+                                               unsigned short port, fStreamCallBack streamCallback,
                                                fStreamConnectStatusCallBack streamConnectStatusCallback,
-                                               void *pUser, unsigned &streamId, bool rtp) {
+                                               void *pUser, unsigned &streamId,
+                                               const std::string &monitorId,
+                                               const std::string &deviceId,
+                                               int playType, int clientType, bool rtp) {
         std::lock_guard<std::mutex> lock(_mutex);
+
         if (!getStreamId(streamId)) {  // 连接数到上限
             return false;
         }
@@ -117,7 +176,9 @@ namespace Dream {
         auto streamSessionPtr = std::make_shared<StreamSession>(streamId, addr, port,
                                                                 streamCallback,
                                                                 streamConnectStatusCallback, pUser,
-                                                                rtp);
+                                                                monitorId, deviceId, playType,
+                                                                clientType, rtp);
+
         if (!streamSessionPtr->startUp()) {
             recoveryStreamId(streamId);
             return false;
@@ -126,7 +187,34 @@ namespace Dream {
         return true;
     }
 
-// 移除码流客户端
+    bool StreamSessionManager::addStreamClient(const std::string &addr, unsigned short port,
+                                               fStreamCallBackExt streamCallback,
+                                               fStreamConnectStatusCallBack streamConnectStatusCallback,
+                                               void *pUser,
+                                               unsigned &streamId, const std::string &monitorId,
+                                               const std::string &deviceId,
+                                               int playType, int clientType, bool rtp) {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        if (!getStreamId(streamId)) {  // 连接数到上限
+            return false;
+        }
+
+        auto streamSessionPtr = std::make_shared<StreamSession>(streamId, addr, port,
+                                                                streamCallback,
+                                                                streamConnectStatusCallback, pUser,
+                                                                monitorId, deviceId, playType,
+                                                                clientType, rtp);
+
+        if (!streamSessionPtr->startUp()) {
+            recoveryStreamId(streamId);
+            return false;
+        }
+        _sessionMap.insert(std::make_pair(streamId, streamSessionPtr));
+        return true;
+    }
+
+    // 移除码流客户端
     void StreamSessionManager::removeStreamClient(unsigned streamId) {
         std::lock_guard<std::mutex> lock(_mutex);
         auto streamSessionPtrIt = _sessionMap.find(streamId);
@@ -135,6 +223,72 @@ namespace Dream {
             _sessionMap.erase(streamSessionPtrIt);
             recoveryStreamId(streamId);
         }
+    }
+
+    bool StreamSessionManager::addRTSPStreamClient(const std::string &url,
+                                                   fStreamCallBackV2 streamCallback,
+                                                   fStreamConnectStatusCallBackV2 streamConnectStatusCallback,
+                                                   void *pUser, unsigned &streamId, bool encrypt) {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        if (!getStreamId(streamId)) {  // 连接数到上限
+            return false;
+        }
+
+        auto rtspStreamSessionPtr = std::make_shared<RtspTcpClient>(url, encrypt);
+
+        if (!rtspStreamSessionPtr->startUp()) {
+            recoveryStreamId(streamId);
+            return false;
+        }
+        rtspStreamSessionPtr->setStreamCallback(streamCallback);
+        rtspStreamSessionPtr->setConnectStatusListener(streamConnectStatusCallback);
+        rtspStreamSessionPtr->setUser(pUser);
+        _rtspSessionMap.insert(std::make_pair(streamId, rtspStreamSessionPtr));
+        return true;
+    }
+
+    void StreamSessionManager::removeRTSPStreamClient(unsigned streamId) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto rtspStreamSessionPtrIt = _rtspSessionMap.find(streamId);
+        if (rtspStreamSessionPtrIt != _rtspSessionMap.end()) {
+            rtspStreamSessionPtrIt->second->shutdown();
+            _rtspSessionMap.erase(rtspStreamSessionPtrIt);
+            recoveryStreamId(streamId);
+        }
+    }
+
+    bool StreamSessionManager::pauseRTSPStream(unsigned streamId) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto rtspStreamSessionPtrIt = _rtspSessionMap.find(streamId);
+        if (rtspStreamSessionPtrIt != _rtspSessionMap.end()) {
+            rtspStreamSessionPtrIt->second->pause();
+            return true;
+        }
+        return false;
+    }
+
+    bool StreamSessionManager::playRTSPStream(unsigned streamId, float scale) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto rtspStreamSessionPtrIt = _rtspSessionMap.find(streamId);
+        if (rtspStreamSessionPtrIt != _rtspSessionMap.end()) {
+            rtspStreamSessionPtrIt->second->play(scale);
+            return true;
+        }
+        return false;
+    }
+
+    bool StreamSessionManager::streamIsValid(unsigned int streamId) {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        auto streamSessionPtrIt = _sessionMap.find(streamId);
+        if (streamSessionPtrIt != _sessionMap.end()) {
+            return true;
+        }
+
+        auto rtspStreamSessionPtrIt = _rtspSessionMap.find(streamId);
+        return rtspStreamSessionPtrIt != _rtspSessionMap.end();
+
     }
 
 // 清除所有码流连接
@@ -146,6 +300,13 @@ namespace Dream {
             streamSessionPtrIt->second->shutDown();
         }
         _sessionMap.clear();
+
+        for (auto rtspStreamSessionPtrIt = _rtspSessionMap.begin();
+             rtspStreamSessionPtrIt != _rtspSessionMap.end(); ++rtspStreamSessionPtrIt) {
+            rtspStreamSessionPtrIt->second->shutdown();
+        }
+        _rtspSessionMap.clear();
+
         _streamId = 0;
         _recoveryStreamIds.clear();
     }

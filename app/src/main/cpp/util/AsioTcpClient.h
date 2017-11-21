@@ -39,15 +39,15 @@ namespace Dream {
     private:
         static const bool RECEIVE_MODE = true;  // 默认为自由接收模式
         static const unsigned RECONNECT_INTERVAL = 10000;  // 默认重连时间间隔
-        static const unsigned DEFAULT_READ_SIZE = 50 * 1024;  // 接收时的默认缓存大小
-        static const unsigned DEFAULT_WRITE_SIZE = 50 * 1024;  // 发送时的默认缓存大小
+        static const unsigned DEFAULT_READ_SIZE = 10 * 1024;  // 接收时的默认缓存大小
+        static const unsigned DEFAULT_WRITE_SIZE = 10 * 1024;  // 发送时的默认缓存大小
 
     public:
         AsioTcpClient() = delete;
 
         AsioTcpClient(
                 std::function<void(const char *pBuf, std::size_t len)> callback,
-                const std::string &address, unsigned port,
+                const std::string &address, unsigned short port,
                 unsigned receiveSize = DEFAULT_READ_SIZE, unsigned sendSize =
         DEFAULT_WRITE_SIZE, unsigned reconnectInterval = RECONNECT_INTERVAL);
 
@@ -96,6 +96,14 @@ namespace Dream {
 
         bool sendSync(const char* buf, std::size_t len);
 
+        const std::string remoteAddress() const {
+            return _address;
+        }
+
+        unsigned short remotePort() const {
+            return _port;
+        }
+
         const std::string localAddress() const {
             if (_socketPtr.get() == nullptr) {
                 return "";
@@ -108,6 +116,10 @@ namespace Dream {
                 return 0;
             }
             return _socketPtr->local_endpoint().port();
+        }
+
+        void reconnect() {
+            doReconnect();
         }
 
     private:
@@ -145,7 +157,7 @@ namespace Dream {
         // 如果设置过readlengthcallback，那么接收到的包将会，严格按照上层希望读取的长度来读取数据
         std::function<void(const char *pBuf, std::size_t len)> _callback;
         std::string _address;  // 服务端地址
-        unsigned _port;  // 服务端端口
+        unsigned short _port;  // 服务端端口
 
         std::function<unsigned()> _readLengthCallback;  // 如果是按协议接收模式，在每次读取数据之前，将调用此函数获取需要读取多少长度的数据
 

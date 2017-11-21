@@ -3,8 +3,26 @@
 //
 
 #include "ReceiveLossList.h"
+#include "../util/public/platform.h"
 
 namespace Dream {
+
+    bool ReceiveLossList::serchNakTimeoutSeqNumber(std::vector<int32_t> &seqNumberList, uint64_t feedbackTime, int32_t ttsUs) {
+        if (!_lossList.empty()) {
+            uint64_t currentTime = getCurrentTimeStampMicro();
+            auto lossIt = _lossList.begin();
+            for (; lossIt != _lossList.end(); ++lossIt) {
+                auto lossPacket = *lossIt;
+                if (lossPacket->latestFeedbackTime() + lossPacket->k() * ttsUs < currentTime) {
+                    seqNumberList.push_back(lossPacket->seqNumber());
+                    lossPacket->updateLatestFeedbackTime(feedbackTime);
+                    lossPacket->setK(lossPacket->k() + 1);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
 
     void ReceiveLossList::addLossPacket(int32_t seqNumber, uint64_t feedbackTime, int32_t left, int32_t right) {
         bool exist = false;
@@ -36,7 +54,7 @@ namespace Dream {
 
         if (exist) {  // 存在的话，更新反馈时间，反馈次数+1
             (*insertPositionIt)->updateLatestFeedbackTime(feedbackTime);
-            (*insertPositionIt)->setFeedbackNumber((*insertPositionIt)->feedbackNumber() + 1);
+            (*insertPositionIt)->setK((*insertPositionIt)->k() + 1);
         } else { // 如果不存在，那么插入列表
             _lossList.insert(insertPositionIt, std::make_shared<LossInfo>(seqNumber, feedbackTime));
         }
@@ -51,5 +69,17 @@ namespace Dream {
             }
         }
         return false;
+    }
+
+    int32_t ReceiveLossList::getFirstSeqNumber() const {
+        if (!_lossList.empty()) {
+            auto insertPositionIt = _lossList.begin();
+            return (*insertPositionIt)->seqNumber();
+        }
+        return -1;
+    }
+
+    bool ReceiveLossList::empty() const {
+        return _lossList.empty();
     }
 }

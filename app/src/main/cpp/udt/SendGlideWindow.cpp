@@ -76,32 +76,49 @@ namespace Dream {
         return packetPtr;
     }
 
+    // 移除左边界一直到seqNumber的包
     bool SendGlideWindow::ackPacket(int32_t seqNumber) {
         std::unique_lock<std::mutex> lock(_mutex);
 
         // 移除包在滑动窗口范围内
-        if ((_left >= 0 && _right >= 0) &&
-            ((_right > _left) && (seqNumber > _left) && (seqNumber <= _right)) ||
+        if (((_left >= 0 && _right >= 0) &&
+             ((_right > _left) && (seqNumber > _left) && (seqNumber <= _right))) ||
             ((_right < _left) && (seqNumber > _left || seqNumber <= _right))) {
 
-            // 从窗口中移除
+            size_t packetListOldSize = _packetList.size();
+            // 先看seqnumber是否存在
+            // 从窗口中移除该seqnumber
             auto packetIt = _packetList.begin();
             for (; packetIt != _packetList.end(); ++packetIt) {
                 if (seqNumber == (*packetIt)->seqNumber()) {
-                    _packetList.erase(packetIt);
+                    packetIt = _packetList.erase(packetIt);
                     break;
                 }
             }
+            
+            // 还有别的数据，并且前面还有数据，那么就将前面的数据全部删除
+            if (packetIt != _packetList.begin() && _packetList.size() > 0) {
+                for (; packetIt != _packetList.begin();) {
+                    packetIt = _packetList.erase(--packetIt);
+                }
+            }
+            
+            size_t packetListNewSize = _packetList.size();
 
             // 当前被移除的序列号等于左边界+1
-            if (continuousSeqNumber(_left, seqNumber)) {
-                // 如果窗口中还存在未确认包，那么左边界等于第一个未确认包序列号-1
-                if (_packetList.size() > 0) {
-                    _left = decreaseSeqNumber((*(_packetList.begin()))->seqNumber());
-                } else {
-                    _left = _right;  // 全部被确认
-                }
-            }  // 不连续于左边界的话，就不移动边界
+//            if (continuousSeqNumber(_left, seqNumber)) {
+//                // 如果窗口中还存在未确认包，那么左边界等于第一个未确认包序列号-1
+//                if (_packetList.size() > 0) {
+//                    _left = decreaseSeqNumber((*(_packetList.begin()))->seqNumber());
+//                } else {
+//                    _left = _right;  // 全部被确认
+//                }
+//                LOGD("!!", "_left = %d\n", _left);
+//            }  // 不连续于左边界的话，就不移动边界
+
+            int oldLeft = _left;
+            _left = seqNumber;
+//            LOGD(TAG, "Send glide windows'left from [%d] move to [%d], size from [%d] to [%d]\n", oldLeft, _left, packetListOldSize, packetListNewSize);
 
             return true;
         } else {
@@ -115,16 +132,23 @@ namespace Dream {
         sendLossList.addLossList(seqNumber, _left, _right);
     }
 
+    void SendGlideWindow::removeLossPacket(SendLossList& sendLossList) {
+        std::unique_lock<std::mutex> lock(_mutex);
+
+        sendLossList.removePacketBeforeSeqNumber(_left);
+    }
+
+    // 将已发送过的包，放入丢失列表中
     bool SendGlideWindow::checkExpAndLossNothing(SendLossList& sendLossList) {
         std::unique_lock<std::mutex> lock(_mutex);
 
         if (!_packetList.empty()) {
             // 倒序检查提高性能
-            auto packetIt = --(_packetList.end());
-            for (; packetIt != _packetList.begin(); --packetIt) {
-                sendLossList.addLossList((*packetIt)->seqNumber(), _left, _right);
+            auto packetIt = _packetList.end();
+            for (; packetIt != _packetList.begin(); ) {
+                sendLossList.addLossList((*(--packetIt))->seqNumber(), _left, _right);
             }
-            sendLossList.addLossList((*packetIt)->seqNumber(), _left, _right);
+//            sendLossList.addLossList((*packetIt)->seqNumber(), _left, _right);
         }
 
         return sendLossList.empty();

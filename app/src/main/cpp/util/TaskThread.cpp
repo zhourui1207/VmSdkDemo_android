@@ -79,14 +79,13 @@ namespace Dream {
         JNIEnv *pJniEnv = nullptr;
         if (g_pJavaVM) {
             if (g_pJavaVM->AttachCurrentThread(&pJniEnv, nullptr) == JNI_OK) {
-                __android_log_print(ANDROID_LOG_WARN, "TaskThread", "绑定android线程成功pJniEnv[%zd]！",
-                                    pJniEnv);
+                LOGW("TaskThread", "Attach android thread success! pJniEnv[%zd]\n", pJniEnv);
             } else {
-                __android_log_print(ANDROID_LOG_ERROR, "TaskThread", "绑定android线程失败！");
+                LOGE("TaskThread", "Attach android thread failed！\n");
                 return;
             }
         } else {
-            __android_log_print(ANDROID_LOG_ERROR, "TaskThread", "pJavaVm 为空！");
+            LOGE("TaskThread", "pJavaVm is NULL！\n");
         }
 #endif
         while (_running) {
@@ -156,7 +155,7 @@ namespace Dream {
         JNIEnv *pJniEnv = reinterpret_cast<JNIEnv *>(point);
         // 解绑android线程
         if (g_pJavaVM && pJniEnv) {
-            LOGW("TaskThread", "解绑android线程[%zd]！\n", pJniEnv);
+            LOGW("TaskThread", "Detach android thread [%zd]！\n", pJniEnv);
             g_pJavaVM->DetachCurrentThread();
         }
 #endif

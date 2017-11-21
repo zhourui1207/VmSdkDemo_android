@@ -268,7 +268,24 @@ public class VmNet {
     public static int startStream(String address, int port, StreamCallback streamCallback,
                                   StreamIdHolder streamIdHolder) {
 //    Log.e("VmNet", "startStream()");
-        return StartStream(address, port, streamCallback, streamIdHolder);
+        return StartStream(address, port, streamCallback, "", "", VmType.PLAY_TYPE_REALPLAY,
+                VmType.CLIENT_TYPE_ANDROID, streamIdHolder);
+    }
+
+    public static int startStream(String address, int port, StreamCallback streamCallback,
+                                  String monitorId, String deviceId, int playType,
+                                  int clientType, StreamIdHolder streamIdHolder) {
+//    Log.e("VmNet", "startStream()");
+        return StartStream(address, port, streamCallback, monitorId, deviceId, playType, clientType,
+                streamIdHolder);
+    }
+
+    public static int startStream(String address, int port, StreamCallbackExt streamCallback,
+                                  String monitorId, String deviceId, int playType,
+                                  int clientType, StreamIdHolder streamIdHolder) {
+//    Log.e("VmNet", "startStream()");
+        return StartStream(address, port, streamCallback, monitorId, deviceId, playType, clientType,
+                streamIdHolder);
     }
 
     /**
@@ -281,20 +298,25 @@ public class VmNet {
         StopStream(streamId);
     }
 
-    public static long startStreamByRtsp(String url, StreamCallbackV2 streamCallbackV2) {
-        return StartStreamByRtsp(url, streamCallbackV2);
+    public static int startStreamByRtsp(String url, boolean encrypt, StreamCallbackV2
+            streamCallbackV2) {
+        return StartStreamByRtsp(url, encrypt, streamCallbackV2);
     }
 
-    public static void stopStreamByRtsp(long rtspStreamId) {
+    public static void stopStreamByRtsp(int rtspStreamId) {
         StopStreamByRtsp(rtspStreamId);
     }
 
-    public static boolean pauseStreamByRtsp(long rtspStreamid) {
+    public static boolean pauseStreamByRtsp(int rtspStreamid) {
         return PauseStreamByRtsp(rtspStreamid);
     }
 
-    public static boolean playStreamByRtsp(long rtspStreamId) {
+    public static boolean playStreamByRtsp(int rtspStreamId) {
         return PlayStreamByRtsp(rtspStreamId);
+    }
+
+    public static boolean speedStreamByRtsp(int rtspStreamId, float speed) {
+        return SpeedStreamByRtsp(rtspStreamId, speed);
     }
 
     /**
@@ -314,6 +336,11 @@ public class VmNet {
     public static boolean filterRtpHeader(byte[] inBuf, int inStart, int inLen, byte[]
             outBuf, int outStart, int outLen, RtpInfoHolder rtpInfoHolder) {
         return FilterRtpHeader(inBuf, inStart, inLen, outBuf, outStart, outLen, rtpInfoHolder);
+    }
+
+    public static boolean filterRtpHeaderExt(byte[] inBuf, int inStart, int inLen, byte[]
+            outBuf, int outStart, int outLen, RtpInfoHolder rtpInfoHolder) {
+        return FilterRtpHeaderExt(inBuf, inStart, inLen, outBuf, outStart, outLen, rtpInfoHolder);
     }
 
     // jni层函数---------------------------------------------------------------------------------------
@@ -360,17 +387,27 @@ public class VmNet {
                                               String action, String param);
 
     private static native int StartStream(String address, int port, StreamCallback streamCallback,
-                                          StreamIdHolder streamIdHolder);
+                                          String monitorId, String deviceId, int playType,
+                                          int clientType, StreamIdHolder streamIdHolder);
+
+    private static native int StartStream(String address, int port, StreamCallbackExt
+            streamCallback, String monitorId, String deviceId, int playType,
+                                             int clientType, StreamIdHolder streamIdHolder);
 
     private static native void StopStream(int streamId);
 
-    private static native long StartStreamByRtsp(String rtspUrl, StreamCallbackV2 streamCallback);
+    //    private static native int StartStreamByRtsp(String rtspUrl, StreamCallbackV2
+    // streamCallback);
+    private static native int StartStreamByRtsp(String rtspUrl, boolean encrypt, StreamCallbackV2
+            streamCallback);
 
-    private static native void StopStreamByRtsp(long rtspStreamId);
+    private static native void StopStreamByRtsp(int rtspStreamId);
 
-    private static native boolean PauseStreamByRtsp(long rtspStreamId);
+    private static native boolean PauseStreamByRtsp(int rtspStreamId);
 
-    private static native boolean PlayStreamByRtsp(long rtspStreamId);
+    private static native boolean PlayStreamByRtsp(int rtspStreamId);
+
+    private static native boolean SpeedStreamByRtsp(int rtspStreamId, float speed);
 
     private static native void SendControl(String fdId, int channelId, int controlType, int param1,
                                            int param2);
@@ -392,6 +429,19 @@ public class VmNet {
     private static native boolean FilterRtpHeader(byte[] inBuf, int inStart, int inLen, byte[]
             outBuf, int outStart, int outLen, RtpInfoHolder rtpInfoHolder);
 
+    private static native boolean FilterRtpHeaderExt(byte[] inBuf, int inStart, int inLen, byte[]
+            outBuf, int outStart, int outLen, RtpInfoHolder rtpInfoHolder);
+
+    public static native long JWCipherCreate(byte[] key, int keyLen);
+
+    public static native void JWCipherRelease(long cipherCtx);
+
+    public static native void JWCipherDecryptH264(long cipherCtx, int streamId, byte[] h264data,
+                                                  int dataBegin, int dataLen);
+
+    public static native int JWCipherDecrypt(long cipherCtx, byte[] in, int inBegin, int inLen,
+                                             byte[] out, int outBegin, int outLen);
+
     // 回调函数分界线---------------------------------------------------------------------------------------
     private static void onServerConnectStatus(boolean isConnected) {
         if (mServerStatusCallback != null) {
@@ -401,17 +451,31 @@ public class VmNet {
 
     private static void onStreamConnectStatus(int streamId, boolean isConnected, Object object) {
         if (object != null) {
-            StreamCallback streamCallback = (StreamCallback) object;
-            streamCallback.onStreamConnectStatus(streamId, isConnected);
+            if (object instanceof StreamCallback) {
+                StreamCallback streamCallback = (StreamCallback) object;
+                streamCallback.onStreamConnectStatus(streamId, isConnected);
+            } else if (object instanceof StreamCallbackExt) {
+                StreamCallbackExt streamCallback = (StreamCallbackExt) object;
+                streamCallback.onStreamConnectStatus(streamId, isConnected);
+            }
         }
     }
 
     private static void onStream(int streamId, int streamType, int payloadType, byte[] buffer, int
-            len, int timeStamp, int seqNumber, boolean isMark, Object object) {
+            len, int timeStamp, int seqNumber, boolean isMark, boolean isJWHeader, boolean
+                                         isFirstFrame, boolean isLastFrame, long utcTimeStamp,
+                                 Object object) {
         if (object != null) {
-            StreamCallback streamCallback = (StreamCallback) object;
-            streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,
-                    timeStamp, seqNumber, isMark);
+            if (object instanceof StreamCallback) {
+                StreamCallback streamCallback = (StreamCallback) object;
+                streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,
+                        timeStamp, seqNumber, isMark);
+            } else if (object instanceof StreamCallbackExt) {
+                StreamCallbackExt streamCallback = (StreamCallbackExt) object;
+                streamCallback.onReceiveStream(streamId, streamType, payloadType, buffer,
+                        timeStamp, seqNumber, isMark, isJWHeader, isFirstFrame, isLastFrame,
+                        utcTimeStamp);
+            }
         }
     }
 
@@ -429,7 +493,8 @@ public class VmNet {
         }
     }
 
-    private static void onStreamV3(String remoteAddr, int remotePort, byte[] buffer, int len, Object object) {
+    private static void onStreamV3(String remoteAddr, int remotePort, byte[] buffer, int len,
+                                   Object object) {
         if (object != null) {
             StreamCallbackV3 streamCallback = (StreamCallbackV3) object;
             streamCallback.onReceiveStream(remoteAddr, remotePort, buffer, len);
@@ -460,6 +525,16 @@ public class VmNet {
         // 接收到码流
         void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer,
                              int timeStamp, int seqNumber, boolean isMark);
+    }
+
+    public interface StreamCallbackExt {
+        // 连接状态
+        void onStreamConnectStatus(int streamId, boolean isConnected);
+
+        // 接收到码流
+        void onReceiveStream(int streamId, int streamType, int payloadType, byte[] buffer,
+                             int timeStamp, int seqNumber, boolean isMark, boolean isJWHeader,
+                             boolean isFirstFrame, boolean isLastFrame, long utcTimeStamp);
     }
 
     /**

@@ -12,13 +12,15 @@
 
 #include <cstring>
 #include <string>
+#include "Object.h"
 
 namespace Dream {
 
 // todo 看情况需要改成使用内存池提高性能
-    class UdpData {
+    class UdpData : public Object {
     private:
         static const std::size_t UDP_DATA_DEFAULT_SIZE = 65507;
+        const char* TAG = "UdpData";
 
     public:
         UdpData() = delete;
@@ -28,7 +30,7 @@ namespace Dream {
                 : _remote_address(remote_address), _remote_port(remote_port), _length(length) {
             // printf("PacketData 构造\n");
             if (length > UDP_DATA_DEFAULT_SIZE) {  // 超出最大值
-                printf("传入长度[%zd]超出允许的最大值[%zd]\n", length, UDP_DATA_DEFAULT_SIZE);
+                LOGE(TAG, "传入长度[%zd]超出允许的最大值[%zd]\n", length, UDP_DATA_DEFAULT_SIZE);
                 throw std::bad_alloc();
             }
 //    memset(_data, 0, PACKET_DATA_DEFAULT_SIZE);
