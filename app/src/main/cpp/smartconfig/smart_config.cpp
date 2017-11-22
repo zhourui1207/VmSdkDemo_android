@@ -7,8 +7,9 @@
 
 Dream::WifiConfig *g_pWifiConfig = nullptr;
 
-bool config(const char *wifiSsid, const char *wifiPwd, int64_t packetIntervalMillis,
-            int64_t waitIntervalMillis, int32_t encryType, int32_t keyIndex, int32_t wepPwdLen) {
+bool JWSmart_config(const char *wifiSsid, const char *wifiPwd, int64_t packetIntervalMillis,
+                    int64_t waitIntervalMillis, int32_t encryType, int32_t keyIndex,
+                    int32_t wepPwdLen) {
     if (!g_pWifiConfig) {
         g_pWifiConfig = new Dream::WifiConfig();
     }
@@ -19,7 +20,7 @@ bool config(const char *wifiSsid, const char *wifiPwd, int64_t packetIntervalMil
     return false;
 }
 
-void stop() {
+void JWSmart_stop() {
     if (g_pWifiConfig) {
         g_pWifiConfig->stop();
     }

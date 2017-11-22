@@ -43,11 +43,11 @@ typedef enum {
 } WEP_ENC_TYPE_E;
 
 
-bool config(const char *wifiSsid, const char *wifiPwd, int64_t packetIntervalMillis = 0,
-           int64_t waitIntervalMillis = 100, int32_t encryType = ENCRY_WPA_TKIP,
-           int32_t keyIndex = WEP_KEY_INDEX_0, int32_t wepPwdLen = WEP_PWD_LEN_64);
+bool JWSmart_config(const char *wifiSsid, const char *wifiPwd, int64_t packetIntervalMillis = 0,
+                    int64_t waitIntervalMillis = 100, int32_t encryType = ENCRY_WPA_TKIP,
+                    int32_t keyIndex = WEP_KEY_INDEX_0, int32_t wepPwdLen = WEP_PWD_LEN_64);
 
-void stop();
+void JWSmart_stop();
 
 #ifdef __cplusplus
 }

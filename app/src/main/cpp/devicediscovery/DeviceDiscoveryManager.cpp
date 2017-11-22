@@ -51,7 +51,7 @@ namespace Dream {
 
     }
 
-    bool DeviceDiscoveryManager::start(fDeviceFindCallBack deviceFindCallBack) {
+    bool DeviceDiscoveryManager::start(fJWDeviceFindCallBack deviceFindCallBack) {
         std::lock_guard<std::mutex> lock(_mutex);
         if (_handlerThreadUp.get()) {
             LOGE(TAG, "Already starting!\n");
@@ -83,7 +83,7 @@ namespace Dream {
     void DeviceDiscoveryManager::stop() {
         std::lock_guard<std::mutex> lock(_mutex);
         if (_handlerThreadUp.get()) {
-            LOGD(TAG, "Send packet stop!\n");
+            LOGD(TAG, "Send packet JWDeviceDiscovery_stop!\n");
             _handlerThreadUp->quit();
             _handlerThreadUp.reset();
         }
@@ -116,7 +116,7 @@ namespace Dream {
                                              unsigned short remote_port, const char *pBuf,
                                              std::size_t len) {
         if (len < ObcpPacket::HEADER_HENGHT + 156) {  // 兼容老版本
-            LOGE(TAG, "The packet's length is too small, len [%d]", len);
+            LOGE(TAG, "The packet's length is too small, len [%d]\n", len);
             return;
         }
 //        LOGW(TAG, "Receive data, len = [%d], [%s]\n", len, getHexString(pBuf, 0, len).c_str());

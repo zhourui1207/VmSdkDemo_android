@@ -48,7 +48,7 @@ namespace Dream {
 
         virtual ~DeviceDiscoveryManager();
 
-        bool start(fDeviceFindCallBack deviceFindCallBack);
+        bool start(fJWDeviceFindCallBack deviceFindCallBack);
 
         void stop();
 
@@ -72,7 +72,7 @@ namespace Dream {
         std::unique_ptr<HandlerThread> _handlerThreadUp;
         HandlerPtr _handlerSp;
         int32_t _intervalSec;  // 请求发送间隔
-        fDeviceFindCallBack _deviceFindCallBack;  // 设备被找到回调
+        fJWDeviceFindCallBack _deviceFindCallBack;  // 设备被找到回调
         std::unique_ptr<AsioUdpServer> _udpServerUp;
         std::set<std::string> _foundDeviceSet;  // 已发现的设备集合
         uint32_t _sendCount;

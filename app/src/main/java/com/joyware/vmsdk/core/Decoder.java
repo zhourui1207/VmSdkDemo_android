@@ -62,7 +62,7 @@ public class Decoder {
     private final int DATA_TYPE_VIDEO_SPS = 1;   // sps数据
     private final int DATA_TYPE_VIDEO_PPS = 2;  // pps数据
     private final int DATA_TYPE_VIDEO_IFRAME = 3;  // I帧数据
-    private final int DATA_TYPE_VIDEO_IFRAME_EXT = 4;  // I帧补全数据数据
+    private final int DATA_TYPE_VIDEO_FRAME_EXT = 4;  // I帧补全数据数据
     private final int DATA_TYPE_VIDEO_PFRAME = 5;  // P帧数据
     private final int DATA_TYPE_VIDEO_OTHER = 6;  // 其他数据
 
@@ -314,11 +314,11 @@ public class Decoder {
 //        try {
 //            if (handleFrameThread == null) {
 //                handleFrameThread = new HandleFrameThread();
-//                handleFrameThread.start();
+//                handleFrameThread.JWDeviceDiscovery_start();
 //            }
 //            if (recordThread == null) {
 //                recordThread = new RecordThread(fileName);
-//                recordThread.start();
+//                recordThread.JWDeviceDiscovery_start();
 //            }
 //        } catch (Exception e) {
 //            return false;
@@ -389,14 +389,15 @@ public class Decoder {
         private boolean haveAudio = false;
         int missPacket = -1;
 
-        byte[] tmpIframeBuf = null;
-        int tmpIframeBegin;
-        int tmpIframeLen;
-        int tmpIframePayloadType;
-        int tmpIframeTimeStamp;
-        long tmpIframePts;
-        boolean tmpIframeHaveJWHeader;
-        long tmpIframeUTCTimeStamp;
+        int tmpDataType;
+        byte[] tmpFrameBuf = null;
+        int tmpFrameBegin;
+        int tmpFrameLen;
+        int tmpFramePayloadType;
+        int tmpFrameTimeStamp;
+        long tmpFramePts;
+        boolean tmpFrameHaveJWHeader;
+        long tmpFrameUTCTimeStamp;
 
         //        int timestampOld;
         private BlockingBuffer streamBuffer = new BlockingBuffer(BlockingBuffer
@@ -546,20 +547,20 @@ public class Decoder {
                                                                         // 这边有一个特别的地方就是i帧如果长度超过
                                                                         // 了一定长度会被截成两端00 00 01
                                                                         // e0，这种情况下，需要把后一段补到前面的i帧后面
-//                                                                        Log.e(TAG, "onESData " +
-//                                                                                "video=" +
-//                                                                                video + ", pts=" +
-//                                                                                pts + ", len=" +
-//                                                                                outLen +
-//                                                                                ", data=" +
-//                                                                                StringUtil
-//                                                                                        .byte2hex
-//
-//                                                                                                (outData,
-//
-//                                                                                                        outStart,
-//
-//                                                                                                        Math.min(outLen, 100)));
+                                                                        Log.e(TAG, "onESData " +
+                                                                                "video=" +
+                                                                                video + ", pts=" +
+                                                                                pts + ", len=" +
+                                                                                outLen +
+                                                                                ", data=" +
+                                                                                StringUtil
+                                                                                        .byte2hex
+
+                                                                                                (outData,
+
+                                                                                                        outStart,
+
+                                                                                                        Math.min(outLen, 100)));
                                                                         if (video) {
                                                                             if (isFirst[0] &&
                                                                                     outLen <= 5) {
@@ -585,7 +586,7 @@ public class Decoder {
                                                                                 if (outLen <= 5
                                                                                         || ((outData[outStart] != 0) && (outData[outStart + 1] != 0) && (outData[outStart + 2] != 0) && (outData[outStart + 3] != 1))) {
                                                                                     dataType[0] =
-                                                                                            DATA_TYPE_VIDEO_IFRAME_EXT;
+                                                                                            DATA_TYPE_VIDEO_FRAME_EXT;
                                                                                 } else if (
                                                                                         (outData[outStart + 4]
                                                                                                 &
@@ -606,23 +607,6 @@ public class Decoder {
                                                                                     // I帧
                                                                                     dataType[0] =
                                                                                             DATA_TYPE_VIDEO_IFRAME;
-                                                                                    // i帧的话，前保存起来，等待他后面的数据
-                                                                                    tmpIframeBuf
-                                                                                            =
-                                                                                            outData;
-                                                                                    tmpIframeBegin = outStart;
-                                                                                    tmpIframeLen
-                                                                                            =
-                                                                                            outLen;
-                                                                                    tmpIframePayloadType = payloadTypeOld;
-                                                                                    tmpIframeTimeStamp = finalTimeStamp;
-                                                                                    tmpIframePts
-                                                                                            = pts;
-                                                                                    tmpIframeHaveJWHeader = haveJWHeader;
-                                                                                    tmpIframeUTCTimeStamp = finalUTCTimeStamp;
-//                                                                                    Log.e(TAG,
-// "c tmpIframeBuf=" + tmpIframeBuf);
-                                                                                    return;
                                                                                 } else if (
                                                                                         (outData[outStart + 4] &
                                                                                                 0x1F) == 6) {
@@ -637,28 +621,41 @@ public class Decoder {
                                                                                     // 分隔符，没作用
                                                                                 } else {
                                                                                     // 否则都当做P帧
-                                                                                    dataType[0] =
-                                                                                            DATA_TYPE_VIDEO_PFRAME;
+                                                                                    dataType[0] = DATA_TYPE_VIDEO_PFRAME;
                                                                                 }
 
-                                                                                if (tmpIframeBuf
-                                                                                        != null) {
-                                                                                    if (dataType[0] == DATA_TYPE_VIDEO_IFRAME_EXT) {
-                                                                                        byte[] totalIframeBuf = new byte[tmpIframeLen + outLen];
-                                                                                        System.arraycopy(tmpIframeBuf, tmpIframeBegin, totalIframeBuf, 0, tmpIframeLen);
-                                                                                        System.arraycopy(outData, outStart, totalIframeBuf, tmpIframeLen, outLen);
+                                                                                if (dataType[0] != DATA_TYPE_VIDEO_FRAME_EXT && tmpFrameBuf != null) {
+                                                                                    sendData(tmpDataType, tmpFramePayloadType, tmpFrameTimeStamp, tmpFramePts, tmpFrameBuf, tmpFrameBegin, tmpFrameLen, tmpFrameHaveJWHeader, tmpFrameUTCTimeStamp);
+                                                                                    tmpFrameBuf = null;
+                                                                                }
 
-//                                                                                        Log.e
-// (TAG, "a");
-                                                                                        sendData(DATA_TYPE_VIDEO_IFRAME, tmpIframePayloadType, tmpIframeTimeStamp, tmpIframePts, totalIframeBuf, 0, totalIframeBuf.length, tmpIframeHaveJWHeader, tmpIframeUTCTimeStamp);
-                                                                                        send = false;
-                                                                                    } else {
-//                                                                                        Log.e
-// (TAG, "b");
-                                                                                        sendData(DATA_TYPE_VIDEO_IFRAME, tmpIframePayloadType, tmpIframeTimeStamp, tmpIframePts, tmpIframeBuf, tmpIframeBegin, tmpIframeLen, tmpIframeHaveJWHeader, tmpIframeUTCTimeStamp);
+                                                                                if (dataType[0] == DATA_TYPE_VIDEO_IFRAME || dataType[0] == DATA_TYPE_VIDEO_PFRAME) {
+                                                                                    // i帧或p帧的话，前保存起来，等待他后面的数据
+                                                                                    tmpDataType = dataType[0];
+                                                                                    tmpFrameBuf
+                                                                                            =
+                                                                                            outData;
+                                                                                    tmpFrameBegin = outStart;
+                                                                                    tmpFrameLen = outLen;
+                                                                                    tmpFramePayloadType = payloadTypeOld;
+                                                                                    tmpFrameTimeStamp = finalTimeStamp;
+                                                                                    tmpFramePts
+                                                                                            = pts;
+                                                                                    tmpFrameHaveJWHeader = haveJWHeader;
+                                                                                    tmpFrameUTCTimeStamp = finalUTCTimeStamp;
+//                                                                                    Log.e(TAG,
+// "c tmpFrameBuf=" + tmpFrameBuf);
+                                                                                    send = false;
+                                                                                } else if (dataType[0] == DATA_TYPE_VIDEO_FRAME_EXT) {
+                                                                                    if (tmpFrameBuf != null) {
+                                                                                        byte[] totalIframeBuf = new byte[tmpFrameLen + outLen];
+                                                                                        System.arraycopy(tmpFrameBuf, tmpFrameBegin, totalIframeBuf, 0, tmpFrameLen);
+                                                                                        System.arraycopy(outData, outStart, totalIframeBuf, tmpFrameLen, outLen);
+                                                                                        tmpFrameBuf = totalIframeBuf;
+                                                                                        tmpFrameBegin = 0;
+                                                                                        tmpFrameLen = totalIframeBuf.length;
                                                                                     }
-                                                                                    tmpIframeBuf
-                                                                                            = null;
+                                                                                    send = false;
                                                                                 }
 
                                                                                 if (send) {
@@ -671,145 +668,6 @@ public class Decoder {
                                                                                             outLen, haveJWHeader, finalUTCTimeStamp);
                                                                                 }
                                                                             }
-
-//                                                                            streamBufUsed = 0;
-//
-//                                                                            while (outLen -
-//                                                                                    streamBufUsed
-//                                                                                    > 0) {
-//                                                                                // 分帧
-//                                                                                int nalLen =
-//
-// mergeBuffer
-//                                                                                        (videoBuf,
-//
-// videoBufUsed,
-//
-// outData,
-//
-// outStart +
-//
-//         streamBufUsed,
-//
-// outLen -
-//
-//         streamBufUsed);
-//                                                                                videoBufUsed +=
-//                                                                                        nalLen;
-//                                                                                streamBufUsed +=
-//                                                                                        nalLen;
-//
-//                                                                                // 分出完整帧
-//                                                                                if (trans == 1) {
-////                                                        Log.e(TAG, "完整帧");
-//                                                                                    //
-// 第一帧的数据可能只会有部分内容，通常将它抛弃比较合理
-//                                                                                    if
-// (isFirst[0] &&
-//
-// (videoBuf[4]
-//
-//     &
-//
-//     0x1F) !=
-//
-//     0x07) {
-//                                                                                        //
-//                                                                                        //
-// 一开始如果不是I帧，就全部丢弃，加快显示速度，还能不用看到绿屏
-//                                                                                        //
-// 发送完之后再重置视频缓存
-//
-// resetVideoBuffer
-//
-// (finalPayloadType,
-//
-//         finalTimeStamp);
-//                                                                                    } else {
-//
-// isFirst[0] = false;
-//                                                                                        boolean
-// send = true;
-//                                                                                        if (
-// (videoBuf[4]
-//                                                                                                &
-//
-// 0x1F)
-//
-// == 0x07) {
-//                                                                                            // sps
-//
-// dataType[0] =
-//
-//     DATA_TYPE_VIDEO_SPS;
-//                                                                                        } else
-// if (
-//
-// (videoBuf[4] &
-//
-//         0x1F) ==
-//
-//         0x08) {
-//                                                                                            // pps
-//
-// dataType[0] =
-//
-//     DATA_TYPE_VIDEO_PPS;
-//                                                                                        } else
-// if (
-//
-// (videoBuf[4] &
-//
-//         0x1F) ==
-//
-//         0x05) {
-//                                                                                            // I帧
-//
-// dataType[0] =
-//
-//     DATA_TYPE_VIDEO_IFRAME;
-//                                                                                        } else
-// if (
-//
-// (videoBuf[4] &
-//
-//         0x1F) ==
-//
-//         0x06) {
-//
-// dataType[0] =
-//
-//     DATA_TYPE_VIDEO_OTHER;
-//                                                                                        } else {
-//                                                                                            //
-// 否则都当做P帧
-//
-// dataType[0] =
-//
-//     DATA_TYPE_VIDEO_PFRAME;
-//                                                                                        }
-//                                                                                        if
-// (send) {
-//
-// sendData(dataType[0],
-//
-//     payloadTypeOld,
-//
-//     finalTimeStamp,
-//
-//     pts,
-//
-//     videoBuf,
-//
-//     0,
-//
-//     videoBufUsed
-//
-//             - 4, haveJWHeader, finalUTCTimeStamp);
-//                                                                                        }
-//                                                                                    }
-//                                                                                }
-//                                                                            }
                                                                         } else {
                                                                             haveAudio = true;
                                                                             if (!isFirst[0]) {  //
@@ -855,7 +713,7 @@ public class Decoder {
                                                                 });
                                         if (tryPsCount[0] >= 0 && !tmpIsPs) {
                                             ++tryPsCount[0];
-                                            if (tryPsCount[0] >= 15) {  // 失败10次
+                                            if (tryPsCount[0] >= 100) {  // 失败10次
                                                 isPs = false;
                                                 Log.w(TAG, "The stream is not ps!");
                                             }
@@ -1109,7 +967,7 @@ public class Decoder {
                 if (SockBuf[SockBufUsed] == 0x00 && SockBuf[SockBufUsed + 1] == 0x00 &&
                         SockBuf[SockBufUsed + 2] == 0x00 && SockBuf[SockBufUsed + 3] == 0x01) {
                     //System.arraycopy(SockBuf, SockBufUsed, NalBuf, NalBufUsed, 4);
-                    //Log.e(TAG, "start");
+                    //Log.e(TAG, "JWDeviceDiscovery_start");
                     i = 4;
                     trans = header;
                 } else {
@@ -1710,7 +1568,7 @@ public class Decoder {
                             tmpIFrameBuffer = new byte[data.length];
                             System.arraycopy(data, 0, tmpIFrameBuffer, 0, data.length);
                             Log.w(TAG, "receive I frame, len=" + data.length);
-                        } else if (dataType == DATA_TYPE_VIDEO_IFRAME_EXT && tmpIFrameBuffer !=
+                        } else if (dataType == DATA_TYPE_VIDEO_FRAME_EXT && tmpIFrameBuffer !=
                                 null) {
                             byte[] totalIFrame = new byte[tmpIFrameBuffer.length + data.length];
                             System.arraycopy(tmpIFrameBuffer, 0, totalIFrame, 0, tmpIFrameBuffer

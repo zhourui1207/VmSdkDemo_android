@@ -107,7 +107,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         LOGE(TAG, "Can't new global JWDeviceInfo class\n");
         return -1;
     }
-    //g_devceInfoConstructorMethodId是JWDeviceInfo的构造方法（方法名用”<init>”）的jmethodID:
+    //g_devceInfoConstructorMethodId是JWDeviceInfo的构造方法（方法名用”<JWDeviceDiscovery_init>”）的jmethodID:
     g_devceInfoConstructorMethodId = env->GetMethodID(g_deviceInfoClass,
                                                       DEVICE_INFO_METHOD_NAME_CONSTRUCTOR,
                                                       DEVICE_INFO_METHOD_SIG_CONSTRUCTOR);
@@ -117,7 +117,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         return -1;
     }
 
-    init();
+    JWDeviceDiscovery_init();
 
     /* success -- return valid version number */
     result = JNI_VERSION_1_6;
@@ -138,7 +138,7 @@ Java_com_joyware_vmsdk_DeviceDiscovery_start(JNIEnv *env, jclass type, jobject d
     }
     env->DeleteLocalRef(deviceFindCallBackCls);
 
-    bool ret = start(onDeviceFindCallBack);
+    bool ret = JWDeviceDiscovery_start(onDeviceFindCallBack);
     if (ret) {
         if (g_deviceFindCallBack) {
             env->DeleteGlobalRef(g_deviceFindCallBack);
@@ -151,7 +151,7 @@ Java_com_joyware_vmsdk_DeviceDiscovery_start(JNIEnv *env, jclass type, jobject d
 
 void
 Java_com_joyware_vmsdk_DeviceDiscovery_stop(JNIEnv *env, jclass type) {
-    stop();
+    JWDeviceDiscovery_stop();
     if (g_deviceFindCallBack) {
         env->DeleteGlobalRef(g_deviceFindCallBack);
         g_deviceFindCallBack = nullptr;
@@ -160,13 +160,13 @@ Java_com_joyware_vmsdk_DeviceDiscovery_stop(JNIEnv *env, jclass type) {
 
 void
 Java_com_joyware_vmsdk_DeviceDiscovery_clearup(JNIEnv *env, jclass type) {
-    clearup();
+    JWDeviceDiscovery_clearup();
 }
 
 void
 Java_com_joyware_vmsdk_DeviceDiscovery_setAutoRequestInterval(JNIEnv *env, jclass type,
                                                               jint intervalSec) {
-    setAutoRequestInterval(intervalSec);
+    JWDeviceDiscovery_setAutoRequestInterval(intervalSec);
 }
 
 } // extern "C"

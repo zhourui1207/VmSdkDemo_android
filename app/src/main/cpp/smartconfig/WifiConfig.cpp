@@ -141,7 +141,7 @@ namespace Dream {
     }
 
     void WifiConfig::run() {
-        LOGW(TAG, "Send smart config packet begin!\n");
+        LOGW(TAG, "Send smart JWSmart_config packet begin!\n");
 
         char sendBuf[BUF_SIZE];
         memset(sendBuf, 0x51, BUF_SIZE);
@@ -180,6 +180,6 @@ namespace Dream {
             }
         }
 
-        LOGW(TAG, "Send smart config packet end!\n");
+        LOGW(TAG, "Send smart JWSmart_config packet end!\n");
     }
 }

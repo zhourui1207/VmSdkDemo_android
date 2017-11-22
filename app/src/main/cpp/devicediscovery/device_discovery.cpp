@@ -8,41 +8,41 @@
 
 std::shared_ptr<Dream::DeviceDiscoveryManager> g_deviceDiscoveryMgrSp;
 
-bool init() {
+bool JWDeviceDiscovery_init() {
     if (!g_deviceDiscoveryMgrSp.get()) {
         g_deviceDiscoveryMgrSp.reset(new Dream::DeviceDiscoveryManager());
     }
     return g_deviceDiscoveryMgrSp.get() != nullptr;
 }
 
-void uninit() {
+void JWDeviceDiscovery_uninit() {
     if (g_deviceDiscoveryMgrSp.get()) {
         g_deviceDiscoveryMgrSp->stop();
         g_deviceDiscoveryMgrSp.reset();
     }
 }
 
-bool start(fDeviceFindCallBack deviceFindCallBack) {
+bool JWDeviceDiscovery_start(fJWDeviceFindCallBack deviceFindCallBack) {
     if (g_deviceDiscoveryMgrSp.get()) {
         return g_deviceDiscoveryMgrSp->start(deviceFindCallBack);
     }
     return false;
 }
 
-void stop() {
+void JWDeviceDiscovery_stop() {
     if (g_deviceDiscoveryMgrSp.get()) {
         g_deviceDiscoveryMgrSp->stop();
     }
 }
 
-void clearup() {
+void JWDeviceDiscovery_clearup() {
     if (g_deviceDiscoveryMgrSp.get()) {
         g_deviceDiscoveryMgrSp->clearup();
     }
 }
 
 // 设置请求间隔，必须再start前设置才生效
-void setAutoRequestInterval(int32_t intervalSec) {
+void JWDeviceDiscovery_setAutoRequestInterval(int32_t intervalSec) {
     if (g_deviceDiscoveryMgrSp.get()) {
         g_deviceDiscoveryMgrSp->setAutoRequestInterval(intervalSec);
     }

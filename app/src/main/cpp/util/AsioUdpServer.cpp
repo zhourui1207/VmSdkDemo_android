@@ -193,12 +193,12 @@ namespace Dream {
                 [this](boost::system::error_code ec, std::size_t /*length*/) {
                     if (!ec) {
                         _sendQueue.pop();
-                        if (!_sendQueue.empty()) {
-                            do_write();
-                        }
                     } else {
-                        LOGE("AsioUdpServer", "AsioUdpServer sned data exception [%s]\n",
-                             ec.message().c_str());
+                        LOGE("AsioUdpServer", "AsioUdpServer send data error_code[%d] exception [%s]\n",
+                             ec.value(), ec.message().c_str());
+                    }
+                    if (!_sendQueue.empty()) {
+                        do_write();
                     }
                 });
     }

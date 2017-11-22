@@ -37,20 +37,20 @@ typedef struct JW_DEVICE_INFO {
     uint8_t resv2[52];  // 预留
 } JWDeviceInfo;
 
-typedef void (*fDeviceFindCallBack)(const JWDeviceInfo& deviceInfo);
+typedef void (*fJWDeviceFindCallBack)(const JWDeviceInfo& deviceInfo);
 
-bool init();
+bool JWDeviceDiscovery_init();
 
-void uninit();
+void JWDeviceDiscovery_uninit();
 
-bool start(fDeviceFindCallBack deviceFindCallBack);
+bool JWDeviceDiscovery_start(fJWDeviceFindCallBack deviceFindCallBack);
 
-void stop();
+void JWDeviceDiscovery_stop();
 
-void clearup();
+void JWDeviceDiscovery_clearup();
 
 // 设置请求间隔，必须再start前设置才生效
-void setAutoRequestInterval(int32_t intervalSec);
+void JWDeviceDiscovery_setAutoRequestInterval(int32_t intervalSec);
 
 #ifdef __cplusplus
 }
